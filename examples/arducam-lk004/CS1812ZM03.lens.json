@@ -1,0 +1,863 @@
+{
+  "format": "lensforge-1",
+  "name": "Arducam CS1812ZM03 (approximation)",
+  "units": "mm",
+  "aperture": {
+    "type": "EPD",
+    "value": 7.5
+  },
+  "fields": {
+    "type": "ANGLE",
+    "values": [
+      {
+        "x": 0.0,
+        "y": 0.0,
+        "weight": 1.0,
+        "vdx": 0.0,
+        "vdy": 0.0,
+        "vcx": 0.0,
+        "vcy": 0.0
+      },
+      {
+        "x": 0.0,
+        "y": 8.879384769200787,
+        "weight": 1.0,
+        "vdx": 0.0,
+        "vdy": 0.0,
+        "vcx": 0.0,
+        "vcy": 0.0
+      },
+      {
+        "x": 0.0,
+        "y": 13.31907715380118,
+        "weight": 1.0,
+        "vdx": 0.0,
+        "vdy": 0.0,
+        "vcx": 0.0,
+        "vcy": 0.0
+      },
+      {
+        "x": 0.0,
+        "y": 15.982892584561416,
+        "weight": 1.0,
+        "vdx": 0.0,
+        "vdy": 0.0,
+        "vcx": 0.0,
+        "vcy": 0.0
+      },
+      {
+        "x": 0.0,
+        "y": 17.758769538401573,
+        "weight": 1.0,
+        "vdx": 0.0,
+        "vdy": 0.0,
+        "vcx": 0.0,
+        "vcy": 0.0
+      }
+    ]
+  },
+  "wavelengths": {
+    "values": [
+      {
+        "value": 0.4861327,
+        "weight": 1.0
+      },
+      {
+        "value": 0.5875618,
+        "weight": 1.0
+      },
+      {
+        "value": 0.6562725,
+        "weight": 1.0
+      }
+    ],
+    "primary": 1
+  },
+  "ray_aiming": "paraxial",
+  "notes": "",
+  "surfaces": [
+    {
+      "type": "STANDARD",
+      "curvature": 0.0,
+      "conic": 0.0,
+      "thickness": "inf",
+      "material": null,
+      "comment": "OBJECT"
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.11460932628854853,
+      "conic": 0.0,
+      "thickness": 2.3880587156976785,
+      "material": "SCHOTT:N-SK16",
+      "semi_diameter": 5.545951879680498
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.013714583831204547,
+      "conic": 0.0,
+      "thickness": 0.10000000000152558,
+      "material": null,
+      "semi_diameter": 5.161195902774981
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.16856032629386233,
+      "conic": 0.0,
+      "thickness": 1.322691923668475,
+      "material": "SCHOTT:N-PK51",
+      "semi_diameter": 3.9952123378293685
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.11267084831691057,
+      "conic": 0.0,
+      "thickness": 1.0,
+      "material": "SCHOTT:N-SF2",
+      "semi_diameter": 3.4795176472096134
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.26955511957066525,
+      "conic": 0.0,
+      "thickness": 1.002654935603328,
+      "material": null,
+      "semi_diameter": 2.5296535506320748
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.0,
+      "conic": 0.0,
+      "thickness": 0.7886549851632322,
+      "material": null,
+      "semi_diameter": 2.4789926433172425,
+      "stop": true
+    },
+    {
+      "type": "STANDARD",
+      "curvature": -0.2222620308531669,
+      "conic": 0.0,
+      "thickness": 1.0,
+      "material": "SCHOTT:N-SF2",
+      "semi_diameter": 2.436265513283403
+    },
+    {
+      "type": "STANDARD",
+      "curvature": -0.09117917926573685,
+      "conic": 0.0,
+      "thickness": 1.2034640477751783,
+      "material": "SCHOTT:N-LAK22",
+      "semi_diameter": 3.0781438339601017
+    },
+    {
+      "type": "STANDARD",
+      "curvature": -0.155756823553292,
+      "conic": 0.0,
+      "thickness": 0.1,
+      "material": null,
+      "semi_diameter": 3.4615017393121397
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.06650935879553847,
+      "conic": 0.0,
+      "thickness": 2.2410339261195125,
+      "material": "SCHOTT:N-LAK22",
+      "semi_diameter": 4.262943987457062
+    },
+    {
+      "type": "STANDARD",
+      "curvature": -0.09369079673953461,
+      "conic": 0.0,
+      "thickness": 5.73,
+      "material": null,
+      "semi_diameter": 4.38523629265191
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.0,
+      "conic": 0.0,
+      "thickness": 1.0,
+      "material": "N-BK7",
+      "semi_diameter": 4.123613991320064
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.0,
+      "conic": 0.0,
+      "thickness": 0.8,
+      "material": null,
+      "semi_diameter": 4.097570113666623
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.0,
+      "conic": 0.0,
+      "thickness": 0.0,
+      "material": null,
+      "semi_diameter": 4.0660064945743155,
+      "comment": "IMAGE"
+    }
+  ],
+  "optimization": {
+    "variables": [
+      {
+        "surface": 1,
+        "param": "curvature"
+      },
+      {
+        "surface": 1,
+        "param": "thickness",
+        "min": 1.0,
+        "max": 8.0
+      },
+      {
+        "surface": 2,
+        "param": "curvature"
+      },
+      {
+        "surface": 2,
+        "param": "thickness",
+        "min": 0.1,
+        "max": 20.0
+      },
+      {
+        "surface": 3,
+        "param": "curvature"
+      },
+      {
+        "surface": 3,
+        "param": "thickness",
+        "min": 1.0,
+        "max": 8.0
+      },
+      {
+        "surface": 4,
+        "param": "curvature"
+      },
+      {
+        "surface": 4,
+        "param": "thickness",
+        "min": 1.0,
+        "max": 8.0
+      },
+      {
+        "surface": 5,
+        "param": "curvature"
+      },
+      {
+        "surface": 5,
+        "param": "thickness",
+        "min": 0.1,
+        "max": 20.0
+      },
+      {
+        "surface": 6,
+        "param": "thickness",
+        "min": 0.1,
+        "max": 20.0
+      },
+      {
+        "surface": 7,
+        "param": "curvature"
+      },
+      {
+        "surface": 7,
+        "param": "thickness",
+        "min": 1.0,
+        "max": 8.0
+      },
+      {
+        "surface": 8,
+        "param": "curvature"
+      },
+      {
+        "surface": 8,
+        "param": "thickness",
+        "min": 1.0,
+        "max": 8.0
+      },
+      {
+        "surface": 9,
+        "param": "curvature"
+      },
+      {
+        "surface": 9,
+        "param": "thickness",
+        "min": 0.1,
+        "max": 20.0
+      },
+      {
+        "surface": 10,
+        "param": "curvature"
+      },
+      {
+        "surface": 10,
+        "param": "thickness",
+        "min": 1.0,
+        "max": 8.0
+      },
+      {
+        "surface": 11,
+        "param": "curvature"
+      },
+      {
+        "surface": 11,
+        "param": "thickness",
+        "min": 0.3
+      }
+    ],
+    "merit_function": {
+      "rows": [
+        {
+          "type": "BLNK",
+          "target": 0.0,
+          "weight": 0,
+          "bound": "=",
+          "params": {},
+          "comment": "Default merit: spot, centroid, 3 rings x 6 arms"
+        },
+        {
+          "type": "MNCG",
+          "target": 1.0,
+          "weight": 10,
+          "bound": ">",
+          "params": {},
+          "comment": ""
+        },
+        {
+          "type": "MNEG",
+          "target": 0.8,
+          "weight": 10,
+          "bound": ">",
+          "params": {},
+          "comment": ""
+        },
+        {
+          "type": "MNCA",
+          "target": 0.1,
+          "weight": 10,
+          "bound": ">",
+          "params": {},
+          "comment": ""
+        },
+        {
+          "type": "MNEA",
+          "target": 0.1,
+          "weight": 10,
+          "bound": ">",
+          "params": {},
+          "comment": ""
+        },
+        {
+          "type": "RAYS",
+          "target": 0.0,
+          "weight": 1.0,
+          "bound": "=",
+          "params": {
+            "field": 0,
+            "reference": "centroid",
+            "rings": 3,
+            "arms": 6,
+            "wavelengths": null,
+            "symmetric": null
+          },
+          "comment": ""
+        },
+        {
+          "type": "RAYS",
+          "target": 0.0,
+          "weight": 1.0,
+          "bound": "=",
+          "params": {
+            "field": 1,
+            "reference": "centroid",
+            "rings": 3,
+            "arms": 6,
+            "wavelengths": null,
+            "symmetric": null
+          },
+          "comment": ""
+        },
+        {
+          "type": "RAYS",
+          "target": 0.0,
+          "weight": 1.0,
+          "bound": "=",
+          "params": {
+            "field": 2,
+            "reference": "centroid",
+            "rings": 3,
+            "arms": 6,
+            "wavelengths": null,
+            "symmetric": null
+          },
+          "comment": ""
+        },
+        {
+          "type": "RAYS",
+          "target": 0.0,
+          "weight": 1.0,
+          "bound": "=",
+          "params": {
+            "field": 3,
+            "reference": "centroid",
+            "rings": 3,
+            "arms": 6,
+            "wavelengths": null,
+            "symmetric": null
+          },
+          "comment": ""
+        },
+        {
+          "type": "RAYS",
+          "target": 0.0,
+          "weight": 1.0,
+          "bound": "=",
+          "params": {
+            "field": 4,
+            "reference": "centroid",
+            "rings": 3,
+            "arms": 6,
+            "wavelengths": null,
+            "symmetric": null
+          },
+          "comment": ""
+        },
+        {
+          "type": "EFFL",
+          "target": 12,
+          "weight": -1,
+          "bound": "=",
+          "params": {},
+          "comment": ""
+        },
+        {
+          "type": "TTHI",
+          "target": 7.53,
+          "weight": -1,
+          "bound": "=",
+          "params": {
+            "surf": 11,
+            "surf2": 13
+          },
+          "comment": "back focal distance"
+        },
+        {
+          "type": "TOTR",
+          "target": 39.0,
+          "weight": 10,
+          "bound": "<",
+          "params": {},
+          "comment": ""
+        },
+        {
+          "type": "REAR",
+          "target": 13.0,
+          "weight": 10,
+          "bound": "<",
+          "params": {
+            "surf": 1,
+            "hy": 1,
+            "py": 1
+          },
+          "comment": ""
+        },
+        {
+          "type": "REAR",
+          "target": 13.0,
+          "weight": 10,
+          "bound": "<",
+          "params": {
+            "surf": 1,
+            "hy": 1,
+            "py": -1
+          },
+          "comment": ""
+        },
+        {
+          "type": "REAR",
+          "target": 13.0,
+          "weight": 10,
+          "bound": "<",
+          "params": {
+            "surf": 1,
+            "hy": 0,
+            "py": 1
+          },
+          "comment": ""
+        },
+        {
+          "type": "REAR",
+          "target": 13.0,
+          "weight": 10,
+          "bound": "<",
+          "params": {
+            "surf": 2,
+            "hy": 1,
+            "py": 1
+          },
+          "comment": ""
+        },
+        {
+          "type": "REAR",
+          "target": 13.0,
+          "weight": 10,
+          "bound": "<",
+          "params": {
+            "surf": 2,
+            "hy": 1,
+            "py": -1
+          },
+          "comment": ""
+        },
+        {
+          "type": "REAR",
+          "target": 13.0,
+          "weight": 10,
+          "bound": "<",
+          "params": {
+            "surf": 2,
+            "hy": 0,
+            "py": 1
+          },
+          "comment": ""
+        },
+        {
+          "type": "REAR",
+          "target": 13.0,
+          "weight": 10,
+          "bound": "<",
+          "params": {
+            "surf": 3,
+            "hy": 1,
+            "py": 1
+          },
+          "comment": ""
+        },
+        {
+          "type": "REAR",
+          "target": 13.0,
+          "weight": 10,
+          "bound": "<",
+          "params": {
+            "surf": 3,
+            "hy": 1,
+            "py": -1
+          },
+          "comment": ""
+        },
+        {
+          "type": "REAR",
+          "target": 13.0,
+          "weight": 10,
+          "bound": "<",
+          "params": {
+            "surf": 3,
+            "hy": 0,
+            "py": 1
+          },
+          "comment": ""
+        },
+        {
+          "type": "REAR",
+          "target": 13.0,
+          "weight": 10,
+          "bound": "<",
+          "params": {
+            "surf": 4,
+            "hy": 1,
+            "py": 1
+          },
+          "comment": ""
+        },
+        {
+          "type": "REAR",
+          "target": 13.0,
+          "weight": 10,
+          "bound": "<",
+          "params": {
+            "surf": 4,
+            "hy": 1,
+            "py": -1
+          },
+          "comment": ""
+        },
+        {
+          "type": "REAR",
+          "target": 13.0,
+          "weight": 10,
+          "bound": "<",
+          "params": {
+            "surf": 4,
+            "hy": 0,
+            "py": 1
+          },
+          "comment": ""
+        },
+        {
+          "type": "REAR",
+          "target": 13.0,
+          "weight": 10,
+          "bound": "<",
+          "params": {
+            "surf": 5,
+            "hy": 1,
+            "py": 1
+          },
+          "comment": ""
+        },
+        {
+          "type": "REAR",
+          "target": 13.0,
+          "weight": 10,
+          "bound": "<",
+          "params": {
+            "surf": 5,
+            "hy": 1,
+            "py": -1
+          },
+          "comment": ""
+        },
+        {
+          "type": "REAR",
+          "target": 13.0,
+          "weight": 10,
+          "bound": "<",
+          "params": {
+            "surf": 5,
+            "hy": 0,
+            "py": 1
+          },
+          "comment": ""
+        },
+        {
+          "type": "REAR",
+          "target": 13.0,
+          "weight": 10,
+          "bound": "<",
+          "params": {
+            "surf": 6,
+            "hy": 1,
+            "py": 1
+          },
+          "comment": ""
+        },
+        {
+          "type": "REAR",
+          "target": 13.0,
+          "weight": 10,
+          "bound": "<",
+          "params": {
+            "surf": 6,
+            "hy": 1,
+            "py": -1
+          },
+          "comment": ""
+        },
+        {
+          "type": "REAR",
+          "target": 13.0,
+          "weight": 10,
+          "bound": "<",
+          "params": {
+            "surf": 6,
+            "hy": 0,
+            "py": 1
+          },
+          "comment": ""
+        },
+        {
+          "type": "REAR",
+          "target": 13.0,
+          "weight": 10,
+          "bound": "<",
+          "params": {
+            "surf": 7,
+            "hy": 1,
+            "py": 1
+          },
+          "comment": ""
+        },
+        {
+          "type": "REAR",
+          "target": 13.0,
+          "weight": 10,
+          "bound": "<",
+          "params": {
+            "surf": 7,
+            "hy": 1,
+            "py": -1
+          },
+          "comment": ""
+        },
+        {
+          "type": "REAR",
+          "target": 13.0,
+          "weight": 10,
+          "bound": "<",
+          "params": {
+            "surf": 7,
+            "hy": 0,
+            "py": 1
+          },
+          "comment": ""
+        },
+        {
+          "type": "REAR",
+          "target": 13.0,
+          "weight": 10,
+          "bound": "<",
+          "params": {
+            "surf": 8,
+            "hy": 1,
+            "py": 1
+          },
+          "comment": ""
+        },
+        {
+          "type": "REAR",
+          "target": 13.0,
+          "weight": 10,
+          "bound": "<",
+          "params": {
+            "surf": 8,
+            "hy": 1,
+            "py": -1
+          },
+          "comment": ""
+        },
+        {
+          "type": "REAR",
+          "target": 13.0,
+          "weight": 10,
+          "bound": "<",
+          "params": {
+            "surf": 8,
+            "hy": 0,
+            "py": 1
+          },
+          "comment": ""
+        },
+        {
+          "type": "REAR",
+          "target": 13.0,
+          "weight": 10,
+          "bound": "<",
+          "params": {
+            "surf": 9,
+            "hy": 1,
+            "py": 1
+          },
+          "comment": ""
+        },
+        {
+          "type": "REAR",
+          "target": 13.0,
+          "weight": 10,
+          "bound": "<",
+          "params": {
+            "surf": 9,
+            "hy": 1,
+            "py": -1
+          },
+          "comment": ""
+        },
+        {
+          "type": "REAR",
+          "target": 13.0,
+          "weight": 10,
+          "bound": "<",
+          "params": {
+            "surf": 9,
+            "hy": 0,
+            "py": 1
+          },
+          "comment": ""
+        },
+        {
+          "type": "REAR",
+          "target": 13.0,
+          "weight": 10,
+          "bound": "<",
+          "params": {
+            "surf": 10,
+            "hy": 1,
+            "py": 1
+          },
+          "comment": ""
+        },
+        {
+          "type": "REAR",
+          "target": 13.0,
+          "weight": 10,
+          "bound": "<",
+          "params": {
+            "surf": 10,
+            "hy": 1,
+            "py": -1
+          },
+          "comment": ""
+        },
+        {
+          "type": "REAR",
+          "target": 13.0,
+          "weight": 10,
+          "bound": "<",
+          "params": {
+            "surf": 10,
+            "hy": 0,
+            "py": 1
+          },
+          "comment": ""
+        },
+        {
+          "type": "REAR",
+          "target": 13.0,
+          "weight": 10,
+          "bound": "<",
+          "params": {
+            "surf": 11,
+            "hy": 1,
+            "py": 1
+          },
+          "comment": ""
+        },
+        {
+          "type": "REAR",
+          "target": 13.0,
+          "weight": 10,
+          "bound": "<",
+          "params": {
+            "surf": 11,
+            "hy": 1,
+            "py": -1
+          },
+          "comment": ""
+        },
+        {
+          "type": "REAR",
+          "target": 13.0,
+          "weight": 10,
+          "bound": "<",
+          "params": {
+            "surf": 11,
+            "hy": 0,
+            "py": 1
+          },
+          "comment": ""
+        },
+        {
+          "type": "DIST",
+          "target": 0.0,
+          "weight": 0.0002,
+          "bound": "=",
+          "params": {
+            "field": 1.0
+          },
+          "comment": "keep distortion low"
+        }
+      ]
+    }
+  }
+}
