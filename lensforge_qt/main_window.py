@@ -8,7 +8,7 @@ import os
 from PySide6.QtCore import QSettings, Qt
 from PySide6.QtGui import QAction, QKeySequence
 from PySide6.QtWidgets import (QDockWidget, QFileDialog, QLabel, QMainWindow, QMenu, QMessageBox,
-                               QUndoView)
+                               QUndoView, QWhatsThis)
 
 import lensforge as lf
 from lensforge import optimize as opt
@@ -22,7 +22,9 @@ from .mfe import MeritFunctionEditor
 from .opt_dialogs import OptimizationDialog, ToleranceDialog
 from .script_console import ScriptConsole
 from .system_dialog import SystemExplorer
-from .toolbar_dialog import SEPARATOR, ToolbarDialog, menu_items
+from . import icons
+from .help_text import lookup as help_lookup
+from .toolbar_dialog import BUTTON_STYLES, SEPARATOR, ToolbarDialog, menu_items
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 EXAMPLES = os.path.join(os.path.dirname(HERE), "examples")
@@ -127,6 +129,8 @@ class MainWindow(QMainWindow):
         self.a_open = A("&Open...", self.open_dialog, QKeySequence.Open, "Open a lensforge JSON or Zemax .zmx file")
         self.a_save = A("&Save", self.save, QKeySequence.Save)
         self.a_save_as = A("Save &As...", self.save_as, QKeySequence.SaveAs)
+        self.a_insert_lens = A("&Insert Lens...", self.insert_lens, "Ctrl+I",
+                               "Insert surfaces from a lens file, scaled and optionally reversed")
         self.a_agf = A("Load Glass Catalog (AGF)...", self.load_agf)
         self.a_export = A("Export Prescription...", self.export_prescription)
         self.a_quit = A("E&xit", self.close, QKeySequence.Quit)
@@ -161,6 +165,9 @@ class MainWindow(QMainWindow):
         self.a_tab_analyses = A("Tab All Analysis Windows", self.tab_analyses)
         self.a_about = A("&About", self.about)
         self.a_keys = A("Keyboard Shortcuts", self.shortcuts_help)
+        self.a_help = A("&Help Contents", self.help_contents, QKeySequence.HelpContents)
+        self.a_whats_this = QWhatsThis.createAction(self)
+        self.a_whats_this.setShortcut(QKeySequence.WhatsThis)
 
     def _make_menus(self):
         mb = self.menuBar()
@@ -175,6 +182,7 @@ class MainWindow(QMainWindow):
         for a in (self.a_save, self.a_save_as):
             m.addAction(a)
         m.addSeparator()
+        m.addAction(self.a_insert_lens)
         for a in (self.a_sys, self.a_fields, self.a_waves, self.a_rays):
             m.addAction(a)
         m.addSeparator()
@@ -228,13 +236,16 @@ class MainWindow(QMainWindow):
         m.addAction(self.a_undo_view)
 
         m = mb.addMenu("&Help")
+        m.addAction(self.a_help)
+        m.addAction(self.a_whats_this)
+        m.addSeparator()
         m.addAction(self.a_keys)
         m.addAction(self.a_about)
 
     def _make_toolbar(self):
         tb = self.toolbar = self.addToolBar("Main")
         tb.setObjectName("toolbar_main")
-        tb.setToolButtonStyle(Qt.ToolButtonTextOnly)
+        tb.setToolButtonStyle(self.toolbar_style())
         tb.visibilityChanged.connect(self.a_toolbar.setChecked)
         tb.setContextMenuPolicy(Qt.CustomContextMenu)
         tb.customContextMenuRequested.connect(lambda pos: self._toolbar_menu().exec(tb.mapToGlobal(pos)))
@@ -244,10 +255,26 @@ class MainWindow(QMainWindow):
         for iid, label in SHORT_LABELS.items():
             if iid in self.toolbar_lookup:
                 self.toolbar_lookup[iid].setIconText(label)
+        self._apply_help_and_icons()
         self.set_toolbar(self.toolbar_ids(), save=False)
         on = self._setting_bool("toolbar/visible", False)  # off by default; everything is in the menus
         tb.setVisible(on)
         self.a_toolbar.setChecked(on)
+
+    def _apply_help_and_icons(self):
+        """Status tip, tooltip, What's This text and icon of every menu command (help_text.py, icons.py)."""
+        for iid, path, a in self.toolbar_items:
+            h = help_lookup(iid)
+            title = path[-1]
+            sc = a.shortcut().toString(QKeySequence.NativeText)
+            if h:
+                summary, details = h
+                a.setStatusTip(summary)
+                a.setWhatsThis(f"<b>{title}</b><p>{details}</p>")
+                a.setToolTip(f"<b>{title}</b>{f' &nbsp;({sc})' if sc else ''}<br>{summary}")
+            ic = icons.icon(iid)
+            if not ic.isNull():
+                a.setIcon(ic)
 
     def _toolbar_menu(self):
         m = QMenu(self)
@@ -258,6 +285,10 @@ class MainWindow(QMainWindow):
     def _setting_bool(self, key, default):
         v = self.settings.value(key, default)
         return v.lower() == "true" if isinstance(v, str) else bool(v)
+
+    def toolbar_style(self):
+        v = self.settings.value("toolbar/style", "icons")
+        return dict(BUTTON_STYLES).get(v, Qt.ToolButtonIconOnly) if isinstance(v, str) else Qt.ToolButtonIconOnly
 
     def toolbar_ids(self) -> list[str]:
         """The saved toolbar layout (menu paths and separators), or the default one."""
@@ -293,9 +324,12 @@ class MainWindow(QMainWindow):
         self.settings.setValue("toolbar/visible", bool(on))
 
     def customize_toolbar(self):
-        dlg = ToolbarDialog(self.toolbar_items, self.toolbar_ids(), DEFAULT_TOOLBAR, self)
+        dlg = ToolbarDialog(self.toolbar_items, self.toolbar_ids(), DEFAULT_TOOLBAR, self,
+                            style=self.settings.value("toolbar/style", "icons"))
         if dlg.exec():
             self.set_toolbar(dlg.ids())
+            self.settings.setValue("toolbar/style", dlg.style_key())
+            self.toolbar.setToolButtonStyle(self.toolbar_style())
             self.show_toolbar(True)
             self.statusBar().showMessage("Toolbar updated", 4000)
         return dlg
@@ -431,6 +465,14 @@ class MainWindow(QMainWindow):
     def system_explorer(self, tab=0):
         SystemExplorer(self.doc, self, tab).exec()
 
+    def insert_lens(self):
+        from .insert_lens_dialog import InsertLensDialog
+        row, _ = self.lde.current()
+        start = os.path.dirname(self.doc.path) if self.doc.path else self.settings.value("last_dir", EXAMPLES)
+        dlg = InsertLensDialog(self.doc, at=max(1, row), start_dir=start, parent=self)
+        dlg.exec()
+        return dlg
+
     def input_rays(self):
         from .rays_dialog import InputRaysDialog
         InputRaysDialog(self.doc, self).exec()
@@ -512,28 +554,36 @@ class MainWindow(QMainWindow):
                           "design: lens data editor, analyses, optimisation and tolerancing.<br><br>Qt front end "
                           "over the lensforge Python API (PySide6, matplotlib).")
 
+    def help_contents(self, item_id=None):
+        from .help_browser import HelpBrowser
+        dlg = self.dialogs.get("help")
+        if dlg is None:
+            dlg = self.dialogs["help"] = HelpBrowser(self.toolbar_items, self)
+        if item_id:
+            dlg.show_command(item_id)
+        dlg.show()
+        dlg.raise_()
+        return dlg
+
+    def shortcut_rows(self):
+        """(menu, command, shortcut) for every menu command that has a shortcut, in menu order."""
+        seen, rows = set(), []
+        for iid, path, a in self.toolbar_items:
+            sc = a.shortcut().toString(QKeySequence.NativeText)
+            if sc and id(a) not in seen:
+                seen.add(id(a))
+                rows.append((path[0], " > ".join(path[1:]), sc))
+        return rows
+
     def shortcuts_help(self):
-        text = "\n".join([
-            "Lens Data Editor",
-            "  Insert            insert surface before the current row",
-            "  Ctrl+Insert       insert surface after",
-            "  Shift+Delete      delete surface",
-            "  Ctrl+Shift+V      toggle variable on the current cell",
-            "  Ctrl+Shift+P      surface properties (aperture, stop, XY terms)",
-            "  right-click       variables, solves, surface type, stop",
-            "",
-            "  Ctrl+G            choose material (also the ... button in a Material cell)",
-            "",
-            "File:     F2 System Explorer, F3 fields, F4 wavelengths, F5 input rays",
-            "Edit:     Ctrl+Shift+F quick focus",
-            "Analyses: Ctrl+L layout, Ctrl+S spot, Ctrl+R ray fan, Ctrl+M MTF, Ctrl+P PSF, Ctrl+W wavefront,",
-            "          Ctrl+F field curvature / distortion",
-            "Tools:    Ctrl+U optimization, Ctrl+Shift+T tolerancing, F8 Python shell (Ctrl+Enter runs),",
-            "          F6 merit function editor",
-            "Edit:     Ctrl+Z undo, Ctrl+Y / Ctrl+Shift+Z redo"])
+        rows = "".join(f"<tr><td>{m}</td><td>{c}</td><td><b>{k}</b></td></tr>" for m, c, k in self.shortcut_rows())
+        extra = ("<p>In the Lens Data Editor, right-click a cell for variables, solves, surface type and stop; "
+                 "the ... button in a Material cell opens the material picker. In the Python Shell, Ctrl+Enter "
+                 "runs the script.</p>")
         d = QMessageBox(self)
         d.setWindowTitle("Keyboard shortcuts")
-        d.setText("<pre>" + text + "</pre>")
+        d.setText(f"<table cellspacing='6'><tr><th align=left>Menu</th><th align=left>Command</th>"
+                  f"<th align=left>Keys</th></tr>{rows}</table>{extra}")
         d.exec()
 
     # ------------------------------------------------------------------ session

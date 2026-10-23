@@ -13,7 +13,7 @@ substitution, sensitivity and Monte Carlo tolerancing); see the tables below.
 
 ```bash
 pip install numpy pytest matplotlib # numpy is the only hard dependency; matplotlib only for lensforge.plot
-python -m pytest tests              # 214 tests (62 for the Qt app, offscreen), ~60 s
+python -m pytest tests              # 235 tests (72 for the Qt app, offscreen), ~70 s
 python examples/scripting_demo.py   # build, analyse and run a scripted design study
 python examples/optimization_demo.py # Cooke triplet: optimise, hammer, glass substitution, tolerancing (~2 min)
 python examples/analysis_demo.py    # report + 16-panel plot gallery (examples/output/analysis_gallery.png)
@@ -62,12 +62,14 @@ python -m lensforge_qt --sample achromat            # singlet, achromat, parabol
 
 | Window | What it does |
 |---|---|
-| Menus | File (New, Open, Open Recent, Save, Save As, System Explorer, Fields, Wavelengths, Input Rays, samples, AGF catalogs), Edit (Undo, Redo, surface editing), Analysis (all plots and reports), Tools (Optimization, Tolerancing, Python Shell, Merit Function Editor), View (toolbar on/off, Customize Toolbar). The menu bar is inside the window on every platform, macOS included. |
+| Menus | File (New, Open, Open Recent, Save, Save As, Insert Lens, System Explorer, Fields, Wavelengths, Input Rays, samples, AGF catalogs), Edit (Undo, Redo, surface editing), Analysis (all plots and reports), Tools (Optimization, Tolerancing, Python Shell, Merit Function Editor), View (toolbar on/off, Customize Toolbar), Help (Help Contents, What's This?, Keyboard Shortcuts). The menu bar is inside the window on every platform, macOS included. |
 | Lens Data Editor (centre) | Spreadsheet of surfaces: type (combo), comment, radius, thickness, material (glass name completion, `nd,vd` model glass, index, MIRROR, or the material picker: "..." button in the cell, right-click or Ctrl+G opens a dialog with the catalog table, a clickable glass map, model glass and air/mirror/constant index), semi-diameter (automatic in grey, typed = fixed `U`), conic, Par 1-8 with headers per surface type (asphere terms, toroid radius X, coordinate-break decentres/tilts, paraxial focal length, binary-2 terms, grating lines/um and order). Cell markers: `V` variable, `M`/`C`/`F`/`E`/`T`/`S`/`P` solves. Right-click: make variable, solves (marginal/chief ray height and angle, F/#, concentric, edge thickness, position, pickup), surface type, stop, surface properties (apertures, obscurations, XY-polynomial terms). Insert / Ctrl+Insert / Shift+Delete insert and delete surfaces, renumbering variables, solves and merit operands. |
 | Input Rays (F5) | Rays drawn in the layout (rays per fan, fan plane, fields, wavelengths), pupil sampling of spot diagrams, fans and footprints, and user-defined rays (Hx, Hy, Px, Py, wavelength) drawn in red on the layout and listed in Analysis > Reports > User Ray Trace. Saved in the lens file's `"ui"` section and undoable. |
 | System Explorer (F2-F4) | Aperture type/value, ray aiming, field type and field table (weights, vignetting factors, equal-area helper), wavelengths with presets and primary, units, title, notes. |
 | Merit Function Editor (F6) | Operand spreadsheet (type with completion, `name=value` parameters, bound, target, weight, live value and % contribution computed in the background), wizard (default spot / wavefront / MTF merit with glass/air boundaries), searchable operand list. |
-| Toolbar | Hidden by default. View > Customize Toolbar (or right-click the toolbar) opens a dialog listing every menu command by menu; add, remove, reorder and separate buttons, or reset to the defaults. The layout and whether the toolbar is shown are saved between sessions. |
+| Toolbar | Hidden by default. Every menu command has its own icon and a tooltip saying what it does (name, shortcut, one-line description). View > Customize Toolbar (or right-click the toolbar) opens a dialog listing every menu command by menu; add, remove, reorder and separate buttons, choose icons only / icons with text / text only, or reset to the defaults. The layout, button style and whether the toolbar is shown are saved between sessions. |
+| Insert Lens (Ctrl+I) | File > Insert Lens copies a range of surfaces from a `.json` or `.zmx` file into the current lens before a chosen surface, with a scale factor (all lengths, aspheric/freeform/phase terms) and an option to reverse the surface order (curvatures and sag terms change sign, thicknesses and media shift, coordinate breaks are inverted). Preview with the group's focal length; one undo step. Scripting: `lf.insert_lens(lens, 'file.json', at=3, scale=0.5, reverse=True)`, plus `lf.scale_surface`, `lf.scale_system`, `lf.reverse_surfaces`, `lf.lens_surfaces`. |
+| Help (F1) | Help > Help Contents is a searchable browser with a page for every menu command (icon, menu path, shortcut, description) and every menu. Status-bar tips, tooltips and Help > What's This? (Shift+F1) use the same text; Help > Keyboard Shortcuts is generated from the menus. |
 | Analysis windows | 36 dockable windows (Analysis menu): layout, footprint, sag; ray / OPD fans, spot, through-focus spot, RMS vs field; wavefront, interferogram, Zernike; FFT/Huygens PSF and cross-section; FFT/Huygens/geometric MTF, through-focus MTF, MTF vs field, encircled energy; field curvature/distortion, grid distortion, lateral colour, longitudinal aberration, chromatic focal shift, Seidel diagram and coefficients, pupil aberration; relative illumination, vignetting, polarisation pupil map, transmission; prescription, system report, single ray trace, cardinal points, glass dispersion, user ray trace. Each has its own settings bar, matplotlib zoom/pan/save toolbar, and recomputes in a worker thread when the lens changes. |
 | Diffractive surfaces | Diffraction Grating (`DGRATING`: linear grating on a conic surface, lines/um and order, transmissive or reflective, `n'M' = nM + m lambda T`; follow it with a coordinate break onto the diffracted order, see `examples/grating_demo.lens.json`) and Binary 2 (rotationally symmetric diffractive phase). |
 | Optimization (Ctrl+U) | Damped least squares, hammer, global search, glass substitution, on a copy of the lens in the background with live merit plot and Stop (keeps the best design so far); the result is one undo step. |
@@ -78,6 +80,11 @@ Also: undo/redo of every edit (Edit > Undo History), open `.json` / import `.zmx
 sample lenses, AGF catalog loading, prescription export, quick focus, fix/auto semi-diameters,
 vary all curvatures / air spaces. `lensforge_qt/edits.py` holds the Qt-free editing helpers (cell
 parsing, surface type changes, insert/delete with renumbering) so a web front end can reuse them.
+
+**Adding a menu command:** write its help in `lensforge_qt/help_text.py` (summary + description) and draw
+its icon in `lensforge_qt/icons.py` (24 x 24 SVG). The Qt tests fail for a command without help or an icon,
+for help or icons left behind by a removed command, for two commands sharing an icon, and for clashing
+shortcuts, so the help cannot fall behind the menus.
 
 ## Analyses
 
@@ -192,6 +199,7 @@ coordinate return, so the rest of the lens stays put (tested to 1e-14). Perturbe
 | `optimize/` | Variables, solves, operands and merit function editor, damped least squares, global search / hammer, glass substitution, tolerancing (see above). |
 | `plot.py` | Optional matplotlib helpers that draw analysis dicts (no computation). |
 | `io/` | Native JSON format; Zemax `.zmx` importer (common subset). |
+| `compose.py` | Scale surfaces and systems, reverse a group of surfaces, insert one lens into another (`insert_lens`). |
 | `samples.py` | Example systems (singlet, achromat, parabola, Cassegrain) and a paraxial focus solve. |
 
 ## Conventions

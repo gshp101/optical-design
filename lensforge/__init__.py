@@ -30,5 +30,6 @@ from .analysis import metrics
 from . import optimize
 from . import samples
 from .io import load, save, load_zmx
+from .compose import insert_lens, lens_surfaces, reverse_surfaces, scale_surface, scale_system
 
 __version__ = "0.3.0"

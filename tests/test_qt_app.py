@@ -16,6 +16,7 @@ import matplotlib  # noqa: E402
 matplotlib.use("QtAgg")
 
 from PySide6.QtCore import QSettings, Qt  # noqa: E402
+from PySide6.QtWidgets import QDialogButtonBox  # noqa: E402
 
 import lensforge as lf  # noqa: E402
 from lensforge import optimize as opt  # noqa: E402
@@ -602,3 +603,149 @@ def test_customize_toolbar_cancel_keeps_toolbar(win, monkeypatch):
     monkeypatch.setattr(toolbar_dialog.ToolbarDialog, "exec", fake_exec)
     win.customize_toolbar()
     assert _toolbar_ids(win) == DEFAULT_TOOLBAR
+
+
+# ---------------------------------------------------------------------- help, icons, tooltips
+# These keep the help complete: a new menu command fails here until it has help text in
+# lensforge_qt/help_text.py and an icon in lensforge_qt/icons.py.
+def test_every_menu_command_has_help(win):
+    from lensforge_qt.help_text import lookup
+    missing = [iid for iid, _, _ in win.toolbar_items if not (lookup(iid) and all(lookup(iid)))]
+    assert missing == [], f"add help for these menu commands to lensforge_qt/help_text.py: {missing}"
+    for iid, _, a in win.toolbar_items:
+        summary = lookup(iid)[0]
+        assert a.statusTip() == summary
+        assert summary in a.toolTip() and a.whatsThis()
+
+
+def test_no_help_or_icon_for_commands_that_no_longer_exist(win):
+    from lensforge_qt import help_text as H, icons as I
+    from lensforge_qt.analyses import REGISTRY
+    ids = {iid for iid, _, _ in win.toolbar_items}
+    assert set(H.HELP) - ids == set()
+    assert set(I.ICONS) - ids == set()
+    assert set(H.ANALYSIS_HELP) == set(REGISTRY) == set(I.ANALYSIS_ICONS)
+    samples = {i[len(H.SAMPLE_PREFIX):] for i in ids if i.startswith(H.SAMPLE_PREFIX)}
+    assert set(H.SAMPLE_HELP) >= samples and set(I.SAMPLE_ICONS) >= samples
+
+
+def test_every_command_has_its_own_icon(win):
+    from lensforge_qt import icons
+    seen = {}
+    for iid, _, a in win.toolbar_items:
+        assert not a.icon().isNull(), f"add an icon for {iid} to lensforge_qt/icons.py"
+        seen.setdefault(icons.svg(iid), set()).add(id(a))
+    shared = [ids for ids in seen.values() if len(ids) > 1]
+    assert shared == [], "two different commands share an icon"
+    img = icons.render(icons.svg("Tools > Optimization"), 32)
+    assert sum(img.pixelColor(x, y).alpha() > 0 for x in range(32) for y in range(32)) > 50  # it draws
+
+
+def test_toolbar_buttons_show_icons_and_tooltips(win):
+    win.show_toolbar(True)
+    assert win.toolbar.toolButtonStyle() == Qt.ToolButtonIconOnly
+    for a in win.toolbar.actions():
+        if a.isSeparator():
+            continue
+        btn = win.toolbar.widgetForAction(a)
+        assert not btn.icon().isNull()
+        assert a.statusTip() and a.statusTip() in btn.toolTip()
+    opt_tip = win.toolbar_lookup["Tools > Optimization"].toolTip()
+    assert "Optimization" in opt_tip and "Ctrl+U" in opt_tip
+
+
+def test_no_two_commands_share_a_shortcut(win):
+    from PySide6.QtGui import QAction
+    keys = {}
+    for a in win.findChildren(QAction):
+        if a.shortcutContext() in (Qt.WidgetShortcut, Qt.WidgetWithChildrenShortcut):
+            continue  # editor-local keys (LDE and MFE both use Insert / Shift+Delete)
+        for sc in a.shortcuts():
+            keys.setdefault(sc.toString(), set()).add(id(a))
+    clashes = {k: v for k, v in keys.items() if k and len(v) > 1}
+    assert clashes == {}
+    rows = win.shortcut_rows()
+    assert ("Analysis", "Rays & Spots > Standard Spot Diagram", "Ctrl+D") in rows
+    assert any(r[1] == "Insert Lens" for r in rows)
+
+
+def test_toolbar_button_style_persists(win, tmp_path, monkeypatch):
+    from lensforge_qt import toolbar_dialog
+    from lensforge_qt.main_window import MainWindow
+
+    def fake_exec(dlg):
+        dlg.style.setCurrentIndex(dlg.style.findData("icons+text"))
+        return 1
+    monkeypatch.setattr(toolbar_dialog.ToolbarDialog, "exec", fake_exec)
+    win.customize_toolbar()
+    assert win.toolbar.toolButtonStyle() == Qt.ToolButtonTextUnderIcon
+    w2 = MainWindow(settings=QSettings(str(tmp_path / "settings.ini"), QSettings.IniFormat))
+    try:
+        assert w2.toolbar.toolButtonStyle() == Qt.ToolButtonTextUnderIcon
+    finally:
+        w2.doc.undo_stack.setClean()
+        w2.close()
+        w2.deleteLater()
+
+
+def test_help_browser(win):
+    dlg = win.help_contents("File > Insert Lens")
+    try:
+        text = dlg.page.toPlainText()
+        assert "Insert Lens" in text and "Scale factor" in text and "Ctrl+I" in text
+        dlg.filter.setText("zernike")
+        cur = dlg.tree.currentItem().data(0, Qt.UserRole)
+        assert "Zernike" in cur
+        dlg.filter.setText("")
+        assert dlg.show_command("Tools > Python Shell")
+        assert "Python" in dlg.page.toPlainText()
+        menu = dlg._find(dlg.tree.invisibleRootItem(), ":menu:Tools")
+        dlg.tree.setCurrentItem(menu)
+        assert "Optimization" in dlg.page.toPlainText() and "Tolerancing" in dlg.page.toPlainText()
+        assert win.help_contents() is dlg  # one help window
+    finally:
+        dlg.close()
+
+
+# ---------------------------------------------------------------------- insert lens
+def test_insert_lens_dialog_scaled_and_reversed(win, tmp_path):
+    from lensforge_qt.insert_lens_dialog import InsertLensDialog
+    src = lf.samples.achromat()
+    p = tmp_path / "doublet.lens.json"
+    lf.save(src, str(p))
+    win.doc.reset(lf.samples.singlet())
+    s0 = win.doc.system
+    opt.vary_curvatures(s0)  # references after the insertion point must move
+    win.doc.reset(s0)
+    n0, img_curv_vars = win.doc.system.num_surfaces, sorted(v.surface for v in opt.variables(win.doc.system))
+    dlg = InsertLensDialog(win.doc, at=2, start_dir=str(tmp_path), parent=win)
+    try:
+        dlg.load(str(p))
+        assert dlg.last.value() == 3 and dlg.buttons.button(QDialogButtonBox.Ok).isEnabled()
+        dlg.scale.setValue(0.5)
+        dlg.reverse.setChecked(True)
+        assert "Focal length of the inserted group" in dlg.info.text()
+        assert "N-SF" in dlg.preview.toPlainText() or "SF" in dlg.preview.toPlainText()
+        dlg.accept()
+    finally:
+        dlg.close()
+    s = win.doc.system
+    assert s.num_surfaces == n0 + 3
+    assert s.surfaces[2].radius == pytest.approx(-0.5 * src.surfaces[3].radius)
+    assert s.surfaces[4].thickness == pytest.approx(0.5 * src.surfaces[3].thickness)
+    assert sorted(v.surface for v in opt.variables(s)) == [i if i < 2 else i + 3 for i in img_curv_vars]
+    win.doc.undo_stack.undo()  # one undo step removes the whole insertion
+    assert win.doc.system.num_surfaces == n0
+
+
+def test_insert_lens_menu_and_bad_file(win, tmp_path, monkeypatch):
+    from lensforge_qt import insert_lens_dialog as M
+    bad = tmp_path / "bad.json"
+    bad.write_text("not a lens")
+    monkeypatch.setattr(M.InsertLensDialog, "exec", lambda self: 0)
+    dlg = win.insert_lens()
+    assert dlg.at.value() >= 1
+    dlg.load(str(bad))
+    assert "Cannot read" in dlg.info.text()
+    assert not dlg.buttons.button(QDialogButtonBox.Ok).isEnabled()
+    assert "File > Insert Lens" in [i for i, _, _ in win.toolbar_items]

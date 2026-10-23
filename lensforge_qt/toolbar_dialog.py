@@ -7,11 +7,16 @@ what gets stored in the settings, so a saved toolbar survives new menu items bei
 from __future__ import annotations
 
 from PySide6.QtCore import QItemSelectionModel, Qt
-from PySide6.QtWidgets import (QAbstractItemView, QDialog, QDialogButtonBox, QGridLayout, QLabel, QLineEdit,
-                               QListWidget, QListWidgetItem, QPushButton, QTreeWidget, QTreeWidgetItem,
+from PySide6.QtWidgets import (QAbstractItemView, QComboBox, QDialog, QDialogButtonBox, QGridLayout, QLabel, QLineEdit,
+                               QHBoxLayout, QListWidget, QListWidgetItem, QPushButton, QTreeWidget, QTreeWidgetItem,
                                QVBoxLayout)
 
 SEPARATOR = "|"
+#: settings key -> Qt button style (Customize Toolbar's "Buttons show" choice)
+BUTTON_STYLES = [("icons", Qt.ToolButtonIconOnly), ("icons+text", Qt.ToolButtonTextUnderIcon),
+                 ("icon+text beside", Qt.ToolButtonTextBesideIcon), ("text", Qt.ToolButtonTextOnly)]
+STYLE_LABELS = {"icons": "Icons only", "icons+text": "Icons with text below", "icon+text beside": "Icons with text beside",
+                "text": "Text only"}
 SEPARATOR_TEXT = "──────  separator  ──────"
 ID_ROLE = Qt.UserRole
 
@@ -50,7 +55,7 @@ def menu_items(menubar, skip=()) -> list[tuple[str, tuple[str, ...], object]]:
 class ToolbarDialog(QDialog):
     """Two lists: every menu command (left, grouped like the menus) and the toolbar's buttons (right)."""
 
-    def __init__(self, items, current, defaults, parent=None):
+    def __init__(self, items, current, defaults, parent=None, style="icons"):
         super().__init__(parent)
         self.setWindowTitle("Customize Toolbar")
         self.resize(760, 520)
@@ -98,6 +103,13 @@ class ToolbarDialog(QDialog):
             mid.addWidget(b)
         mid.addStretch(1)
 
+        self.style = QComboBox()
+        for key, _ in BUTTON_STYLES:
+            self.style.addItem(STYLE_LABELS[key], key)
+        i = self.style.findData(style)
+        self.style.setCurrentIndex(max(i, 0))
+        self.style.setToolTip("Hovering a button always shows what it does")
+
         bb = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
         bb.accepted.connect(self.accept)
         bb.rejected.connect(self.reject)
@@ -109,7 +121,12 @@ class ToolbarDialog(QDialog):
         g.addWidget(self.tree, 2, 0)
         g.addLayout(mid, 1, 1, 2, 1)
         g.addWidget(self.list, 1, 2, 2, 1)
-        g.addWidget(QLabel("Double-click a command to add or remove it; drag to reorder."), 3, 0, 1, 3)
+        g.addWidget(QLabel("Double-click a command to add or remove it; drag to reorder."), 3, 0, 1, 2)
+        sty = QHBoxLayout()
+        sty.addStretch(1)
+        sty.addWidget(QLabel("Buttons show:"))
+        sty.addWidget(self.style)
+        g.addLayout(sty, 3, 2)
         g.addWidget(bb, 4, 0, 1, 3)
         g.setColumnStretch(0, 1)
         g.setColumnStretch(2, 1)
@@ -128,9 +145,10 @@ class ToolbarDialog(QDialog):
                 parent = nodes[key]
             leaf = QTreeWidgetItem(parent, [path[-1]])
             leaf.setData(0, ID_ROLE, iid)
+            leaf.setIcon(0, action.icon())
+            tip = action.statusTip()
             sc = action.shortcut().toString()
-            if sc:
-                leaf.setToolTip(0, sc)
+            leaf.setToolTip(0, f"{tip} ({sc})" if sc and tip else tip or sc)
         self.tree.expandToDepth(0)
 
     def _apply_filter(self, text):
@@ -159,8 +177,13 @@ class ToolbarDialog(QDialog):
             it.setForeground(Qt.gray)
         else:
             it = QListWidgetItem(iid)
+            it.setIcon(self.items[iid][1].icon())
+            it.setToolTip(self.items[iid][1].statusTip())
         it.setData(ID_ROLE, iid)
         return it
+
+    def style_key(self) -> str:
+        return self.style.currentData()
 
     def ids(self) -> list[str]:
         return [self.list.item(i).data(ID_ROLE) for i in range(self.list.count())]

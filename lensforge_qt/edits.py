@@ -14,6 +14,7 @@ import math
 from dataclasses import MISSING, fields as dc_fields
 from typing import List, Tuple
 
+import lensforge as lf
 from lensforge import surfaces as S
 from lensforge import optimize as opt
 from lensforge.materials import ConstantIndex, Material, ModelGlass
@@ -312,6 +313,18 @@ def insert_surface(system, index: int, surface=None):
     index = max(1, min(index, system.image_index))
     system.insert(index, surface or S.Standard(thickness=0.0))
     _renumber(system, lambda i: i + 1 if i >= index else i)
+
+
+def insert_lens(system, source, at: int, **kw) -> range:
+    """Insert surfaces of another lens before row ``at`` (see :func:`lensforge.insert_lens`
+    for ``first``, ``last``, ``scale``, ``reverse``, ``keep_stop``), shifting variables,
+    solves and merit operands that refer to later surfaces."""
+    at = max(1, min(int(at), system.image_index))
+    n0 = system.num_surfaces
+    rng = lf.insert_lens(system, source, at=at, **kw)
+    n = system.num_surfaces - n0
+    _renumber(system, lambda i: i + n if i >= at else i)
+    return rng
 
 
 def delete_surface(system, index: int):

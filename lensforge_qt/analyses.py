@@ -260,7 +260,7 @@ def _spot_plot(fig, res, opts, system):
 
 
 register(AnalysisSpec("spot", "Standard Spot Diagram", "Rays & Spots", _spot_compute, _spot_plot,
-                      [FIELD_ALL, WAVE_ALL], shortcut="Ctrl+S", uses_rays=True))
+                      [FIELD_ALL, WAVE_ALL], shortcut="Ctrl+D", uses_rays=True))
 
 
 def _tfs_compute(system, field=0, wave=-1, steps=7, focus_range=0.0):
