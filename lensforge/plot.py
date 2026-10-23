@@ -58,6 +58,21 @@ def spot(result, ax=None, scale=1.0):
     return ax
 
 
+def point_source(result, ax=None, scale=1.0, relative=True):
+    """Image-plane rays from :func:`lensforge.analysis.point_source_trace` (vignetted
+    rays are dropped).  ``relative`` plots about the centroid."""
+    ax = _ax(ax, figsize=(4, 4))
+    v = result["valid"]
+    cx, cy = result["centroid"] if (relative and result["centroid"]) else (0.0, 0.0)
+    ax.plot((result["x"][v] - cx) * scale, (result["y"][v] - cy) * scale, ".", ms=2)
+    ax.set_aspect("equal")
+    x, y, z = result["point"]
+    ax.set_title(f"({x:.4g}, {y:.4g}, {z:.4g}) {result['wavelength']:.4f} um\n"
+                 f"RMS {result['rms_radius'] * scale:.4g}, {result['n_valid']}/{result['n_launched']} rays",
+                 fontsize=8)
+    return ax
+
+
 def ray_fan(result, axes=None):
     if axes is None:
         _, axes = _plt().subplots(1, 2, figsize=(8, 3.5), sharey=True)

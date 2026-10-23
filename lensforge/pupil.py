@@ -10,7 +10,8 @@ def pupil_grid(pattern: str = "hexapolar", n: int = 6, seed: int = 0):
 
     pattern: "hexapolar" (n rings), "square" (n x n grid clipped to the circle),
     "random" (n**2 uniform points), "dithered" (jittered square grid),
-    "ring" (n points on the edge), "cross" (n points on each axis fan).
+    "ring" (n points on the edge), "cross" (n points on each axis fan),
+    "yfan" / "xfan" (n points along one pupil axis).
     """
     p = pattern.lower()
     if p == "hexapolar":
@@ -43,4 +44,8 @@ def pupil_grid(pattern: str = "hexapolar", n: int = 6, seed: int = 0):
         v = np.linspace(-1, 1, n)
         z = np.zeros(n)
         return np.concatenate([v, z]), np.concatenate([z, v])
+    if p in ("yfan", "xfan", "fan_y", "fan_x"):
+        v = np.linspace(-1, 1, n)
+        z = np.zeros(n)
+        return (z, v) if "y" in p else (v, z)
     raise ValueError(f"Unknown pupil pattern {pattern!r}")

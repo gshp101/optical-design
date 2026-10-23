@@ -249,7 +249,7 @@ class RayGenerator:
 
     def _rays_from_aim(self, spec, ax, ay):
         """Rays toward aim points (ax, ay) on the paraxial entrance pupil plane."""
-        kind, a, b = spec
+        kind, a, b = spec[:3]
         ax, ay = np.broadcast_arrays(_as_array(ax), _as_array(ay))
         a = np.broadcast_to(a, ax.shape)
         b = np.broadcast_to(b, ax.shape)
@@ -264,9 +264,13 @@ class RayGenerator:
             ref = np.array([0.0, 0.0, z_ep])
             opl0 = self.n0 * np.einsum("ij,ij->i", P - ref, D)
         else:
-            t0 = self.system.object.thickness
-            P = np.stack([a, b, np.full(ax.shape, -t0)], axis=1)
+            # ("point", x, y) sits on the object surface; ("point", x, y, z) anywhere
+            # in object space (surface 1 frame)
+            z0 = spec[3] if len(spec) > 3 else -self.system.object.thickness
+            P = np.stack([a, b, np.full(ax.shape, z0)], axis=1)
             D = A - P
+            if z_ep < z0:  # virtual pupil in front of the point: light still travels +z
+                D = -D
             D /= np.linalg.norm(D, axis=1, keepdims=True)
             opl0 = np.zeros(ax.shape)
         return P, D, opl0

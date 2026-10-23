@@ -13,10 +13,11 @@ substitution, sensitivity and Monte Carlo tolerancing); see the tables below.
 
 ```bash
 pip install numpy pytest matplotlib # numpy is the only hard dependency; matplotlib only for lensforge.plot
-python -m pytest tests              # 198 tests (62 for the Qt app, offscreen), ~60 s
+python -m pytest tests              # 214 tests (62 for the Qt app, offscreen), ~60 s
 python examples/scripting_demo.py   # build, analyse and run a scripted design study
 python examples/optimization_demo.py # Cooke triplet: optimise, hammer, glass substitution, tolerancing (~2 min)
 python examples/analysis_demo.py    # report + 16-panel plot gallery (examples/output/analysis_gallery.png)
+python examples/point_source_demo.py # rays from 3-D object points to the image plane
 python -m lensforge some_lens.zmx [--report]  # prescription, first-order data, spots [full analysis report]
 ```
 
@@ -86,6 +87,7 @@ plotting helpers with the same names are in `lensforge.plot`.
 | Zemax analysis | lensforge |
 |---|---|
 | Ray fan, OPD fan, wavefront map, spot diagram | `ray_fan`, `opd_fan`, `wavefront`, `spot_diagram` |
+| Single ray trace from an arbitrary 3-D source point (any pupil pattern) | `point_source_trace` (see below) |
 | Through-focus / full-field spot | `through_focus_spot`, `full_field_spot` |
 | FFT PSF, Huygens PSF, PSF cross-section | `fft_psf`, `huygens_psf`, `psf_cross_section` |
 | Strehl ratio | `strehl(method="fft" / "huygens" / "marechal")` |
@@ -110,6 +112,36 @@ wavelengths land on one grid; PSFs are in fraction of energy per pixel and every
 its aberration-free counterpart, which gives the Strehl ratio and diffraction-limit curves.
 Encircled/ensquared energies are integrated exactly through the OTF (no pixelation error).
 If an aberrated PSF does not fit on the grid, the result's `warnings` says to raise `pupil_n`.
+
+### Point-source trace
+
+`point_source_trace` traces rays from one source point anywhere in object space, given as
+(x, y, z), through a pupil sampling pattern and returns where each ray lands on the image plane.
+The point does not have to lie on the object surface or match a field definition, so it covers
+near and off-axis points, through-object-distance studies and lenses whose object is at infinity.
+
+```python
+r = lf.point_source_trace("examples/arducam-lk004/CS2308ZM05.lens.json",  # lens or file path
+                          (0.0, 100.0, -500.0),   # x, y, z (lens units; surface 1 vertex at origin)
+                          wavelength=0.5876,      # um; an int picks a system wavelength; None = primary
+                          pattern="hexapolar", n=8,  # see below
+                          size=1.0,               # fraction of the pupil radius filled
+                          aiming="real")          # or "paraxial" (default: the lens's setting)
+r["x"], r["y"]          # image-plane coordinates per ray (NaN where a ray failed)
+r["valid"], r["vignetted"], r["status"], r["error_surface"], r["reasons"]
+r["px"], r["py"]        # normalised pupil coordinates of each ray
+r["chief"], r["centroid"], r["rms_radius"], r["geo_radius"], r["trace"]  # trace = full TraceResult
+import lensforge.plot as P; P.point_source(r, scale=1000)
+```
+
+* `point=(x, y)` puts the point on the object surface; `frame="object"` measures z from the object
+  surface instead of from surface 1.
+* Patterns (from `lf.pupil_grid`): `"hexapolar"` (n rings), `"square"` / `"grid"` (n x n),
+  `"random"` and `"dithered"` (n² points), `"ring"` (n points on the rim; with `size` < 1 a zone),
+  `"cross"`, `"xfan"`, `"yfan"` (n points per fan). Explicit `px=`, `py=` arrays override the pattern.
+* Status codes: 0 ok, 1 missed a surface, 2 total internal reflection, 3 clipped by an aperture;
+  `apertures=False` ignores clear apertures. Real aiming maps pupil coordinates onto the stop exactly,
+  which matters for wide-angle lenses with strong pupil aberration.
 
 ## Optimisation and tolerancing
 
