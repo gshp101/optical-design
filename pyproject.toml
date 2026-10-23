@@ -1,0 +1,21 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "lensforge"
+version = "0.2.0"
+description = "Sequential optical design: lens modelling, ray tracing, analysis and optimisation"
+requires-python = ">=3.9"
+dependencies = ["numpy>=1.21"]
+
+[project.optional-dependencies]
+plot = ["matplotlib"]
+gui = ["PySide6>=6.5", "matplotlib>=3.5"]
+test = ["pytest", "pytest-qt"]
+
+[project.gui-scripts]
+lensforge-qt = "lensforge_qt.app:main"
+
+[tool.setuptools.packages.find]
+include = ["lensforge*", "lensforge_qt*"]

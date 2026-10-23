@@ -1,0 +1,82 @@
+Starting design
+  # Type            Radius    Thickness     Material     Conic  Semi-Dia  Comment
+OBJ STANDARD      Infinity     Infinity                      0            OBJECT
+  1 STANDARD            40            6       N-SK16         0            
+  2 STANDARD          -200            8                      0            
+STO STANDARD           -40            2           F2         0            
+  4 STANDARD            40            8                      0            
+  5 STANDARD           200            6       N-SK16         0            
+  6 STANDARD      -39.0195      84.9317                      0            
+IMA STANDARD      Infinity            0                      0            IMAGE
+  # Type  Parameters                                 Bnd       Target   Weight         Value % Contrib
+  0 BLNK                                               =            0        0             0     0.000
+  1 MNCG                                               >            2        1             2     0.000
+  2 MNEG                                               >            1        1       2.33532     0.000
+  3 MNCA                                               >            1        1             8     0.000
+  4 RAYS  field=0, reference='centroid', rings=3,...   =            0        1      0.257096    45.757
+  5 RAYS  field=1, reference='centroid', rings=3,...   =            0        1      0.215803    32.239
+  6 RAYS  field=2, reference='centroid', rings=3,...   =            0        1      0.178285    22.004
+  7 DIST  field=1.0                                    =            0        0      0.314557     0.000
+Merit function: 0.21943474
+
+DLS: OptimizationResult(merit 0.219435 -> 0.0240533, 28 cycles, 282 evaluations, 6.99 s: converged)
+Hammer: GlobalResult(merit 0.0240533 -> 0.0240533, 6 trials, 0 improvements, 1 designs kept, 15.5 s)
+Glass substitution: SubstitutionResult(merit 0.0240533 -> 0.020279; S1: N-SK16, S3: SCHOTT:N-SF2, S5: SCHOTT:N-SK16; 12 glasses tried, 24.2 s)
+
+Optimised design
+  # Type            Radius    Thickness     Material     Conic  Semi-Dia  Comment
+OBJ STANDARD      Infinity     Infinity                      0            OBJECT
+  1 STANDARD       33.4933            6       N-SK16         0            
+  2 STANDARD       2866.57      12.1114                      0            
+STO STANDARD      -55.5996            2 SCHOTT:N-SF2         0            
+  4 STANDARD       29.5064      14.6858                      0            
+  5 STANDARD       101.789            6 SCHOTT:N-SK16         0            
+  6 STANDARD       -45.743      77.6361                      0            
+IMA STANDARD      Infinity            0                      0            IMAGE
+  # Type  Parameters                                 Bnd       Target   Weight         Value % Contrib
+  0 BLNK                                               =            0        0             0     0.000
+  1 MNCG                                               >            2        1             2     0.000
+  2 MNEG                                               >            1        1       1.46356     0.000
+  3 MNCA                                               >            1        1       12.1114     0.000
+  4 RAYS  field=0, reference='centroid', rings=3,...   =            0        1    0.00987475     7.904
+  5 RAYS  field=1, reference='centroid', rings=3,...   =            0        1     0.0241243    47.173
+  6 RAYS  field=2, reference='centroid', rings=3,...   =            0        1     0.0235419    44.923
+  7 DIST  field=1.0                                    =            0        0     -0.658372     0.000
+Merit function: 0.020279001
+EFL 100.0000  F/4.000  total track 118.433
+field   0.0 deg: RMS spot  10.52 um, MTF(50/mm) T/S = 0.174/0.174
+field  10.0 deg: RMS spot  32.92 um, MTF(50/mm) T/S = 0.320/0.125
+field  14.0 deg: RMS spot  27.87 um, MTF(50/mm) T/S = 0.033/0.087
+
+Sensitivity analysis (53 tolerances, back-focus compensator, 36.7 s)
+Criterion: RMS spot radius   nominal 0.0198891
+Tolerance                     Min    Crit(min)        Max    Crit(max)
+TETX S3-4                   -0.02    0.0192243       0.02     0.020773
+TETX S1-2                   -0.02    0.0204797       0.02    0.0194064
+TTHI S2                     -0.05    0.0204566       0.05    0.0193937
+TEDY S3-4                   -0.02    0.0203029       0.02    0.0199809
+TSDY S4                     -0.01    0.0202372       0.01    0.0196225
+TEDY S1-2                   -0.02    0.0197093       0.02    0.0202273
+TETX S5-6                   -0.02    0.0202121       0.02    0.0195982
+TSDY S3                     -0.01    0.0196811       0.01     0.020134
+TSTX S3                     -0.01    0.0196868       0.01    0.0201262
+TTHI S1                     -0.05    0.0201161       0.05    0.0196801
+TEDX S3-4                   -0.02    0.0201145       0.02    0.0201145
+TTHI S3                     -0.05    0.0197316       0.05    0.0200998
+Estimated performance (RSS): 0.0214881  (change 0.001599)
+
+Monte Carlo: 40 trials, criterion RMS spot radius
+  nominal 0.0198891   mean 0.020107   std 0.0004984   best 0.0188405   worst 0.0211582
+   98% of lenses <= 0.0210644
+   90% of lenses <= 0.0207837
+   80% of lenses <= 0.0206468
+   50% of lenses <= 0.0199997
+   20% of lenses <= 0.0197954
+   10% of lenses <= 0.0195666
+Yield for RMS spot <= 20.5 um: 75%
+TETX S1-2      -> +-0.059 deg
+TETY S1-2      -> +-0.164 deg
+TETX S3-4      -> +-0.041 deg
+TETY S3-4      -> +-0.113 deg
+TETX S5-6      -> +-0.104 deg
+TETY S5-6      -> +-0.200 deg

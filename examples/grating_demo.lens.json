@@ -1,0 +1,96 @@
+{
+  "format": "lensforge-1",
+  "name": "Transmission grating + ideal lens (600 lines/mm)",
+  "units": "mm",
+  "aperture": {
+    "type": "EPD",
+    "value": 10.0
+  },
+  "fields": {
+    "type": "ANGLE",
+    "values": [
+      {
+        "x": 0.0,
+        "y": 0.0,
+        "weight": 1.0,
+        "vdx": 0.0,
+        "vdy": 0.0,
+        "vcx": 0.0,
+        "vcy": 0.0
+      }
+    ]
+  },
+  "wavelengths": {
+    "values": [
+      {
+        "value": 0.5,
+        "weight": 1.0
+      },
+      {
+        "value": 0.55,
+        "weight": 1.0
+      },
+      {
+        "value": 0.6,
+        "weight": 1.0
+      }
+    ],
+    "primary": 1
+  },
+  "ray_aiming": "paraxial",
+  "notes": "",
+  "surfaces": [
+    {
+      "type": "STANDARD",
+      "curvature": 0.0,
+      "conic": 0.0,
+      "thickness": "inf",
+      "material": null,
+      "comment": "OBJECT"
+    },
+    {
+      "type": "DGRATING",
+      "curvature": 0.0,
+      "conic": 0.0,
+      "lines_per_um": 0.6,
+      "diffraction_order": 1.0,
+      "thickness": 0.0,
+      "material": null,
+      "stop": true,
+      "comment": "grating"
+    },
+    {
+      "type": "COORDBRK",
+      "decenter_x": 0.0,
+      "decenter_y": 0.0,
+      "tilt_x": -19.26877549148377,
+      "tilt_y": 0.0,
+      "tilt_z": 0.0,
+      "order": 0,
+      "thickness": 20.0,
+      "material": null,
+      "comment": "follow 1st order"
+    },
+    {
+      "type": "PARAXIAL",
+      "focal_length": 100.0,
+      "thickness": 100.0,
+      "material": null,
+      "comment": "ideal lens"
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.0,
+      "conic": 0.0,
+      "thickness": 0.0,
+      "material": null,
+      "comment": "IMAGE"
+    }
+  ],
+  "ui": {
+    "input_rays": {
+      "layout_waves": "all",
+      "layout_rays": 5
+    }
+  }
+}
