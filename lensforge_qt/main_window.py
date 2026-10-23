@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+import json
 import os
 
 from PySide6.QtCore import QSettings, Qt
 from PySide6.QtGui import QAction, QKeySequence
-from PySide6.QtWidgets import (QDockWidget, QFileDialog, QLabel, QMainWindow, QMessageBox, QUndoView)
+from PySide6.QtWidgets import (QDockWidget, QFileDialog, QLabel, QMainWindow, QMenu, QMessageBox,
+                               QUndoView)
 
 import lensforge as lf
 from lensforge import optimize as opt
@@ -20,9 +22,30 @@ from .mfe import MeritFunctionEditor
 from .opt_dialogs import OptimizationDialog, ToleranceDialog
 from .script_console import ScriptConsole
 from .system_dialog import SystemExplorer
+from .toolbar_dialog import SEPARATOR, ToolbarDialog, menu_items
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 EXAMPLES = os.path.join(os.path.dirname(HERE), "examples")
+# Toolbar buttons out of the box (menu paths, see toolbar_dialog.menu_items); View > Customize Toolbar changes them.
+DEFAULT_TOOLBAR = [
+    "File > New", "File > Open", "File > Save", SEPARATOR,
+    "Edit > Undo", "Edit > Redo", SEPARATOR,
+    "File > System Explorer", "Analysis > Layout > 2D Layout", "Analysis > Rays & Spots > Standard Spot Diagram",
+    "Analysis > Rays & Spots > Ray Aberration (Ray Fan)", "Analysis > Rays & Spots > Optical Path (OPD Fan)",
+    "Analysis > PSF & MTF > MTF", "Analysis > PSF & MTF > PSF", "Analysis > Aberrations > Field Curvature / Distortion",
+    "Analysis > Aberrations > Seidel Diagram", "Analysis > Reports > Prescription Data", SEPARATOR,
+    "Tools > Merit Function Editor", "Tools > Optimization", "Tools > Tolerancing", "Tools > Python Shell",
+]
+# Short button captions (the menu text is still the tooltip); anything else shows its menu text.
+SHORT_LABELS = {
+    "File > System Explorer": "Sys", "Analysis > Layout > 2D Layout": "Lay",
+    "Analysis > Rays & Spots > Standard Spot Diagram": "Spt", "Analysis > Rays & Spots > Ray Aberration (Ray Fan)": "Ray",
+    "Analysis > Rays & Spots > Optical Path (OPD Fan)": "Opd", "Analysis > PSF & MTF > MTF": "Mtf",
+    "Analysis > PSF & MTF > PSF": "Psf", "Analysis > Aberrations > Field Curvature / Distortion": "Fcd",
+    "Analysis > Aberrations > Seidel Diagram": "Sei", "Analysis > Reports > Prescription Data": "Pre",
+    "Tools > Merit Function Editor": "Mfe", "Tools > Optimization": "Opt", "Tools > Tolerancing": "Tol",
+    "Tools > Python Shell": "Py",
+}
 FILE_FILTER = "Lens files (*.json *.zmx);;lensforge JSON (*.json);;Zemax ZMX (*.zmx);;All files (*)"
 
 
@@ -130,7 +153,9 @@ class MainWindow(QMainWindow):
             "Remove all solves", lambda s: setattr(s, "solves", [])))
         self.a_console = A("&Python Shell", self.show_console, "F8")
         self.a_rays = A("&Input Rays...", self.input_rays, "F5")
-        self.a_toolbar = A("Toolbar", lambda on: self.toolbar.setVisible(on), checkable=True)
+        self.a_toolbar = A("Show &Toolbar", self.show_toolbar, checkable=True)
+        self.a_customize_tb = A("&Customize Toolbar...", self.customize_toolbar,
+                                tip="Choose which menu commands appear as toolbar buttons")
         self.a_undo_view = A("Undo History", lambda: (self.undo_dock.show(), self.undo_dock.raise_()))
         self.a_close_analyses = A("Close All Analysis Windows", self.close_analyses)
         self.a_tab_analyses = A("Tab All Analysis Windows", self.tab_analyses)
@@ -198,6 +223,8 @@ class MainWindow(QMainWindow):
 
         m = mb.addMenu("&View")
         m.addAction(self.a_toolbar)
+        m.addAction(self.a_customize_tb)
+        m.addSeparator()
         m.addAction(self.a_undo_view)
 
         m = mb.addMenu("&Help")
@@ -207,26 +234,71 @@ class MainWindow(QMainWindow):
     def _make_toolbar(self):
         tb = self.toolbar = self.addToolBar("Main")
         tb.setObjectName("toolbar_main")
-        tb.setVisible(False)  # everything is in the menus; View > Toolbar shows quick buttons
-        tb.visibilityChanged.connect(self.a_toolbar.setChecked)
         tb.setToolButtonStyle(Qt.ToolButtonTextOnly)
-        for a in (self.a_new, self.a_open, self.a_save):
-            tb.addAction(a)
-        tb.addSeparator()
-        tb.addAction(self.a_undo)
-        tb.addAction(self.a_redo)
-        tb.addSeparator()
-        tb.addAction(self._action("Sys", lambda: self.system_explorer(0), tip="System Explorer"))
-        for key, label in (("layout", "Lay"), ("spot", "Spt"), ("ray_fan", "Ray"), ("opd_fan", "Opd"),
-                           ("mtf", "Mtf"), ("psf", "Psf"), ("field_curvature", "Fcd"), ("seidel", "Sei"),
-                           ("prescription", "Pre")):
-            tb.addAction(self._action(label, lambda _=False, k=key: self.open_analysis(k),
-                                      tip=REGISTRY[key].title))
-        tb.addSeparator()
-        tb.addAction(self._action("Mfe", self.show_mfe, tip="Merit Function Editor"))
-        tb.addAction(self._action("Opt", self.optimization, tip="Optimization"))
-        tb.addAction(self._action("Tol", self.tolerancing, tip="Tolerancing"))
-        tb.addAction(self._action("Py", self.show_console, tip="Python script console"))
+        tb.visibilityChanged.connect(self.a_toolbar.setChecked)
+        tb.setContextMenuPolicy(Qt.CustomContextMenu)
+        tb.customContextMenuRequested.connect(lambda pos: self._toolbar_menu().exec(tb.mapToGlobal(pos)))
+        # ids are taken now, before any edit renames Undo/Redo ("Undo Change curvature")
+        self.toolbar_items = menu_items(self.menuBar(), skip=(self.recent_menu,))
+        self.toolbar_lookup = {iid: a for iid, _, a in self.toolbar_items}
+        for iid, label in SHORT_LABELS.items():
+            if iid in self.toolbar_lookup:
+                self.toolbar_lookup[iid].setIconText(label)
+        self.set_toolbar(self.toolbar_ids(), save=False)
+        on = self._setting_bool("toolbar/visible", False)  # off by default; everything is in the menus
+        tb.setVisible(on)
+        self.a_toolbar.setChecked(on)
+
+    def _toolbar_menu(self):
+        m = QMenu(self)
+        m.addAction(self.a_customize_tb)
+        m.addAction("Hide Toolbar", lambda: self.show_toolbar(False))
+        return m
+
+    def _setting_bool(self, key, default):
+        v = self.settings.value(key, default)
+        return v.lower() == "true" if isinstance(v, str) else bool(v)
+
+    def toolbar_ids(self) -> list[str]:
+        """The saved toolbar layout (menu paths and separators), or the default one."""
+        raw = self.settings.value("toolbar/items")
+        try:
+            ids = json.loads(raw) if raw else None
+        except (TypeError, ValueError):
+            ids = None
+        return list(DEFAULT_TOOLBAR) if not isinstance(ids, list) else [str(i) for i in ids]
+
+    def set_toolbar(self, ids, save=True):
+        """Rebuild the toolbar from menu paths; unknown paths (e.g. a removed command) are skipped."""
+        tb = self.toolbar
+        for a in tb.actions():  # not tb.clear(): under PySide that can delete the menus' own QActions
+            tb.removeAction(a)
+            if a.isSeparator():
+                a.deleteLater()
+        sep = False
+        for iid in ids:
+            if iid == SEPARATOR:
+                sep = True
+            elif iid in self.toolbar_lookup:
+                if sep and tb.actions():
+                    tb.addSeparator()
+                tb.addAction(self.toolbar_lookup[iid])
+                sep = False
+        if save:
+            self.settings.setValue("toolbar/items", json.dumps(list(ids)))
+
+    def show_toolbar(self, on=True):
+        self.toolbar.setVisible(bool(on))
+        self.a_toolbar.setChecked(bool(on))
+        self.settings.setValue("toolbar/visible", bool(on))
+
+    def customize_toolbar(self):
+        dlg = ToolbarDialog(self.toolbar_items, self.toolbar_ids(), DEFAULT_TOOLBAR, self)
+        if dlg.exec():
+            self.set_toolbar(dlg.ids())
+            self.show_toolbar(True)
+            self.statusBar().showMessage("Toolbar updated", 4000)
+        return dlg
 
     def _make_status(self):
         self.status_lens = QLabel()

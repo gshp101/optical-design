@@ -488,3 +488,117 @@ def test_grating_surface_in_editor(win):
     assert win.doc.system.variables[0].param == "lines_per_um"
     w = win.open_analysis("layout")
     assert w.error is None
+
+
+# ---------------------------------------------------------------------- customize toolbar
+def _toolbar_ids(w):
+    """Toolbar contents as menu paths ("|" for separators)."""
+    back = {id(a): iid for iid, _, a in w.toolbar_items}
+    return [back.get(id(a), "|") if not a.isSeparator() else "|" for a in w.toolbar.actions()]
+
+
+def test_toolbar_defaults_and_every_menu_command_listed(win):
+    from lensforge_qt.main_window import DEFAULT_TOOLBAR
+    ids = [i for i, _, _ in win.toolbar_items]
+    assert "File > Open" in ids and "Tools > Optimization" in ids and "Analysis > PSF & MTF > MTF" in ids
+    assert "View > Customize Toolbar" in ids
+    assert not any(i.startswith("File > Open Recent") for i in ids)  # dynamic entries are not offered
+    assert _toolbar_ids(win) == DEFAULT_TOOLBAR
+    assert not win.a_toolbar.isChecked()
+    assert win.toolbar_lookup["Tools > Optimization"].iconText() == "Opt"
+
+
+def test_toolbar_dialog_add_remove_reorder(win, qtbot):
+    from lensforge_qt.toolbar_dialog import SEPARATOR, ToolbarDialog
+    dlg = ToolbarDialog(win.toolbar_items, ["File > New", "File > Open"], ["File > Save"], win)
+    qtbot.addWidget(dlg)
+    assert dlg.ids() == ["File > New", "File > Open"]
+
+    # add a command picked in the menu tree (after the current row), and a separator
+    dlg.filter.setText("tolerancing")
+    leaf = [it for it in _tree_leaves(dlg.tree) if not it.isHidden()]
+    assert [it.data(0, Qt.UserRole) for it in leaf] == ["Tools > Tolerancing"]
+    leaf[0].setSelected(True)
+    dlg.add_selected()
+    dlg.add_selected()  # already there: not added twice
+    assert dlg.ids() == ["File > New", "File > Open", "Tools > Tolerancing"]
+    dlg.list.setCurrentRow(0)
+    dlg.insert_ids([SEPARATOR])
+    assert dlg.ids() == ["File > New", SEPARATOR, "File > Open", "Tools > Tolerancing"]
+
+    # move and remove
+    dlg.list.clearSelection()
+    dlg.list.item(3).setSelected(True)
+    dlg.move(-1)
+    assert dlg.ids() == ["File > New", SEPARATOR, "Tools > Tolerancing", "File > Open"]
+    dlg.list.clearSelection()
+    dlg.list.item(0).setSelected(True)
+    dlg.list.item(1).setSelected(True)
+    dlg.remove_selected()
+    assert dlg.ids() == ["Tools > Tolerancing", "File > Open"]
+    dlg.b_reset.click()
+    assert dlg.ids() == ["File > Save"]
+    dlg.set_ids(["No > Such > Command", "File > New"])  # stale entries are dropped
+    assert dlg.ids() == ["File > New"]
+
+
+def _tree_leaves(tree):
+    out, stack = [], [tree.invisibleRootItem()]
+    while stack:
+        n = stack.pop()
+        for i in range(n.childCount()):
+            c = n.child(i)
+            (out.append(c) if c.data(0, Qt.UserRole) else stack.append(c))
+    return out
+
+
+def test_customize_toolbar_applies_and_persists(win, qtbot, tmp_path, monkeypatch):
+    from lensforge_qt import toolbar_dialog
+    from lensforge_qt.main_window import MainWindow
+    chosen = ["Analysis > Layout > 2D Layout", "|", "Tools > Python Shell", "File > Save As"]
+
+    def fake_exec(dlg):
+        dlg.set_ids(chosen)
+        return 1
+    monkeypatch.setattr(toolbar_dialog.ToolbarDialog, "exec", fake_exec)
+    win.a_customize_tb.trigger()
+    assert _toolbar_ids(win) == chosen
+    assert win.a_toolbar.isChecked()
+
+    # the toolbar button runs the same command as the menu item
+    btn = win.toolbar.widgetForAction(win.toolbar_lookup["Analysis > Layout > 2D Layout"])
+    n = len(win.analysis_windows)
+    btn.click()
+    assert len(win.analysis_windows) == n + 1
+
+    # a new session (same settings file) gets the same toolbar, shown
+    w2 = MainWindow(settings=QSettings(str(tmp_path / "settings.ini"), QSettings.IniFormat))
+    try:
+        assert _toolbar_ids(w2) == chosen
+        assert w2.a_toolbar.isChecked()
+        w2.show_toolbar(False)
+        w2.set_toolbar([])
+        assert w2.toolbar.actions() == []
+    finally:
+        w2.doc.undo_stack.setClean()
+        w2.close()
+        w2.deleteLater()
+    w3 = MainWindow(settings=QSettings(str(tmp_path / "settings.ini"), QSettings.IniFormat))
+    try:
+        assert w3.toolbar.actions() == [] and not w3.a_toolbar.isChecked()
+    finally:
+        w3.doc.undo_stack.setClean()
+        w3.close()
+        w3.deleteLater()
+
+
+def test_customize_toolbar_cancel_keeps_toolbar(win, monkeypatch):
+    from lensforge_qt import toolbar_dialog
+    from lensforge_qt.main_window import DEFAULT_TOOLBAR
+
+    def fake_exec(dlg):
+        dlg.set_ids([])
+        return 0
+    monkeypatch.setattr(toolbar_dialog.ToolbarDialog, "exec", fake_exec)
+    win.customize_toolbar()
+    assert _toolbar_ids(win) == DEFAULT_TOOLBAR
