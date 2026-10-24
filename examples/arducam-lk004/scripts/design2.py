@@ -4,7 +4,7 @@ Resumable: the lens and the stage reached are checkpointed in WORK after every s
 usage: design2.py NAME [start.lens.json stage F fs]
 """
 import sys, os, json, math, time, copy
-sys.path.insert(0, "/mnt/project-files/optical-design")
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", ".."))
 import numpy as np
 import lensforge as lf
 from lensforge import optimize as opt
@@ -144,6 +144,7 @@ def corner_angle():
 
 VIG = os.environ.get("VIG") == "1"
 KEEP = float(os.environ.get('KEEP', '0.6'))   # fraction of the edge-field pupil (in y) the clear apertures must pass
+S_MAX = float(os.environ.get('S_MAX', '0.9'))  # largest sin(refraction angle) allowed for axial / kept edge rays
 from lensforge.optimize.operands import Block, gaussian_quadrature, _wave_set, is_symmetric
 from lensforge.raytrace import trace_rays, OK
 from lensforge.surfaces import CircularAperture
@@ -155,9 +156,12 @@ def set_apertures(system):
         system.surfaces[i].aperture = None
     hs = []
     for hy, py in ((0.0, 1.0), (1.0, KEEP), (1.0, -KEEP), (1.0, 0.0)):
-        r = trace_rays(system, 0.0, hy, 0.0, py, apertures=False)
-        hs.append(np.abs(r.positions[1:n + 1, 0, 1]))
-    h = np.nanmax(np.array(hs), axis=0) * 1.01 + 1e-3
+        for w in system.wavelengths:
+            r = trace_rays(system, 0.0, hy, 0.0, py, wavelength=w.value, apertures=False)
+            if r.status[0] != OK:   # never size apertures from a ray that TIRs or misses
+                raise RuntimeError(f"ray hy={hy} py={py} fails at surface {r.error_surface[0]}")
+            hs.append(np.abs(r.positions[1:n + 1, 0, 1]))
+    h = np.max(np.array(hs), axis=0) * 1.01 + 1e-3
     for i in range(1, n + 1):
         system.surfaces[i].aperture = CircularAperture(float(h[i - 1]))
     return float(np.nanmax(h))
@@ -173,6 +177,8 @@ def rays_vig(system, field=0, rings=2, arms=4):
     bundle = []
     for wl, w in zip(waves, ww):
         r = trace_rays(system, hx, hy, px, py, wavelength=wl)
+        if int(field) == 0 and not np.all(r.status == OK):
+            raise ValueError("axial rays blocked")   # vignetting is only allowed off axis
         bundle.append((w, r, r.status == OK))
     sw = sum((w * q * k).sum() for w, r, k in bundle)
     if sw == 0:
@@ -194,6 +200,20 @@ def transmitted(system, n=15):
     r = trace_rays(system, 0.0, 1.0, X[m], Y[m])
     return float(np.mean(r.status == OK))
 
+def tir_margin(system):
+    """sin(refraction angle) on every lens surface for axial and kept edge-field rays (> 1 is TIR)."""
+    n_lens = system.image_index - 3
+    vals = []
+    for hy, py in ((0.0, 0.5), (0.0, 0.75), (0.0, 0.9), (0.0, 1.0), (1.0, KEEP), (1.0, -KEEP)):
+        for w in system.wavelengths:
+            r = trace_rays(system, 0.0, hy, 0.0, py, wavelength=w.value, apertures=False)
+            nn = system.media(w.value)[0]
+            for k in range(1, n_lens + 1):
+                s = nn[k - 1] / nn[k] * np.linalg.norm(np.cross(r.directions[k - 1, 0], r.normals[k, 0]))
+                vals.append(s if np.isfinite(s) else 0.0)
+    vals = np.array(vals)
+    return Block(vals, np.ones_like(vals), np.zeros_like(vals))
+
 def vig_merit(mf):
     from lensforge.optimize.merit import Operand
     rows = [Operand("USER", sd_max, 1.0, "<", {"func": set_apertures}, "set clear apertures (max <= sd_max)")]
@@ -207,6 +227,7 @@ def vig_merit(mf):
         else:
             rows.append(r)
     mf.rows = rows
+    mf.add("USER", S_MAX, 10, bound="<", func=tir_margin, comment="refraction angle margin (no TIR)")
     mf.add("USER", 0.5, 1 if os.environ.get("LEAN") == "1" else 10, bound=">", func=transmitted, comment="edge field >= 50% unvignetted")
     return mf
 

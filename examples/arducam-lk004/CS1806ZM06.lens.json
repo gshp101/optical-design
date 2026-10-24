@@ -20,7 +20,7 @@
       },
       {
         "x": 0.0,
-        "y": 17.189106293953508,
+        "y": 15.87242937396141,
         "weight": 1.0,
         "vdx": 0.0,
         "vdy": 0.0,
@@ -29,7 +29,7 @@
       },
       {
         "x": 0.0,
-        "y": 25.78365944093026,
+        "y": 23.808644060942115,
         "weight": 1.0,
         "vdx": 0.0,
         "vdy": 0.0,
@@ -38,7 +38,7 @@
       },
       {
         "x": 0.0,
-        "y": 30.940391329116313,
+        "y": 28.570372873130538,
         "weight": 1.0,
         "vdx": 0.0,
         "vdy": 0.0,
@@ -47,7 +47,7 @@
       },
       {
         "x": 0.0,
-        "y": 34.378212587907015,
+        "y": 31.74485874792282,
         "weight": 1.0,
         "vdx": 0.0,
         "vdy": 0.0,
@@ -86,13 +86,13 @@
     },
     {
       "type": "STANDARD",
-      "curvature": 0.07630620229311598,
+      "curvature": 0.0688509510565449,
       "conic": 0.0,
-      "thickness": 2.7619783562927265,
-      "material": "SCHOTT:N-LAK22",
+      "thickness": 2.630028123788583,
+      "material": "SCHOTT:N-SK16",
       "aperture": {
         "type": "CIRCULAR",
-        "r_max": 6.121481651141178,
+        "r_max": 7.1822792188338624,
         "r_min": 0.0,
         "dx": 0.0,
         "dy": 0.0
@@ -100,13 +100,13 @@
     },
     {
       "type": "STANDARD",
-      "curvature": 0.21124799601859134,
+      "curvature": 0.1555743954248856,
       "conic": 0.0,
-      "thickness": 2.1355622508320056,
+      "thickness": 3.1108209235288147,
       "material": null,
       "aperture": {
         "type": "CIRCULAR",
-        "r_max": 3.9961905640190434,
+        "r_max": 5.180784273692273,
         "r_min": 0.0,
         "dx": 0.0,
         "dy": 0.0
@@ -114,13 +114,13 @@
     },
     {
       "type": "STANDARD",
-      "curvature": 0.14594878046298745,
+      "curvature": 0.015576812828689904,
       "conic": 0.0,
-      "thickness": 2.396274734774476,
+      "thickness": 2.998681188911064,
       "material": "SCHOTT:F2",
       "aperture": {
         "type": "CIRCULAR",
-        "r_max": 3.7523485609148794,
+        "r_max": 4.976728645098044,
         "r_min": 0.0,
         "dx": 0.0,
         "dy": 0.0
@@ -128,13 +128,13 @@
     },
     {
       "type": "STANDARD",
-      "curvature": -0.05245499152353497,
+      "curvature": -0.06792223843542801,
       "conic": 0.0,
-      "thickness": 0.1,
+      "thickness": 0.100000000000024,
       "material": null,
       "aperture": {
         "type": "CIRCULAR",
-        "r_max": 3.373983267220934,
+        "r_max": 4.566704196095313,
         "r_min": 0.0,
         "dx": 0.0,
         "dy": 0.0
@@ -142,13 +142,13 @@
     },
     {
       "type": "STANDARD",
-      "curvature": 0.21490230535779842,
+      "curvature": 0.1793869823569623,
       "conic": 0.0,
-      "thickness": 0.7996276235055383,
-      "material": "SCHOTT:N-K5",
+      "thickness": 0.7999718760644526,
+      "material": "SCHOTT:N-PK51",
       "aperture": {
         "type": "CIRCULAR",
-        "r_max": 2.343257531892363,
+        "r_max": 3.2953205974320277,
         "r_min": 0.0,
         "dx": 0.0,
         "dy": 0.0
@@ -156,13 +156,13 @@
     },
     {
       "type": "STANDARD",
-      "curvature": 0.12375202302475431,
+      "curvature": 0.22264144157990573,
       "conic": 0.0,
-      "thickness": 0.7995729749568122,
+      "thickness": 1.7540584826123107,
       "material": "SCHOTT:N-SF2",
       "aperture": {
         "type": "CIRCULAR",
-        "r_max": 2.115486592387315,
+        "r_max": 2.8049286371151676,
         "r_min": 0.0,
         "dx": 0.0,
         "dy": 0.0
@@ -170,13 +170,13 @@
     },
     {
       "type": "STANDARD",
-      "curvature": 0.49448130169883703,
+      "curvature": 0.3455329046122186,
       "conic": 0.0,
-      "thickness": 2.0473535363148585,
+      "thickness": 3.936695065514479,
       "material": null,
       "aperture": {
         "type": "CIRCULAR",
-        "r_max": 1.730833464008242,
+        "r_max": 1.9331389972616937,
         "r_min": 0.0,
         "dx": 0.0,
         "dy": 0.0
@@ -186,11 +186,11 @@
       "type": "STANDARD",
       "curvature": 0.0,
       "conic": 0.0,
-      "thickness": 0.639953281013575,
+      "thickness": 0.25,
       "material": null,
       "aperture": {
         "type": "CIRCULAR",
-        "r_max": 1.6512983869415203,
+        "r_max": 2.736248428718922,
         "r_min": 0.0,
         "dx": 0.0,
         "dy": 0.0
@@ -199,13 +199,13 @@
     },
     {
       "type": "STANDARD",
-      "curvature": -0.12840787562471284,
+      "curvature": -0.03891994626209043,
       "conic": 0.0,
-      "thickness": 1.0297667777622772,
-      "material": "SCHOTT:N-BAK4",
+      "thickness": 1.0610299588577605,
+      "material": "SCHOTT:N-SF57",
       "aperture": {
         "type": "CIRCULAR",
-        "r_max": 2.015299185855847,
+        "r_max": 2.762267332927617,
         "r_min": 0.0,
         "dx": 0.0,
         "dy": 0.0
@@ -213,13 +213,13 @@
     },
     {
       "type": "STANDARD",
-      "curvature": 0.15460448793100787,
+      "curvature": 0.11190492868522237,
       "conic": 0.0,
-      "thickness": 1.5446044788998765,
-      "material": "SCHOTT:N-PK51",
+      "thickness": 3.2119871189077527,
+      "material": "SCHOTT:N-SK16",
       "aperture": {
         "type": "CIRCULAR",
-        "r_max": 3.4984645998591843,
+        "r_max": 3.083666577649519,
         "r_min": 0.0,
         "dx": 0.0,
         "dy": 0.0
@@ -227,13 +227,13 @@
     },
     {
       "type": "STANDARD",
-      "curvature": -0.2958288747010384,
+      "curvature": -0.1944132681906995,
       "conic": 0.0,
       "thickness": 0.1,
       "material": null,
       "aperture": {
         "type": "CIRCULAR",
-        "r_max": 2.8157311640080525,
+        "r_max": 3.4551109751355606,
         "r_min": 0.0,
         "dx": 0.0,
         "dy": 0.0
@@ -241,13 +241,13 @@
     },
     {
       "type": "STANDARD",
-      "curvature": 0.030759996933207794,
+      "curvature": 0.07490705572047451,
       "conic": 0.0,
-      "thickness": 1.285900534085555,
-      "material": "SCHOTT:N-SK16",
+      "thickness": 1.9715854764203131,
+      "material": "SCHOTT:N-LAK22",
       "aperture": {
         "type": "CIRCULAR",
-        "r_max": 3.6460010171981474,
+        "r_max": 4.079642365646459,
         "r_min": 0.0,
         "dx": 0.0,
         "dy": 0.0
@@ -255,13 +255,13 @@
     },
     {
       "type": "STANDARD",
-      "curvature": -0.12049617987168076,
+      "curvature": -0.051852591570597635,
       "conic": 0.0,
       "thickness": 6.2299999999999995,
       "material": null,
       "aperture": {
         "type": "CIRCULAR",
-        "r_max": 3.697720665820672,
+        "r_max": 4.128515180957438,
         "r_min": 0.0,
         "dx": 0.0,
         "dy": 0.0
@@ -364,12 +364,6 @@
         "max": 20.0
       },
       {
-        "surface": 8,
-        "param": "thickness",
-        "min": 0.1,
-        "max": 20.0
-      },
-      {
         "surface": 9,
         "param": "curvature"
       },
@@ -417,6 +411,12 @@
         "surface": 13,
         "param": "thickness",
         "min": 0.3
+      },
+      {
+        "surface": 8,
+        "param": "thickness",
+        "min": 0.25,
+        "max": 20.0
       }
     ]
   }

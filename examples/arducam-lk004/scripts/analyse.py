@@ -1,6 +1,6 @@
 """Summarise the approximate Arducam LK004 designs and draw a gallery."""
 import sys, os, math, json
-sys.path.insert(0, "/mnt/project-files/optical-design")
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", ".."))
 import numpy as np
 import lensforge as lf
 import lensforge.plot as P
