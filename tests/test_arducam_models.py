@@ -26,3 +26,11 @@ def test_axial_beam_unvignetted(path):
 
 def test_models_found():
     assert len(MODELS) == 5
+
+
+@pytest.mark.parametrize("path", MODELS, ids=[os.path.basename(p).split(".")[0] for p in MODELS])
+def test_no_filter_and_focal_length_in_name(path):
+    lens = lf.load(path)
+    assert not any(s.material and s.curvature == 0 for s in lens.surfaces[1:lens.image_index])
+    f = int(os.path.basename(path).split("_")[1].removesuffix("mm.lens.json"))
+    assert lens.paraxial().efl == pytest.approx(f, abs=1e-3)

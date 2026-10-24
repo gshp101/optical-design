@@ -33,6 +33,11 @@ DG = [(54.153, 8.747, "N-SK16", 0), (152.522, 0.5, None, 0), (35.951, 14, "N-SK1
       (-36.98, 0.5, None, 0), (196.417, 6.858, "N-SK16", 0), (-67.148, 57.315, None, 0)]
 FRONT = [(150, 6, "N-BK7", 0), (50, 35, None, 0)]  # negative meniscus for the retrofocus lenses
 F0 = max(2 * fno, 2.8)
+FILTER = os.environ.get("FILTER") == "1"   # add a 1 mm N-BK7 IR filter / cover glass plate 0.8 mm before the sensor
+
+def last_lens(system):
+    """Index of the last powered lens surface (any flat plate after it is a filter)."""
+    return max(i for i in range(1, system.image_index) if system.surfaces[i].curvature != 0)
 
 def fresh():
     L = lf.OpticalSystem(f"Arducam {name} (approximation)")
@@ -40,13 +45,14 @@ def fresh():
     for r, t, m, st in (FRONT if retro else []) + DG:
         L.add_surface(radius=r if r else math.inf, thickness=t, material=m, stop=bool(st))
     n = L.image_index - 1
-    L.add_surface(radius=math.inf, thickness=1.0, material="N-BK7", comment="IR filter + cover glass (assumed)")
-    L.add_surface(radius=math.inf, thickness=0.8)
+    if FILTER:
+        L.add_surface(radius=math.inf, thickness=1.0, material="N-BK7", comment="IR filter + cover glass (assumed)")
+        L.add_surface(radius=math.inf, thickness=0.8)
     s = f / L.paraxial().efl
     for srf in L.surfaces[1:n + 1]:
         srf.curvature /= s
         srf.thickness *= s
-    L.surfaces[n].thickness = bfl - 1.8
+    L.surfaces[n].thickness = bfl - 1.8 if FILTER else bfl
     for i in range(1, n + 1):
         if i != L.stop_index:
             opt.set_variable(L, i, "curvature")
@@ -72,7 +78,7 @@ elif len(sys.argv) > 2:
     log("start from", sys.argv[2], state)
 else:
     L = fresh(); state = dict(stage="field", F=F0, fs=0.35 if retro else 1.0, td=td0); log("fresh start")
-nlens = L.image_index - 3
+nlens = last_lens(L)
 if os.environ.get("REGLASS") == "1":
     for i in range(1, nlens + 1):
         if L.surfaces[i].material:
@@ -151,7 +157,7 @@ from lensforge.surfaces import CircularAperture
 
 def set_apertures(system):
     """Size every lens clear aperture to pass the axial bundle and +-KEEP of the edge-field pupil."""
-    n = system.image_index - 3
+    n = last_lens(system)
     for i in range(1, n + 1):
         system.surfaces[i].aperture = None
     hs = []
@@ -202,7 +208,7 @@ def transmitted(system, n=15):
 
 def tir_margin(system):
     """sin(refraction angle) on every lens surface for axial and kept edge-field rays (> 1 is TIR)."""
-    n_lens = system.image_index - 3
+    n_lens = last_lens(system)
     vals = []
     for hy, py in ((0.0, 0.5), (0.0, 0.75), (0.0, 0.9), (0.0, 1.0), (1.0, KEEP), (1.0, -KEEP)):
         for w in system.wavelengths:
