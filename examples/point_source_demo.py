@@ -12,7 +12,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 import lensforge as lf  # noqa: E402
 
 here = os.path.dirname(__file__)
-lens_file = os.path.join(here, "arducam-lk004", "CS2308ZM05.lens.json")
+lens_file = os.path.join(here, "arducam-lk004", "CS2308ZM05_8mm.lens.json")
 lens = lf.load(lens_file)
 print(lens.prescription())
 

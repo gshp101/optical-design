@@ -1,6 +1,6 @@
 """Summarise the approximate Arducam LK004 designs and draw a gallery."""
 import sys, os, math, json
-sys.path.insert(0, "/mnt/project-files/optical-design")
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", ".."))
 import numpy as np
 import lensforge as lf
 import lensforge.plot as P
@@ -23,12 +23,12 @@ def angle_for_height(L, h):
 
 rows, lenses = [], []
 for name in SPEC:
-    p = f"{D}/{name}.lens.json"
+    p = f"{D}/{name}_{SPEC[name][0]}mm.lens.json"
     if os.environ.get("ONLY") and name not in os.environ["ONLY"]: continue
     if not os.path.exists(p): continue
     L = lf.load(p); lenses.append((name, L))
     par = L.paraxial()
-    lastlens = L.image_index - 3
+    lastlens = max(i for i in range(1, L.image_index) if L.surfaces[i].curvature != 0)
     bfd = sum(L.surfaces[i].thickness for i in range(lastlens, L.image_index))
     sd = max((s.aperture.r_max if s.aperture is not None else (s.semi_diameter or 0)) for s in L.surfaces[1:lastlens + 1])
     if all(s.semi_diameter is None for s in L.surfaces[1:lastlens + 1]) and L.surfaces[1].aperture is None: L.update_semi_diameters(margin=0.05); sd = max(s.semi_diameter for s in L.surfaces[1:lastlens + 1])

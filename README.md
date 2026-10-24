@@ -128,7 +128,7 @@ The point does not have to lie on the object surface or match a field definition
 near and off-axis points, through-object-distance studies and lenses whose object is at infinity.
 
 ```python
-r = lf.point_source_trace("examples/arducam-lk004/CS2308ZM05.lens.json",  # lens or file path
+r = lf.point_source_trace("examples/arducam-lk004/CS2308ZM05_8mm.lens.json",  # lens or file path
                           (0.0, 100.0, -500.0),   # x, y, z (lens units; surface 1 vertex at origin)
                           wavelength=0.5876,      # um; an int picks a system wavelength; None = primary
                           pattern="hexapolar", n=8,  # see below
