@@ -22,6 +22,14 @@ def main(argv=None):
     app.setApplicationName("lensforge")
     app.setOrganizationName("lensforge")
     app.setStyle("Fusion")
+    if sys.platform == "win32":
+        # without its own app id, Windows groups the window under python.exe and shows Python's icon
+        import ctypes
+        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID("lensforge.desktop")
+
+    from .icons import app_icon
+
+    app.setWindowIcon(app_icon())
 
     from .main_window import MainWindow, _sample_list
 

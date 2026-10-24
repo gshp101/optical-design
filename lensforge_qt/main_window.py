@@ -70,6 +70,7 @@ class MainWindow(QMainWindow):
         self.doc = LensDocument()
         self.analysis_windows = []
         self.dialogs = {}
+        self.setWindowIcon(icons.app_icon())
         self.setDockNestingEnabled(True)
         self.setDockOptions(QMainWindow.AnimatedDocks | QMainWindow.AllowTabbedDocks | QMainWindow.AllowNestedDocks)
         self.resize(1400, 880)
