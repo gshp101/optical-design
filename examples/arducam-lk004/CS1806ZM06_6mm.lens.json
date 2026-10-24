@@ -1,6 +1,6 @@
 {
   "format": "lensforge-1",
-  "name": "Arducam CS1806ZM06 (approximation)",
+  "name": "Arducam CS1806ZM06 (approximation after US6549344 Example 1)",
   "units": "mm",
   "aperture": {
     "type": "EPD",
@@ -12,7 +12,7 @@
       {
         "x": 0.0,
         "y": 0.0,
-        "weight": 1.0,
+        "weight": 1,
         "vdx": 0.0,
         "vdy": 0.0,
         "vcx": 0.0,
@@ -20,8 +20,8 @@
       },
       {
         "x": 0.0,
-        "y": 15.87242937396141,
-        "weight": 1.0,
+        "y": 17.093413356343355,
+        "weight": 1,
         "vdx": 0.0,
         "vdy": 0.0,
         "vcx": 0.0,
@@ -29,8 +29,8 @@
       },
       {
         "x": 0.0,
-        "y": 23.808644060942115,
-        "weight": 1.0,
+        "y": 25.640120034515032,
+        "weight": 1,
         "vdx": 0.0,
         "vdy": 0.0,
         "vcx": 0.0,
@@ -38,8 +38,8 @@
       },
       {
         "x": 0.0,
-        "y": 28.570372873130538,
-        "weight": 1.0,
+        "y": 30.76814404141804,
+        "weight": 1,
         "vdx": 0.0,
         "vdy": 0.0,
         "vcx": 0.0,
@@ -47,8 +47,8 @@
       },
       {
         "x": 0.0,
-        "y": 31.74485874792282,
-        "weight": 1.0,
+        "y": 34.18682671268671,
+        "weight": 0.5,
         "vdx": 0.0,
         "vdy": 0.0,
         "vcx": 0.0,
@@ -74,7 +74,7 @@
     "primary": 1
   },
   "ray_aiming": "paraxial",
-  "notes": "No IR filter or cover glass; back focus refocused for the plate's removal.",
+  "notes": "Approximation, not Arducam's design: US6549344 Example 1 rescaled to 6 mm and re-optimised at F/1.4 without its IR filter. No IR filter or cover glass.",
   "surfaces": [
     {
       "type": "STANDARD",
@@ -86,186 +86,126 @@
     },
     {
       "type": "STANDARD",
-      "curvature": 0.0688509510565449,
+      "curvature": 0.037780455699226285,
       "conic": 0.0,
-      "thickness": 2.630028123788583,
-      "material": "SCHOTT:N-SK16",
-      "aperture": {
-        "type": "CIRCULAR",
-        "r_max": 7.1822792188338624,
-        "r_min": 0.0,
-        "dx": 0.0,
-        "dy": 0.0
-      }
+      "thickness": 0.8175837232732172,
+      "material": "N-LAF34",
+      "semi_diameter": 9.41682097002479
     },
     {
       "type": "STANDARD",
-      "curvature": 0.1555743954248856,
+      "curvature": 0.08695085707938842,
       "conic": 0.0,
-      "thickness": 3.1108209235288147,
+      "thickness": 1.6754606683979167,
       "material": null,
-      "aperture": {
-        "type": "CIRCULAR",
-        "r_max": 5.180784273692273,
-        "r_min": 0.0,
-        "dx": 0.0,
-        "dy": 0.0
-      }
+      "semi_diameter": 8.157862645728997
     },
     {
       "type": "STANDARD",
-      "curvature": 0.015576812828689904,
+      "curvature": 0.04563484554898031,
       "conic": 0.0,
-      "thickness": 2.998681188911064,
-      "material": "SCHOTT:F2",
-      "aperture": {
-        "type": "CIRCULAR",
-        "r_max": 4.976728645098044,
-        "r_min": 0.0,
-        "dx": 0.0,
-        "dy": 0.0
-      }
+      "thickness": 2.4365452437630393,
+      "material": "N-SF6",
+      "semi_diameter": 8.137186661484133
     },
     {
       "type": "STANDARD",
-      "curvature": -0.06792223843542801,
+      "curvature": -0.016494062659094904,
       "conic": 0.0,
-      "thickness": 0.100000000000024,
+      "thickness": 0.10195619237552561,
       "material": null,
-      "aperture": {
-        "type": "CIRCULAR",
-        "r_max": 4.566704196095313,
-        "r_min": 0.0,
-        "dx": 0.0,
-        "dy": 0.0
-      }
+      "semi_diameter": 7.951865925795378
     },
     {
       "type": "STANDARD",
-      "curvature": 0.1793869823569623,
+      "curvature": 0.09612817650584206,
       "conic": 0.0,
-      "thickness": 0.7999718760644526,
-      "material": "SCHOTT:N-PK51",
-      "aperture": {
-        "type": "CIRCULAR",
-        "r_max": 3.2953205974320277,
-        "r_min": 0.0,
-        "dx": 0.0,
-        "dy": 0.0
-      }
+      "thickness": 2.097395344757877,
+      "material": "N-LAF34",
+      "semi_diameter": 5.822549842871639
     },
     {
       "type": "STANDARD",
-      "curvature": 0.22264144157990573,
+      "curvature": 0.22731662317720852,
       "conic": 0.0,
-      "thickness": 1.7540584826123107,
-      "material": "SCHOTT:N-SF2",
-      "aperture": {
-        "type": "CIRCULAR",
-        "r_max": 2.8049286371151676,
-        "r_min": 0.0,
-        "dx": 0.0,
-        "dy": 0.0
-      }
-    },
-    {
-      "type": "STANDARD",
-      "curvature": 0.3455329046122186,
-      "conic": 0.0,
-      "thickness": 3.936695065514479,
+      "thickness": 5.515983056718037,
       "material": null,
-      "aperture": {
-        "type": "CIRCULAR",
-        "r_max": 1.9331389972616937,
-        "r_min": 0.0,
-        "dx": 0.0,
-        "dy": 0.0
-      }
+      "semi_diameter": 3.8305878922165593
     },
     {
       "type": "STANDARD",
       "curvature": 0.0,
       "conic": 0.0,
-      "thickness": 0.25,
+      "thickness": 3.1759900175066815,
       "material": null,
-      "aperture": {
-        "type": "CIRCULAR",
-        "r_max": 2.736248428718922,
-        "r_min": 0.0,
-        "dx": 0.0,
-        "dy": 0.0
-      },
-      "stop": true
+      "semi_diameter": 3.5813162194197017,
+      "comment": "flare stop"
     },
     {
       "type": "STANDARD",
-      "curvature": -0.03891994626209043,
+      "curvature": -0.040057243766203766,
       "conic": 0.0,
-      "thickness": 1.0610299588577605,
-      "material": "SCHOTT:N-SF57",
-      "aperture": {
-        "type": "CIRCULAR",
-        "r_max": 2.762267332927617,
-        "r_min": 0.0,
-        "dx": 0.0,
-        "dy": 0.0
-      }
+      "thickness": 4.958425300503243,
+      "material": "N-LAK8",
+      "semi_diameter": 3.71932664260137
     },
     {
       "type": "STANDARD",
-      "curvature": 0.11190492868522237,
-      "conic": 0.0,
-      "thickness": 3.2119871189077527,
-      "material": "SCHOTT:N-SK16",
-      "aperture": {
-        "type": "CIRCULAR",
-        "r_max": 3.083666577649519,
-        "r_min": 0.0,
-        "dx": 0.0,
-        "dy": 0.0
-      }
-    },
-    {
-      "type": "STANDARD",
-      "curvature": -0.1944132681906995,
+      "curvature": -0.09872529989113038,
       "conic": 0.0,
       "thickness": 0.1,
       "material": null,
-      "aperture": {
-        "type": "CIRCULAR",
-        "r_max": 3.4551109751355606,
-        "r_min": 0.0,
-        "dx": 0.0,
-        "dy": 0.0
-      }
+      "semi_diameter": 4.796358650141129
     },
     {
       "type": "STANDARD",
-      "curvature": 0.07490705572047451,
+      "curvature": 0.0,
       "conic": 0.0,
-      "thickness": 1.9715854764203131,
-      "material": "SCHOTT:N-LAK22",
-      "aperture": {
-        "type": "CIRCULAR",
-        "r_max": 4.079642365646459,
-        "r_min": 0.0,
-        "dx": 0.0,
-        "dy": 0.0
-      }
-    },
-    {
-      "type": "STANDARD",
-      "curvature": -0.051852591570597635,
-      "conic": 0.0,
-      "thickness": 7.694282685426133,
+      "thickness": 0.1,
       "material": null,
-      "aperture": {
-        "type": "CIRCULAR",
-        "r_max": 4.128515180957438,
-        "r_min": 0.0,
-        "dx": 0.0,
-        "dy": 0.0
-      }
+      "semi_diameter": 5.104222190024881,
+      "stop": true,
+      "comment": "aperture stop"
+    },
+    {
+      "type": "STANDARD",
+      "curvature": -0.0032484357537381917,
+      "conic": 0.0,
+      "thickness": 0.7999906634747732,
+      "material": "N-SF6",
+      "semi_diameter": 5.120662248164575
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.11287931580265889,
+      "conic": 0.0,
+      "thickness": 3.1065120258282484,
+      "material": "N-LAK8",
+      "semi_diameter": 5.52596606865644
+    },
+    {
+      "type": "STANDARD",
+      "curvature": -0.05495077513035489,
+      "conic": 0.0,
+      "thickness": 3.3053295447019524,
+      "material": null,
+      "semi_diameter": 5.656384730683739
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.07798760313214641,
+      "conic": 0.0,
+      "thickness": 3.9444877182476192,
+      "material": "N-LAF34",
+      "semi_diameter": 6.7685653655049025
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.0010559249066450025,
+      "conic": 0.0,
+      "thickness": 7.68,
+      "material": null,
+      "semi_diameter": 6.405675571929625
     },
     {
       "type": "STANDARD",
@@ -273,6 +213,7 @@
       "conic": 0.0,
       "thickness": 0.0,
       "material": null,
+      "semi_diameter": 4.1640240771640595,
       "comment": "IMAGE"
     }
   ],
@@ -335,12 +276,8 @@
       {
         "surface": 6,
         "param": "thickness",
-        "min": 0.6,
-        "max": 8.0
-      },
-      {
-        "surface": 7,
-        "param": "curvature"
+        "min": 0.1,
+        "max": 20.0
       },
       {
         "surface": 7,
@@ -349,59 +286,79 @@
         "max": 20.0
       },
       {
-        "surface": 9,
+        "surface": 8,
         "param": "curvature"
-      },
-      {
-        "surface": 9,
-        "param": "thickness",
-        "min": 0.6,
-        "max": 8.0
-      },
-      {
-        "surface": 10,
-        "param": "curvature"
-      },
-      {
-        "surface": 10,
-        "param": "thickness",
-        "min": 0.6,
-        "max": 8.0
-      },
-      {
-        "surface": 11,
-        "param": "curvature"
-      },
-      {
-        "surface": 11,
-        "param": "thickness",
-        "min": 0.1,
-        "max": 20.0
-      },
-      {
-        "surface": 12,
-        "param": "curvature"
-      },
-      {
-        "surface": 12,
-        "param": "thickness",
-        "min": 0.6,
-        "max": 8.0
-      },
-      {
-        "surface": 13,
-        "param": "curvature"
-      },
-      {
-        "surface": 13,
-        "param": "thickness",
-        "min": 0.3
       },
       {
         "surface": 8,
         "param": "thickness",
-        "min": 0.25,
+        "min": 0.6,
+        "max": 8.0
+      },
+      {
+        "surface": 9,
+        "param": "curvature"
+      },
+      {
+        "surface": 9,
+        "param": "thickness",
+        "min": 0.1,
         "max": 20.0
+      },
+      {
+        "surface": 10,
+        "param": "thickness",
+        "min": 0.1,
+        "max": 20.0
+      },
+      {
+        "surface": 11,
+        "param": "curvature"
+      },
+      {
+        "surface": 11,
+        "param": "thickness",
+        "min": 0.6,
+        "max": 8.0
+      },
+      {
+        "surface": 12,
+        "param": "curvature"
+      },
+      {
+        "surface": 12,
+        "param": "thickness",
+        "min": 0.6,
+        "max": 8.0
+      },
+      {
+        "surface": 13,
+        "param": "curvature"
+      },
+      {
+        "surface": 13,
+        "param": "thickness",
+        "min": 0.1,
+        "max": 20.0
+      },
+      {
+        "surface": 14,
+        "param": "curvature"
+      },
+      {
+        "surface": 14,
+        "param": "thickness",
+        "min": 0.6,
+        "max": 8.0
+      },
+      {
+        "surface": 15,
+        "param": "curvature"
+      },
+      {
+        "surface": 15,
+        "param": "thickness",
+        "min": 0.3
       }
     ]
   }
