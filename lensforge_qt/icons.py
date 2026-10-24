@@ -313,3 +313,44 @@ def icon(item_id: str) -> QIcon:
         for size in (16, 24, 32, 48, 64):
             ic.addPixmap(QPixmap.fromImage(render(markup, size)))
     return ic
+
+
+# ------------------------------------------------------------------ application icon
+# "Forge": a lens glowing like hot metal above an anvil (chosen by Joe, 2026-10-24).
+APP_ICON = (
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" xmlns:c2pa="http://c2pa.org/manifest">'
+    '<metadata>'
+    '<c2pa:manifest>'
+    '</c2pa:manifest>'
+    '</metadata>'
+    '<defs>'
+    '<linearGradient id="g-bg" x1="0" y1="0" x2="0" y2="1">'
+    '<stop offset="0" stop-color="#2a1a14"/>'
+    '<stop offset="1" stop-color="#120b08"/>'
+    '</linearGradient>'
+    '<radialGradient id="g-hot" cx=".5" cy=".5">'
+    '<stop offset="0" stop-color="#fff3c4"/>'
+    '<stop offset=".45" stop-color="#ffb23a"/>'
+    '<stop offset="1" stop-color="#e2541c"/>'
+    '</radialGradient>'
+    '<radialGradient id="g-halo">'
+    '<stop offset="0" stop-color="#ff8a2a" stop-opacity=".55"/>'
+    '<stop offset="1" stop-color="#ff8a2a" stop-opacity="0"/>'
+    '</radialGradient>'
+    '</defs>'
+    '<rect width="256" height="256" rx="56" fill="url(#g-bg)"/>'
+    '<circle cx="128" cy="100" r="92" fill="url(#g-halo)"/>'
+    '<path d="M44 100H212" stroke="#ffcf7a" stroke-width="4" stroke-dasharray="10 9" opacity=".7"/>'
+    '<path d="M128 38C158.6 69.0 158.6 131.0 128 162C97.4 131.0 97.4 69.0 128 38z" fill="url(#g-hot)" stroke="#fff0c8" stroke-width="3"/>'
+    '<path d="M58 178H198L184 194H150V212H176V224H80V212H106V194H72z" fill="#4a3f3a" stroke="#6e625c" stroke-width="3" stroke-linejoin="round"/>'
+    '<path d="M58 178H198" stroke="#9a8e86" stroke-width="5" stroke-linecap="round"/>'
+    '</svg>'
+)
+
+
+def app_icon() -> QIcon:
+    """The LensForge window/taskbar icon, rendered at the usual platform sizes."""
+    ic = QIcon()
+    for size in (16, 24, 32, 48, 64, 128, 256):
+        ic.addPixmap(QPixmap.fromImage(render(APP_ICON, size)))
+    return ic

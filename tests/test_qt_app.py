@@ -749,3 +749,10 @@ def test_insert_lens_menu_and_bad_file(win, tmp_path, monkeypatch):
     assert "Cannot read" in dlg.info.text()
     assert not dlg.buttons.button(QDialogButtonBox.Ok).isEnabled()
     assert "File > Insert Lens" in [i for i, _, _ in win.toolbar_items]
+
+
+def test_app_icon(win):
+    from lensforge_qt import icons
+    assert not win.windowIcon().isNull()
+    img = icons.render(icons.APP_ICON, 32)
+    assert img.pixelColor(16, 12).alpha() == 255      # the glowing lens is drawn, not transparent
