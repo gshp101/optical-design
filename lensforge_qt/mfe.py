@@ -20,6 +20,7 @@ from lensforge import optimize as opt
 
 from . import edits as E
 from . import workers
+from .fonts import fixed_font
 
 COLUMNS = ["Type", "Parameters", "Bound", "Target", "Weight", "Value", "% Contrib", "Comment"]
 C_TYPE, C_PARAMS, C_BOUND, C_TARGET, C_WEIGHT, C_VALUE, C_CONTRIB, C_COMMENT = range(len(COLUMNS))
@@ -410,9 +411,7 @@ class OperandList(QDialog):
             it = QListWidgetItem(f"{k:6} {opt.OPERAND_INFO[k]}")
             it.setData(Qt.UserRole, k)
             self.list.addItem(it)
-        f = self.list.font()
-        f.setFamily("monospace")
-        self.list.setFont(f)
+        self.list.setFont(fixed_font(self.list.font()))
         self.filter.textChanged.connect(self._filter)
         self.list.itemDoubleClicked.connect(self._choose)
         bb = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
