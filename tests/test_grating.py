@@ -76,3 +76,19 @@ def test_grating_serialisation_and_zmx():
     assert z.surfaces[1].kind == "DGRATING" and z.surfaces[1].lines_per_um == 0.6
     r = z.trace(0, 0, 0, 0)
     assert r.directions[-1][0, 1] == pytest.approx(0.55 * 0.6)
+
+
+def test_rulings_rotated_by_coordinate_break_pair():
+    # A +90 / -90 degree z coordinate break pair around the grating turns the rulings parallel to y,
+    # so the beam is diffracted in x by the same angle (hyperspectral example layout).
+    s = lf.OpticalSystem("rotated grating")
+    s.set_aperture("EPD", 2.0)
+    s.set_wavelengths([0.7])
+    s.add_surface(lf.CoordinateBreak(tilt_z=90.0))
+    s.add_surface(lf.DiffractionGrating(lines_per_um=0.3, diffraction_order=1, stop=True))
+    s.add_surface(lf.CoordinateBreak(tilt_z=-90.0, thickness=10))
+    r = s.trace(0, 0, [0, 0.5, -1], [0, 0.3, 1])
+    D = r.directions[-1]
+    assert np.allclose(np.abs(D[:, 0]), 0.7 * 0.3, atol=1e-12)
+    assert np.allclose(D[:, 1], 0, atol=1e-12)
+    assert np.allclose(np.abs(r.image[:, 0] - r.positions[3][:, 0]), 10 * 0.21 / math.sqrt(1 - 0.21 ** 2))
