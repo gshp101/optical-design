@@ -99,6 +99,9 @@ ICONS = {
     "Edit > Insert Surface": TABLE + plus(16, 6.6, r=2.8),
     "Edit > Insert Surface After": TABLE + plus(16, 17.3, r=2.8),
     "Edit > Delete Surface": TABLE + cross(16, 11.8),
+    "Edit > Delete Surfaces": (TABLE + f'<rect x="3.6" y="9.6" width="16.8" height="10" fill="#f6c6c2" stroke="none"/>'
+                               + '<path d="M3 14.5h18M9 9v11"/>' + cross(16.5, 14.5, r=2.6)
+                               + f'<path d="M1.5 9.5v10" stroke="{RED}" stroke-width="1.6"/>'),
     "Edit > Toggle Variable": ('<rect x="3" y="5" width="18" height="14" rx="2" fill="#fff"/>'
                                + letter(12, 16.5, "V", ORANGE, 11)),
     "Edit > Choose Material": (f'<path d="M3 20L10 4l7 16z" fill="{GLASS}"/>'

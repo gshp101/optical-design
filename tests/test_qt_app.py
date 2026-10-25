@@ -127,6 +127,108 @@ def test_insert_delete_renumbers_variables_and_solves(win):
     assert not doc.system.variables and not doc.system.solves
 
 
+def _select_rows(w, first, last, col=3):
+    from PySide6.QtCore import QItemSelection, QItemSelectionModel
+    m = w.lde.model
+    w.lde.select(first, col)
+    w.lde.view.selectionModel().select(QItemSelection(m.index(first, col), m.index(last, col)),
+                                       QItemSelectionModel.ClearAndSelect)
+
+
+def test_delete_range_from_selection_confirms(win, monkeypatch):
+    from lensforge_qt.lde import LensDataEditor
+    win.doc.reset(lf.load(TRIPLET))
+    win.doc.modify("setup", lambda s: (opt.variables(s).clear(), opt.solves(s).clear(),
+                                       opt.set_variable(s, 3, "curvature"), opt.set_variable(s, 5, "curvature")))
+    radii = [x.radius for x in win.doc.system.surfaces]
+    asked = []
+
+    def refuse(self, first, last, lines):
+        asked.append((first, last, lines))
+        return False
+    monkeypatch.setattr(LensDataEditor, "confirm_delete", refuse)
+    _select_rows(win, 2, 4)
+    assert win.lde.selected_rows() == (2, 4)
+    assert win.lde.delete_surface() is False      # cancelled: nothing deleted
+    assert win.doc.system.num_surfaces == 8
+    first, last, lines = asked[0]
+    assert (first, last) == (2, 4)
+    assert lines[0].startswith("Surface 2:") and lines[2].startswith("Surface 4:")
+    assert any("1 variable" in t for t in lines) and any("stop" in t for t in lines)
+
+    monkeypatch.setattr(LensDataEditor, "confirm_delete", lambda *a: True)
+    _select_rows(win, 2, 4)
+    assert win.lde.delete_surface()
+    s = win.doc.system
+    assert [x.radius for x in s.surfaces] == radii[:2] + radii[5:]
+    assert [v.surface for v in s.variables] == [2]
+    assert win.doc.undo_stack.undoText() == "Delete surfaces 2-4"
+    win.doc.undo_stack.undo()                     # one undo step restores everything
+    assert [x.radius for x in win.doc.system.surfaces] == radii
+    assert sorted(v.surface for v in win.doc.system.variables) == [3, 5]
+
+
+def test_delete_range_selection_clamped_to_object_and_image(win, monkeypatch):
+    from lensforge_qt.lde import LensDataEditor
+    monkeypatch.setattr(LensDataEditor, "confirm_delete", lambda *a: True)
+    win.doc.reset(lf.load(TRIPLET))
+    _select_rows(win, 0, 4)                       # from the object row: only 1..4 go
+    assert win.lde.delete_surface()
+    assert win.doc.system.num_surfaces == 4
+    _select_rows(win, 2, 3)                       # onto the image row: only surface 2 goes
+    assert win.lde.delete_surface()
+    assert win.doc.system.num_surfaces == 3
+
+
+def test_delete_surfaces_dialog(win, qtbot, monkeypatch):
+    from lensforge_qt import lde
+    win.doc.reset(lf.load(TRIPLET))
+    seen = {}
+
+    def fake_exec(self):
+        seen["range"] = self.surface_range()
+        ok = self.bb.button(QDialogButtonBox.Ok)
+        self.last.setValue(1)                     # reversed range: preview says so, Delete disabled
+        seen["reversed_ok"] = ok.isEnabled()
+        self.first.setValue(4)
+        self.last.setValue(6)
+        seen["preview"] = self.preview.toPlainText()
+        seen["ok"] = ok.isEnabled()
+        return lde.QDialog.Accepted
+    monkeypatch.setattr(lde.DeleteSurfacesDialog, "exec", fake_exec)
+    confirmed = []
+    monkeypatch.setattr(lde.LensDataEditor, "confirm_delete", lambda self, f, l, lines: confirmed.append((f, l)) or True)
+    _select_rows(win, 2, 3)
+    assert win.lde.delete_surfaces_dialog()
+    assert seen["range"] == (2, 3)
+    assert not seen["reversed_ok"] and seen["ok"]
+    assert "Surface 4:" in seen["preview"] and "Surface 6:" in seen["preview"]
+    assert confirmed == [(4, 6)]
+    assert win.doc.system.num_surfaces == 5
+    # the spin boxes never offer the object or image surface
+    d = lde.DeleteSurfacesDialog(win.doc.system, 0, 99)
+    assert (d.first.minimum(), d.last.maximum()) == (1, win.doc.system.image_index - 1)
+    assert d.surface_range() == (1, win.doc.system.image_index - 1)
+    d.deleteLater()
+
+
+def test_confirm_delete_prompt_defaults_to_cancel(win, monkeypatch):
+    from lensforge_qt import lde
+    shown = {}
+
+    def fake_exec(box):
+        shown["text"], shown["info"] = box.text(), box.informativeText()
+        shown["default"] = box.defaultButton() is box.button(lde.QMessageBox.Cancel)
+        return lde.QMessageBox.Cancel
+    monkeypatch.setattr(lde.QMessageBox, "exec", fake_exec)
+    win.doc.reset(lf.load(TRIPLET))
+    assert win.lde.delete_range(2, 4) is False
+    assert shown["text"] == "Delete surfaces 2 to 4 (3 surfaces)?"
+    assert "Surface 3:" in shown["info"] and "Undo" in shown["info"]
+    assert shown["default"]
+    assert win.doc.system.num_surfaces == 8
+
+
 def test_variable_and_solve_markers(win):
     m = win.lde.model
     win.lde.toggle_variable(1, "radius")

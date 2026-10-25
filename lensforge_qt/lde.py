@@ -16,7 +16,7 @@ from PySide6.QtCore import QAbstractTableModel, QModelIndex, QRect, Qt, Signal
 from PySide6.QtGui import QAction, QColor, QFont, QKeySequence
 from PySide6.QtWidgets import (QAbstractItemView, QCheckBox, QComboBox, QCompleter, QDialog, QDialogButtonBox,
                                QFormLayout, QHBoxLayout, QHeaderView, QLabel, QLineEdit, QMenu, QMessageBox,
-                               QPlainTextEdit, QStyledItemDelegate, QTableView, QToolButton, QVBoxLayout, QWidget)
+                               QPlainTextEdit, QSpinBox, QStyledItemDelegate, QTableView, QToolButton, QVBoxLayout, QWidget)
 
 from lensforge import optimize as opt
 from lensforge import surfaces as S
@@ -346,7 +346,7 @@ class LensDataEditor(QWidget):
         self.view.setModel(self.model)
         self.view.setItemDelegate(MarkerDelegate(self.model, self.view))
         self.view.setSelectionBehavior(QAbstractItemView.SelectItems)
-        self.view.setSelectionMode(QAbstractItemView.SingleSelection)
+        self.view.setSelectionMode(QAbstractItemView.ContiguousSelection)  # shift-click selects a range
         self.view.setEditTriggers(QAbstractItemView.DoubleClicked | QAbstractItemView.EditKeyPressed
                                   | QAbstractItemView.AnyKeyPressed)
         self.view.verticalHeader().setVisible(False)
@@ -383,6 +383,7 @@ class LensDataEditor(QWidget):
         self.act_insert = act("Insert Surface", self.insert_before, "Insert")
         self.act_insert_after = act("Insert Surface After", self.insert_after, "Ctrl+Insert")
         self.act_delete = act("Delete Surface", self.delete_surface, "Shift+Delete")
+        self.act_delete_range = act("Delete Surfaces...", self.delete_surfaces_dialog, "Ctrl+Shift+Delete")
         self.act_variable = act("Toggle Variable", self.toggle_variable, "Ctrl+Shift+V")
         self.act_props = act("Surface Properties...", self.surface_properties, "Ctrl+Shift+P")
         self.act_material = act("Choose Material...", self.choose_material, "Ctrl+G")
@@ -409,10 +410,65 @@ class LensDataEditor(QWidget):
         if self.doc.modify(f"Insert surface {row}", lambda s: E.insert_surface(s, row)):
             self.select(row)
 
+    def selected_rows(self):
+        """First and last row of the selection (the current row if nothing is selected)."""
+        rows = sorted({i.row() for i in self.view.selectionModel().selectedIndexes()})
+        if not rows:
+            row, _ = self.current()
+            return row, row
+        return rows[0], rows[-1]
+
     def delete_surface(self):
-        row, _ = self.current()
+        """Delete the selected surface, or all selected surfaces (after confirmation)."""
+        first, last = self.selected_rows()
+        if first != last:
+            # a selection running onto the object or image row deletes the surfaces between
+            first, last = max(first, 1), min(last, self.doc.system.image_index - 1)
+            if first < last:
+                return self.delete_range(first, last)
+        row = first
         if self.doc.modify(f"Delete surface {row}", lambda s: E.delete_surface(s, row)):
             self.select(row)
+            return True
+        return False
+
+    def delete_surfaces_dialog(self):
+        first, last = self.selected_rows()
+        dlg = DeleteSurfacesDialog(self.doc.system, first, last, self)
+        if dlg.exec() != QDialog.Accepted:
+            return False
+        return self.delete_range(*dlg.surface_range())
+
+    def confirm_delete(self, first, last, lines):
+        """Ask before deleting surfaces ``first``..``last``; ``lines`` say what goes."""
+        n = last - first + 1
+        what = f"surface {first}" if n == 1 else f"surfaces {first} to {last} ({n} surfaces)"
+        box = QMessageBox(QMessageBox.Warning, "Delete Surfaces", f"Delete {what}?", parent=self)
+        shown = lines if len(lines) <= 14 else lines[:12] + [f"... and {len(lines) - 12} more (see Details)"]
+        box.setInformativeText("\n".join(shown) + "\n\nYou can undo this with Edit > Undo.")
+        if len(lines) > 14:
+            box.setDetailedText("\n".join(lines))
+        box.setStandardButtons(QMessageBox.Yes | QMessageBox.Cancel)
+        box.button(QMessageBox.Yes).setText("Delete")
+        box.setDefaultButton(QMessageBox.Cancel)
+        return box.exec() == QMessageBox.Yes
+
+    def delete_range(self, first, last):
+        """Delete surfaces ``first``..``last`` as one undoable edit, once the user confirms."""
+        try:
+            lines = E.describe_deletion(self.doc.system, first, last)
+        except ValueError as e:
+            self.statusMessage.emit(f"Delete Surfaces: {e}")
+            return False
+        if not self.confirm_delete(first, last, lines):
+            return False
+        text = f"Delete surface {first}" if first == last else f"Delete surfaces {first}-{last}"
+        if self.doc.modify(text, lambda s: E.delete_surfaces(s, first, last)):
+            self.select(first)
+            n = last - first + 1
+            self.statusMessage.emit(f"Deleted {n} surface{'s' if n > 1 else ''}")
+            return True
+        return False
 
     def make_stop(self, row):
         self.doc.modify(f"Stop on surface {row}", lambda s: E.set_stop(s, row))
@@ -534,7 +590,55 @@ class LensDataEditor(QWidget):
         m.addAction(self.act_insert)
         m.addAction(self.act_insert_after)
         m.addAction(self.act_delete)
+        m.addAction(self.act_delete_range)
         m.exec(self.view.viewport().mapToGlobal(pos))
+
+
+class DeleteSurfacesDialog(QDialog):
+    """Choose a contiguous range of surfaces to delete, with a preview of what goes."""
+
+    def __init__(self, system, first, last, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("Delete Surfaces")
+        self.system = system
+        hi = max(1, system.image_index - 1)
+        self.first, self.last = QSpinBox(), QSpinBox()
+        for sb, v in ((self.first, first), (self.last, last)):
+            sb.setRange(1, hi)
+            sb.setValue(max(1, min(v, hi)))
+            sb.valueChanged.connect(self._update)
+        form = QFormLayout()
+        form.addRow("From surface", self.first)
+        form.addRow("To surface", self.last)
+        lab = QLabel(f"Surfaces 1 to {hi} can be deleted; the object and image surfaces cannot. "
+                     "You will be asked to confirm.")
+        lab.setWordWrap(True)
+        self.preview = QPlainTextEdit(readOnly=True)
+        self.preview.setMinimumHeight(140)
+        self.bb = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        self.bb.button(QDialogButtonBox.Ok).setText("Delete...")
+        self.bb.accepted.connect(self.accept)
+        self.bb.rejected.connect(self.reject)
+        lay = QVBoxLayout(self)
+        lay.addWidget(lab)
+        lay.addLayout(form)
+        lay.addWidget(QLabel("Will be deleted:"))
+        lay.addWidget(self.preview)
+        lay.addWidget(self.bb)
+        self.setMinimumWidth(460)
+        self._update()
+
+    def surface_range(self):
+        return self.first.value(), self.last.value()
+
+    def _update(self):
+        ok = self.system.image_index > 1
+        try:
+            text = "\n".join(E.describe_deletion(self.system, *self.surface_range()))
+        except ValueError as e:
+            text, ok = str(e), False
+        self.preview.setPlainText(text)
+        self.bb.button(QDialogButtonBox.Ok).setEnabled(ok)
 
 
 class SolveDialog(QDialog):

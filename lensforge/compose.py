@@ -1,4 +1,5 @@
-"""Combine lenses: scale a prescription, reverse surface order, insert one lens into another.
+"""Combine lenses: scale a prescription, reverse surface order, insert one lens into another,
+delete a range of surfaces.
 
 >>> import lensforge as lf
 >>> sys = lf.samples.singlet()
@@ -6,7 +7,10 @@
 ...               copy_semi_diameters=True)
 range(3, 6)
 
-All three work on surface lists from any lensforge system, so the same calls serve
+>>> lf.delete_surfaces(sys, 3, 5)        # surfaces 3, 4 and 5; variables etc. renumbered
+3
+
+These work on surface lists from any lensforge system, so the same calls serve
 "Insert Lens" in the desktop app and scripts.
 """
 
@@ -232,3 +236,79 @@ def insert_lens(target, source, at: Optional[int] = None, first: int = 1, last: 
     for i, s in enumerate(group):
         target.insert(at + i, s)
     return range(at, at + len(group))
+
+
+# ---------------------------------------------------------------------------
+# Surface references (variables, solves, merit operands) and deleting surfaces
+# ---------------------------------------------------------------------------
+
+_SOLVE_REFS = ("surface", "from_surface", "center_surface")
+_OPERAND_REFS = ("surf", "surf2")
+
+
+def renumber_surface_refs(system, fn, operand_fn=None):
+    """Apply ``fn(old_index) -> new index or None (deleted)`` to every surface reference.
+
+    Variables and solves pointing at a deleted surface are removed; merit
+    operands keep their row and are mapped with ``operand_fn`` (default ``fn``)."""
+    from . import optimize as opt
+    operand_fn = operand_fn or fn
+    vs = opt.variables(system)
+    keep = []
+    for v in vs:
+        n = fn(v.surface)
+        if n is not None:
+            v.surface = n
+            keep.append(v)
+    vs[:] = keep
+    sl = opt.solves(system)
+    keep = []
+    for x in sl:
+        refs = {name: fn(getattr(x, name)) for name in _SOLVE_REFS if isinstance(getattr(x, name, None), int)}
+        if all(n is not None for n in refs.values()):
+            for name, n in refs.items():
+                setattr(x, name, n)
+            keep.append(x)
+    sl[:] = keep
+    mf = getattr(system, "merit_function", None)
+    if mf is not None:
+        for row in mf.rows:
+            for name in _OPERAND_REFS:
+                v = row.params.get(name)
+                if isinstance(v, int) and not isinstance(v, bool):
+                    row.params[name] = operand_fn(v)
+
+
+def check_surface_range(system, first: int, last: Optional[int] = None):
+    """Validate a range of deletable surfaces; returns ``(first, last)`` as ints."""
+    first = int(first)
+    last = first if last is None else int(last)
+    if first > last:
+        raise ValueError(f"the first surface ({first}) is after the last ({last})")
+    if first <= 0 or last >= system.image_index:
+        raise ValueError("the object and image surfaces cannot be deleted "
+                         f"(choose surfaces 1..{system.image_index - 1})")
+    return first, last
+
+
+def delete_surfaces(system, first: int, last: Optional[int] = None) -> int:
+    """Delete surfaces ``first``..``last`` (inclusive; ``last`` defaults to ``first``).
+
+    The object and image surfaces cannot be deleted. Variables and solves that refer
+    to a deleted surface are dropped, later surface numbers in variables, solves and
+    merit operands move down, and merit operands that referred to a deleted surface
+    move to the surface before the range. If the stop was deleted, the surface that
+    takes the first deleted surface's place becomes the stop. Returns the number of
+    surfaces deleted.
+    """
+    first, last = check_surface_range(system, first, last)
+    n = last - first + 1
+    had_stop = any(system.surfaces[i].stop for i in range(first, last + 1))
+    for i in range(last, first - 1, -1):
+        system.remove(i)
+    renumber_surface_refs(system,
+                          lambda i: i if i < first else (None if i <= last else i - n),
+                          lambda i: i if i < first else (first - 1 if i <= last else i - n))
+    if had_stop:
+        system.stop_index = max(1, min(first, system.image_index - 1))
+    return n
