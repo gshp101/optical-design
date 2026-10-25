@@ -62,6 +62,12 @@ def with_gap(d, gap):
     return d
 
 
+def with_lines(d, lines_per_um):
+    d = copy.deepcopy(d)
+    d["surfaces"][GRATING]["lines_per_um"] = lines_per_um
+    return d
+
+
 lens = lf.OpticalSystem.from_dict(data)
 
 print("1. The grating obeys sin(theta) = m lambda T, turned into x by the z breaks")
@@ -107,10 +113,11 @@ for w, a in zip(WAVES, angles):
     print(f"   {w} um: {(17 + ep_behind_36) * math.tan(math.radians(a)):.1f} mm offset "
           f"(beam radius 1.55 mm, camera entrance pupil radius about {ep_r:.2f} mm)")
 
-print("\n5. Throughput of the whole system (slit centre and both slit ends)")
+print("\n5. Throughput of the whole system (slit centre and both slit ends); the bench has a 5 mm gap")
 for label, d in [("as in the file (17 mm gap)", data),
                  ("file, hard apertures removed", without_apertures(data))] + \
         [(f"gap {g:2d} mm", with_gap(data, g)) for g in (10, 5, 2, 0)] + \
-        [(f"gap {g:2d} mm, no hard apertures", without_apertures(with_gap(data, g))) for g in (0,)]:
+        [(f"gap {g:2d} mm, no hard apertures", without_apertures(with_gap(data, g))) for g in (5, 0)] + \
+        [(f"gap  5 mm, {t} lines/um", with_lines(with_gap(data, 5), t)) for t in (0.15, 0.05)]:
     pct, top = throughput(lf.OpticalSystem.from_dict(d))
     print(f"   {label:32s} {pct}   [{top}]")
