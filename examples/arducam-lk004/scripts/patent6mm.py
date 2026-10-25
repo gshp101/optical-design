@@ -22,6 +22,7 @@ BFD = 8.03 - 0.35              # published back focus, less the removed filter p
 TRACK = 40.0                   # first surface to image
 DIST = 3.0                     # |distortion| at the sensor corner, percent
 SD_MAX = 12.0                  # front element clear semi-diameter (28 mm barrel)
+EDGE_GLASS, EDGE_AIR = 0.8, 0.3  # minimum edge thicknesses, mm
 
 # US6549344 Example 1, f' = 1: radius, thickness, glass. Surfaces 7 and 10 are the flare and aperture
 # stops; the patent's last two surfaces (a 0.81 thick filter, nd 1.5163) are left out.
@@ -73,7 +74,8 @@ def set_fields(L):
 def merit(L, final):
     n = L.image_index - 1
     mf = opt.default_merit(L, "spot", rings=3, arms=6)
-    mf.add("MNCG", 0.8, 1); mf.add("MNCA", 0.1, 1); mf.add("MNEG", 0.5, 1)
+    mf.add("MNCG", 0.8, 1); mf.add("MNCA", 0.1, 1)
+    mf.add("MNEG", EDGE_GLASS, 10); mf.add("MNEA", EDGE_AIR, 10)   # edges from 5%-padded clear apertures
     mf.add("EFFL", F, -1)
     if final:
         mf.add("TTHI", BFD, -1, surf=n, surf2=n, comment="back focus")

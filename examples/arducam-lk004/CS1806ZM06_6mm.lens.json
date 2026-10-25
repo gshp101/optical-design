@@ -20,7 +20,7 @@
       },
       {
         "x": 0.0,
-        "y": 17.093413356343355,
+        "y": 17.240862301506994,
         "weight": 1,
         "vdx": 0.0,
         "vdy": 0.0,
@@ -29,7 +29,7 @@
       },
       {
         "x": 0.0,
-        "y": 25.640120034515032,
+        "y": 25.86129345226049,
         "weight": 1,
         "vdx": 0.0,
         "vdy": 0.0,
@@ -38,7 +38,7 @@
       },
       {
         "x": 0.0,
-        "y": 30.76814404141804,
+        "y": 31.03355214271259,
         "weight": 1,
         "vdx": 0.0,
         "vdy": 0.0,
@@ -47,7 +47,7 @@
       },
       {
         "x": 0.0,
-        "y": 34.18682671268671,
+        "y": 34.48172460301399,
         "weight": 0.5,
         "vdx": 0.0,
         "vdy": 0.0,
@@ -86,126 +86,126 @@
     },
     {
       "type": "STANDARD",
-      "curvature": 0.037780455699226285,
+      "curvature": 0.04582552977695022,
       "conic": 0.0,
-      "thickness": 0.8175837232732172,
+      "thickness": 2.73240142620301,
       "material": "N-LAF34",
-      "semi_diameter": 9.41682097002479
+      "semi_diameter": 9.649599067185534
     },
     {
       "type": "STANDARD",
-      "curvature": 0.08695085707938842,
+      "curvature": 0.10582056985883001,
       "conic": 0.0,
-      "thickness": 1.6754606683979167,
+      "thickness": 3.032518097456876,
       "material": null,
-      "semi_diameter": 8.157862645728997
+      "semi_diameter": 7.331218843580071
     },
     {
       "type": "STANDARD",
-      "curvature": 0.04563484554898031,
+      "curvature": 0.05217736967321709,
       "conic": 0.0,
-      "thickness": 2.4365452437630393,
+      "thickness": 2.3696462332972783,
       "material": "N-SF6",
-      "semi_diameter": 8.137186661484133
+      "semi_diameter": 6.998283487262289
     },
     {
       "type": "STANDARD",
-      "curvature": -0.016494062659094904,
+      "curvature": -0.016930340909795703,
       "conic": 0.0,
-      "thickness": 0.10195619237552561,
+      "thickness": 0.1,
       "material": null,
-      "semi_diameter": 7.951865925795378
+      "semi_diameter": 6.722115863985135
     },
     {
       "type": "STANDARD",
-      "curvature": 0.09612817650584206,
+      "curvature": 0.09241041646318228,
       "conic": 0.0,
-      "thickness": 2.097395344757877,
+      "thickness": 2.001271137213221,
       "material": "N-LAF34",
-      "semi_diameter": 5.822549842871639
+      "semi_diameter": 5.207014790060177
     },
     {
       "type": "STANDARD",
-      "curvature": 0.22731662317720852,
+      "curvature": 0.2487827241105107,
       "conic": 0.0,
-      "thickness": 5.515983056718037,
+      "thickness": 4.7272631054961884,
       "material": null,
-      "semi_diameter": 3.8305878922165593
+      "semi_diameter": 3.4154611610601653
     },
     {
       "type": "STANDARD",
       "curvature": 0.0,
       "conic": 0.0,
-      "thickness": 3.1759900175066815,
+      "thickness": 2.147491967417698,
       "material": null,
-      "semi_diameter": 3.5813162194197017,
+      "semi_diameter": 3.506860554973387,
       "comment": "flare stop"
     },
     {
       "type": "STANDARD",
-      "curvature": -0.040057243766203766,
+      "curvature": -0.026945239410108596,
       "conic": 0.0,
-      "thickness": 4.958425300503243,
+      "thickness": 3.9843549202831854,
       "material": "N-LAK8",
-      "semi_diameter": 3.71932664260137
+      "semi_diameter": 3.878074639925281
     },
     {
       "type": "STANDARD",
-      "curvature": -0.09872529989113038,
+      "curvature": -0.12002588666869204,
       "conic": 0.0,
       "thickness": 0.1,
       "material": null,
-      "semi_diameter": 4.796358650141129
+      "semi_diameter": 4.501453836720705
     },
     {
       "type": "STANDARD",
       "curvature": 0.0,
       "conic": 0.0,
-      "thickness": 0.1,
+      "thickness": 0.48270831377931817,
       "material": null,
-      "semi_diameter": 5.104222190024881,
+      "semi_diameter": 4.4315230401243815,
       "stop": true,
       "comment": "aperture stop"
     },
     {
       "type": "STANDARD",
-      "curvature": -0.0032484357537381917,
+      "curvature": 0.01762533114785272,
       "conic": 0.0,
-      "thickness": 0.7999906634747732,
+      "thickness": 0.7999922090611179,
       "material": "N-SF6",
-      "semi_diameter": 5.120662248164575
+      "semi_diameter": 4.5445944202152315
     },
     {
       "type": "STANDARD",
-      "curvature": 0.11287931580265889,
+      "curvature": 0.1455194763366314,
       "conic": 0.0,
-      "thickness": 3.1065120258282484,
+      "thickness": 5.9903659898656345,
       "material": "N-LAK8",
-      "semi_diameter": 5.52596606865644
+      "semi_diameter": 4.722309377413338
     },
     {
       "type": "STANDARD",
-      "curvature": -0.05495077513035489,
+      "curvature": -0.04691146399506327,
       "conic": 0.0,
-      "thickness": 3.3053295447019524,
+      "thickness": 1.806811152626955,
       "material": null,
-      "semi_diameter": 5.656384730683739
+      "semi_diameter": 5.316452528201599
     },
     {
       "type": "STANDARD",
-      "curvature": 0.07798760313214641,
+      "curvature": 0.06019272530110449,
       "conic": 0.0,
-      "thickness": 3.9444877182476192,
+      "thickness": 2.0451884517756365,
       "material": "N-LAF34",
-      "semi_diameter": 6.7685653655049025
+      "semi_diameter": 5.694356873924343
     },
     {
       "type": "STANDARD",
-      "curvature": 0.0010559249066450025,
+      "curvature": -0.0005827784195926272,
       "conic": 0.0,
       "thickness": 7.68,
       "material": null,
-      "semi_diameter": 6.405675571929625
+      "semi_diameter": 5.586139810650956
     },
     {
       "type": "STANDARD",
@@ -213,7 +213,7 @@
       "conic": 0.0,
       "thickness": 0.0,
       "material": null,
-      "semi_diameter": 4.1640240771640595,
+      "semi_diameter": 4.236640169721043,
       "comment": "IMAGE"
     }
   ],
