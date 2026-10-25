@@ -67,6 +67,9 @@ ICONS = {
     "File > Insert Lens": (lens(8, 7, 2.4) + '<path d="M2 12h20" stroke="' + GREY + '" stroke-dasharray="2 2"/>'
                            + f'<path d="M17 4v9m-3.5-3.5L17 13l3.5-3.5" stroke="{GREEN}" stroke-width="2.2"/>'
                            + f'<path d="M14 19h6" stroke="{GREEN}" stroke-width="2.2"/>'),
+    "File > Inspect Lens File": (PAGE + '<path d="M8 7h5M8 10h3"/>'
+                                 + f'<circle cx="13.5" cy="15" r="3.6" fill="{GLASS}"/>'
+                                 + f'<path d="M16.2 17.7l4.3 4.3" stroke="{ORANGE}" stroke-width="2.6"/>'),
     "File > System Explorer": ('<path d="M4 6h16M4 12h16M4 18h16"/>'
                                f'<circle cx="8" cy="6" r="2.2" fill="{ORANGE}"/><circle cx="15" cy="12" r="2.2" '
                                f'fill="{GREEN}"/><circle cx="10" cy="18" r="2.2" fill="{RED}"/>'),

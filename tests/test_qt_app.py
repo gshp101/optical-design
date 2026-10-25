@@ -778,3 +778,47 @@ def test_app_icon(win):
     assert not win.windowIcon().isNull()
     img = icons.render(icons.APP_ICON, 32)
     assert img.pixelColor(16, 12).alpha() == 255      # the glowing lens is drawn, not transparent
+
+
+def test_inspect_lens_file_window(win, tmp_path, monkeypatch):
+    from lensforge_qt import main_window as M
+    src = lf.samples.achromat()
+    src.name = "Inspected doublet"
+    p = tmp_path / "doublet.lens.json"
+    lf.save(src, str(p))
+    win.doc.reset(lf.samples.singlet())
+    before = win.doc.system.to_dict()
+    assert "Inspect Lens File..." in _menu(win, "File")
+    monkeypatch.setattr(M.QFileDialog, "getOpenFileName", lambda *a, **k: (str(p), ""))
+    w = win.inspect_lens_dialog()
+    try:
+        assert w.isVisible() and not w.isModal() and w.windowModality() == Qt.NonModal
+        assert w in win.inspect_windows
+        report = w.text.toPlainText()
+        assert report.startswith("SYSTEM REPORT: Inspected doublet") and "Seidel coefficients" in report
+        assert w.save_btn.isEnabled() and "doublet.lens.json" in w.windowTitle()
+        after = win.doc.system.to_dict()
+        assert after == before and win.doc.undo_stack.count() == 0  # current lens untouched
+        out = tmp_path / "report.txt"
+        monkeypatch.setattr("lensforge_qt.inspect_window.QFileDialog.getSaveFileName",
+                            lambda *a, **k: (str(out), ""))
+        w.save_text()
+        assert out.read_text(encoding="utf-8") == report
+        w.open_btn.click()  # Open in Editor loads the file as the current lens
+        assert win.doc.system.name == "Inspected doublet"
+    finally:
+        w.close()
+
+
+def test_inspect_lens_file_bad_file_and_cancel(win, tmp_path, monkeypatch):
+    from lensforge_qt import main_window as M
+    bad = tmp_path / "bad.json"
+    bad.write_text("not a lens")
+    w = win.inspect_lens(str(bad))
+    try:
+        assert "Could not read" in w.text.toPlainText()
+        assert not w.open_btn.isEnabled() and not w.save_btn.isEnabled()
+    finally:
+        w.close()
+    monkeypatch.setattr(M.QFileDialog, "getOpenFileName", lambda *a, **k: ("", ""))
+    assert win.inspect_lens_dialog() is None

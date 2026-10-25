@@ -34,6 +34,14 @@ HELP = {
     "File > Save As": (
         "Save the lens under a new file name.",
         "Writes the lens to a new JSON file, which then becomes the current file."),
+    "File > Inspect Lens File": (
+        "Show the system report of a lens file in its own window, without opening the file.",
+        "Choose a lens file (.json or .zmx). Its System Report (prescription, first-order data, cardinal "
+        "points, Seidel coefficients and image quality per field) opens in a separate window; the current "
+        "lens is not changed. The window is not modal, so you can keep editing and open several reports "
+        "side by side to compare designs. <b>Copy</b> and <b>Save</b> take the report text; "
+        "<b>Open in Editor</b> makes the file the current lens (you are asked to save changes first). "
+        "Scripting: <code>lf.system_report(lf.load('file.json'))</code>."),
     "File > Insert Lens": (
         "Insert surfaces from a lens file into the current design, optionally scaled or reversed.",
         "Choose a lens file (.json or .zmx), the range of its surfaces to copy and the surface of the current "

@@ -70,6 +70,7 @@ class MainWindow(QMainWindow):
         self.doc = LensDocument()
         self.analysis_windows = []
         self.dialogs = {}
+        self.inspect_windows = []  # open File > Inspect Lens File windows
         self.setWindowIcon(icons.app_icon())
         self.setDockNestingEnabled(True)
         self.setDockOptions(QMainWindow.AnimatedDocks | QMainWindow.AllowTabbedDocks | QMainWindow.AllowNestedDocks)
@@ -132,6 +133,8 @@ class MainWindow(QMainWindow):
         self.a_save_as = A("Save &As...", self.save_as, QKeySequence.SaveAs)
         self.a_insert_lens = A("&Insert Lens...", self.insert_lens, "Ctrl+I",
                                "Insert surfaces from a lens file, scaled and optionally reversed")
+        self.a_inspect = A("Ins&pect Lens File...", self.inspect_lens_dialog, "Ctrl+Shift+O",
+                           "Show the system report of a lens file without opening it")
         self.a_agf = A("Load Glass Catalog (AGF)...", self.load_agf)
         self.a_export = A("Export Prescription...", self.export_prescription)
         self.a_quit = A("E&xit", self.close, QKeySequence.Quit)
@@ -184,6 +187,7 @@ class MainWindow(QMainWindow):
             m.addAction(a)
         m.addSeparator()
         m.addAction(self.a_insert_lens)
+        m.addAction(self.a_inspect)
         for a in (self.a_sys, self.a_fields, self.a_waves, self.a_rays):
             m.addAction(a)
         m.addSeparator()
@@ -474,6 +478,22 @@ class MainWindow(QMainWindow):
         dlg.exec()
         return dlg
 
+    def inspect_lens_dialog(self):
+        start = os.path.dirname(self.doc.path) if self.doc.path else self.settings.value("last_dir", EXAMPLES)
+        path, _ = QFileDialog.getOpenFileName(self, "Inspect lens file", start, FILE_FILTER)
+        if path:
+            return self.inspect_lens(path)
+
+    def inspect_lens(self, path):
+        """Show the system report of ``path`` in a non-modal window; the current lens is untouched."""
+        from .inspect_window import InspectLensWindow
+        w = InspectLensWindow(path, self)
+        w.open_requested.connect(lambda p: self.maybe_save() and self.open_file(p))
+        self.inspect_windows.append(w)
+        w.destroyed.connect(lambda _=None, w=w: self.inspect_windows.remove(w) if w in self.inspect_windows else None)
+        w.show()
+        return w
+
     def input_rays(self):
         from .rays_dialog import InputRaysDialog
         InputRaysDialog(self.doc, self).exec()
@@ -592,6 +612,6 @@ class MainWindow(QMainWindow):
         if not self.maybe_save():
             ev.ignore()
             return
-        for d in self.dialogs.values():
+        for d in list(self.dialogs.values()) + self.inspect_windows:
             d.close()
         ev.accept()
