@@ -30,15 +30,23 @@ def surface_profiles(system, n: int = 41, plane: str = "y"):
     if any(s.semi_diameter is None for s in system.surfaces[1:]):
         sd = system.copy().update_semi_diameters()
     frames = system.surface_frames()
+    axis = np.array([0.0, 1.0, 0.0]) if plane == "y" else np.array([1.0, 0.0, 0.0])
     out = []
     for i, s in enumerate(system.surfaces):
         if i == 0 or s.is_coordinate_break or frames[i] is None:
             continue
         r = s.semi_diameter if s.semi_diameter is not None else (sd[i] if sd is not None else 0.0)
         t = np.linspace(-r, r, n)
-        x, y = (np.zeros(n), t) if plane == "y" else (t, np.zeros(n))
-        z = s.sag(x, y)
         R, O = frames[i]
+        # cut the surface along the local direction that lies in the global plot
+        # plane, so a surface rotated about z (e.g. after a 90 deg tilt-z break)
+        # is still drawn as its true cross-section rather than edge-on
+        u = (R.T @ axis)[:2]
+        if np.hypot(*u) < 1e-9:  # plot axis along the surface normal: use the local axis
+            u = axis[:2]
+        u = u / np.hypot(*u)
+        x, y = t * u[0], t * u[1]
+        z = s.sag(x, y)
         P = np.stack([x, y, z], axis=1) @ R.T + O
         out.append({"surface": i, "points": P, "semi_diameter": float(r),
                     "mirror": system.library.resolve(s.material).is_mirror if s.material else False})
