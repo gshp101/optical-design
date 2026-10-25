@@ -43,8 +43,13 @@ HELP = {
         "and sag terms change sign, each surface takes the thickness and medium that preceded it, and "
         "coordinate breaks are inverted. The preview shows the surfaces exactly as they will be inserted and "
         "the group's focal length. Lenses in other units are converted to the current units. The current "
-        "lens keeps its stop unless you tick the stop option. One undo step removes the whole insertion. "
-        "From Python: <code>lf.insert_lens(lens, 'file.json', at=3, scale=0.5, reverse=True)</code>."),
+        "lens keeps its stop unless you tick the stop option. <b>Copy semi-diameters</b> gives each inserted "
+        "surface the semi-diameter it has in the lens file, as a fixed value (marked U) and scaled with the "
+        "lens; semi-diameters that are automatic in the file are computed from the file's own aperture, "
+        "fields and wavelengths. Unticked, the inserted surfaces get automatic semi-diameters sized by the "
+        "current lens's rays. Clear apertures set in Surface Properties are copied either way. One undo step "
+        "removes the whole insertion. From Python: <code>lf.insert_lens(lens, 'file.json', at=3, scale=0.5, "
+        "reverse=True, copy_semi_diameters=True)</code>."),
     "File > System Explorer": (
         "Set the aperture, fields, wavelengths and general system options.",
         "Opens the System Explorer: aperture type and value, field type and field points, wavelengths and "

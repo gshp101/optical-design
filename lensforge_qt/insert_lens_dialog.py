@@ -1,4 +1,5 @@
-"""File > Insert Lens: put surfaces from a lens file into the current design (scaled, optionally reversed)."""
+"""File > Insert Lens: put surfaces from a lens file into the current design (scaled, optionally reversed,
+optionally with the lens's semi-diameters)."""
 
 from __future__ import annotations
 
@@ -47,10 +48,14 @@ class InsertLensDialog(QDialog):
         self.keep_stop = QCheckBox("Use the inserted lens's stop surface as the system stop")
         self.units = QCheckBox("Convert units to the current lens's units")
         self.units.setChecked(True)
+        self.copy_sd = QCheckBox("Copy semi-diameters from the inserted lens")
+        self.copy_sd.setToolTip("Checked: each surface keeps the semi-diameter it has in the lens file (automatic "
+                                "ones are computed there), as a fixed value, scaled.\n"
+                                "Unchecked: the inserted surfaces get automatic semi-diameters.")
         for w in (self.first, self.last, self.at):
             w.valueChanged.connect(self.update_preview)
         self.scale.valueChanged.connect(self.update_preview)
-        for w in (self.reverse, self.keep_stop, self.units):
+        for w in (self.reverse, self.keep_stop, self.units, self.copy_sd):
             w.toggled.connect(self.update_preview)
 
         rng = QHBoxLayout()
@@ -66,6 +71,7 @@ class InsertLensDialog(QDialog):
         form.addRow("", self.reverse)
         form.addRow("", self.keep_stop)
         form.addRow("", self.units)
+        form.addRow("", self.copy_sd)
 
         mono = QFont("monospace")
         mono.setStyleHint(QFont.TypeWriter)
@@ -119,7 +125,8 @@ class InsertLensDialog(QDialog):
     def options(self) -> dict:
         return dict(first=self.first.value(), last=max(self.first.value(), self.last.value()),
                     scale=self.scale.value(), reverse=self.reverse.isChecked(),
-                    keep_stop=self.keep_stop.isChecked(), convert_units=self.units.isChecked())
+                    keep_stop=self.keep_stop.isChecked(), convert_units=self.units.isChecked(),
+                    copy_semi_diameters=self.copy_sd.isChecked())
 
     def update_preview(self):
         ok = self.source is not None and self.source.image_index > 1
