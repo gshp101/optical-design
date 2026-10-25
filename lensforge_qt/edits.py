@@ -272,40 +272,7 @@ def set_stop(system, index: int):
 # Inserting / deleting surfaces with renumbering
 # ---------------------------------------------------------------------------
 
-_SOLVE_REFS = ("surface", "from_surface", "center_surface")
-_OPERAND_REFS = ("surf", "surf2")
-
-
-def _renumber(system, fn, operand_fn=None):
-    """Apply ``fn(old_index) -> new index or None (deleted)`` to every surface reference.
-
-    Variables and solves pointing at a deleted surface are removed; merit
-    operands keep their row and are mapped with ``operand_fn`` (default ``fn``)."""
-    operand_fn = operand_fn or fn
-    vs = opt.variables(system)
-    keep = []
-    for v in vs:
-        n = fn(v.surface)
-        if n is not None:
-            v.surface = n
-            keep.append(v)
-    vs[:] = keep
-    sl = opt.solves(system)
-    keep = []
-    for x in sl:
-        refs = {name: fn(getattr(x, name)) for name in _SOLVE_REFS if isinstance(getattr(x, name, None), int)}
-        if all(n is not None for n in refs.values()):
-            for name, n in refs.items():
-                setattr(x, name, n)
-            keep.append(x)
-    sl[:] = keep
-    mf = getattr(system, "merit_function", None)
-    if mf is not None:
-        for row in mf.rows:
-            for name in _OPERAND_REFS:
-                v = row.params.get(name)
-                if isinstance(v, int) and not isinstance(v, bool):
-                    row.params[name] = operand_fn(v)
+_renumber = lf.compose.renumber_surface_refs
 
 
 def insert_surface(system, index: int, surface=None):
@@ -330,14 +297,52 @@ def insert_lens(system, source, at: int, **kw) -> range:
 def delete_surface(system, index: int):
     """Delete surface ``index``; variables and solves on it are dropped, merit
     operands that referred to it move to the previous surface."""
-    if index <= 0 or index >= system.image_index:
-        raise ValueError("the object and image surfaces cannot be deleted")
-    was_stop = system.surfaces[index].stop
-    system.remove(index)
-    _renumber(system, lambda i: None if i == index else (i - 1 if i > index else i),
-              lambda i: i - 1 if i >= index else i)
-    if was_stop:
-        system.stop_index = max(1, min(index, system.image_index - 1))
+    delete_surfaces(system, index, index)
+
+
+def delete_surfaces(system, first: int, last: int) -> int:
+    """Delete surfaces ``first``..``last`` (see :func:`lensforge.delete_surfaces`)."""
+    return lf.delete_surfaces(system, first, last)
+
+
+def describe_deletion(system, first: int, last: int) -> List[str]:
+    """Lines saying what deleting surfaces ``first``..``last`` removes or changes,
+    for a confirmation prompt. Raises ValueError for a range that cannot be deleted."""
+    first, last = lf.compose.check_surface_range(system, first, last)
+    gone = range(first, last + 1)
+    lines = []
+    for i in gone:
+        s = system.surfaces[i]
+        bits = [f"Surface {i}: {SURFACE_TYPES.get(s.kind, (s.kind,))[0]}"]
+        if has_radius(s):
+            bits.append(f"R {format_number(get_value(s, 'radius'), 6)}")
+        bits.append(f"T {format_number(s.thickness, 6)}")
+        mat = material_text(system, s.material)
+        if mat:
+            bits.append(mat)
+        if s.comment:
+            bits.append(f'"{s.comment}"')
+        if s.stop:
+            bits.append("(stop)")
+        lines.append(", ".join(bits))
+    nv = sum(1 for v in opt.variables(system) if v.surface in gone)
+    ns = sum(1 for x in opt.solves(system)
+             if any(getattr(x, n, None) in gone for n in lf.compose._SOLVE_REFS
+                    if isinstance(getattr(x, n, None), int)))
+    mf = getattr(system, "merit_function", None)
+    nm = 0 if mf is None else sum(
+        1 for row in mf.rows
+        if any(isinstance(row.params.get(n), int) and not isinstance(row.params.get(n), bool)
+               and row.params.get(n) in gone for n in lf.compose._OPERAND_REFS))
+    if nv:
+        lines.append(f"{nv} variable{'s' if nv > 1 else ''} on these surfaces will be removed.")
+    if ns:
+        lines.append(f"{ns} solve{'s' if ns > 1 else ''} referring to these surfaces will be removed.")
+    if nm:
+        lines.append(f"{nm} merit operand{'s' if nm > 1 else ''} will move to surface {first - 1}.")
+    if any(system.surfaces[i].stop for i in gone):
+        lines.append("The stop moves to the surface that takes the place of the first deleted one.")
+    return lines
 
 
 # ---------------------------------------------------------------------------
