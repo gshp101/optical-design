@@ -318,3 +318,29 @@ def test_second_ideal_lens_uses_its_conjugate():
     samples.focus_paraxial(s)
     for k in (0, 1):
         assert np.nanmax(np.abs(lf.opd_fan(s, k)["wy"])) < 1e-6
+
+
+def test_coordinate_break_z_tilt_inverse_pair_is_identity():
+    """+90 then -90 deg about z, immediately after each other, changes nothing."""
+    s = samples.achromat()
+    base_rays = lf.layout(s)
+    base_surfs = lf.surface_profiles(s)
+    s.insert(2, lf.CoordinateBreak(tilt_z=90))
+    s.insert(3, lf.CoordinateBreak(tilt_z=-90))
+    for a, b in zip(lf.surface_profiles(s), base_surfs):
+        np.testing.assert_allclose(a["points"], b["points"], atol=1e-12)
+    for a, b in zip(lf.layout(s)["rays"], base_rays["rays"]):
+        np.testing.assert_allclose(np.delete(a["path"], [2, 3], axis=0), b["path"], atol=1e-12)
+
+
+@pytest.mark.parametrize("tilt_z", [90, -90, 37, 180])
+def test_layout_profile_unchanged_by_z_rotation(tilt_z):
+    """A rotationally symmetric lens rotated about z looks the same in the 2-D layout."""
+    s = samples.achromat()
+    base = lf.surface_profiles(s)
+    s.insert(1, lf.CoordinateBreak(tilt_z=tilt_z))
+    prof = lf.surface_profiles(s)
+    for a, b in zip(prof, base):
+        # same cross-section, possibly traversed in the opposite direction
+        pa = a["points"] if np.allclose(a["points"][0], b["points"][0], atol=1e-9) else a["points"][::-1]
+        np.testing.assert_allclose(pa, b["points"], atol=1e-9)
