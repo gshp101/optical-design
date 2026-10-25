@@ -7,12 +7,13 @@ import itertools
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg, NavigationToolbar2QT
 from matplotlib.figure import Figure
 from PySide6.QtCore import Qt, QTimer, Signal
-from PySide6.QtGui import QFont, QGuiApplication
+from PySide6.QtGui import QGuiApplication
 from PySide6.QtWidgets import (QCheckBox, QComboBox, QDockWidget, QDoubleSpinBox, QFileDialog, QHBoxLayout, QLabel,
                                QPlainTextEdit, QPushButton, QSpinBox, QStackedWidget, QVBoxLayout, QWidget)
 
 from . import workers
 from .analyses import REGISTRY
+from .fonts import fixed_font
 
 _ids = itertools.count(1)
 
@@ -173,8 +174,7 @@ class AnalysisWindow(QDockWidget):
             self.text = QPlainTextEdit()
             self.text.setReadOnly(True)
             self.text.setLineWrapMode(QPlainTextEdit.NoWrap)
-            f = QFont("Monospace")
-            f.setStyleHint(QFont.TypeWriter)
+            f = fixed_font()
             self.text.setFont(f)
             tw = QWidget()
             tl = QVBoxLayout(tw)

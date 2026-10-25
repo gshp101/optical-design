@@ -17,7 +17,6 @@ import numpy as np
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
 from matplotlib.figure import Figure
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QFont
 from PySide6.QtWidgets import (QAbstractItemView, QCheckBox, QComboBox, QDialog, QDoubleSpinBox, QFormLayout,
                                QGridLayout, QGroupBox, QHBoxLayout, QHeaderView, QLabel, QMessageBox,
                                QPlainTextEdit, QPushButton, QSpinBox, QSplitter, QTableWidget, QTableWidgetItem,
@@ -27,6 +26,7 @@ from lensforge import optimize as opt
 from lensforge.optimize.tolerance import (TOLERANCE_TYPES, Criterion, make_criterion, sensitivity_table)
 
 from . import workers
+from .fonts import fixed_font
 
 
 class StopRequested(Exception):
@@ -425,8 +425,7 @@ class ToleranceDialog(QDialog):
         self.output = QPlainTextEdit()
         self.output.setReadOnly(True)
         self.output.setLineWrapMode(QPlainTextEdit.NoWrap)
-        mono = QFont("Monospace")
-        mono.setStyleHint(QFont.TypeWriter)
+        mono = fixed_font()
         self.output.setFont(mono)
         self.figure = Figure(figsize=(4, 3), dpi=80, layout="tight")
         self.canvas = FigureCanvasQTAgg(self.figure)

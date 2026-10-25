@@ -9,13 +9,14 @@ from __future__ import annotations
 import os
 
 from PySide6.QtCore import Qt, Signal
-from PySide6.QtGui import QFont, QGuiApplication
+from PySide6.QtGui import QGuiApplication
 from PySide6.QtWidgets import (QFileDialog, QHBoxLayout, QLabel, QPlainTextEdit, QPushButton, QVBoxLayout,
                                QWidget)
 
 import lensforge as lf
 
 from . import icons, workers
+from .fonts import fixed_font
 
 
 class InspectLensWindow(QWidget):
@@ -35,8 +36,7 @@ class InspectLensWindow(QWidget):
         self.header = QLabel()
         self.header.setWordWrap(True)
         self.header.setTextInteractionFlags(Qt.TextSelectableByMouse)
-        mono = QFont("Monospace")
-        mono.setStyleHint(QFont.TypeWriter)
+        mono = fixed_font()
         self.text = QPlainTextEdit(readOnly=True)
         self.text.setFont(mono)
         self.text.setLineWrapMode(QPlainTextEdit.NoWrap)

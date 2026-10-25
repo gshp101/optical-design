@@ -822,3 +822,24 @@ def test_inspect_lens_file_bad_file_and_cancel(win, tmp_path, monkeypatch):
         w.close()
     monkeypatch.setattr(M.QFileDialog, "getOpenFileName", lambda *a, **k: ("", ""))
     assert win.inspect_lens_dialog() is None
+
+
+def test_fixed_font_is_a_real_family(qtbot):
+    # Requesting a missing family ("Monospace" on macOS/Windows) makes Qt rebuild its alias table and warn.
+    from PySide6.QtGui import QFont, QFontDatabase, QFontInfo
+    from lensforge_qt.fonts import fixed_font
+    info = QFontInfo(fixed_font())
+    assert info.family() in QFontDatabase.families()
+    assert info.fixedPitch()
+    base = QFont()
+    base.setPointSizeF(13.0)
+    assert fixed_font(base).pointSizeF() == 13.0
+
+
+def test_no_hard_coded_font_families():
+    import re
+    pkg = os.path.join(HERE, "..", "lensforge_qt")
+    bad = re.compile(r'QFont\(\s*["\']|setFamily\(|setFamilies\(|font-family\s*:', re.I)
+    hits = [f"{name}:{i}" for name in sorted(os.listdir(pkg)) if name.endswith(".py")
+            for i, line in enumerate(open(os.path.join(pkg, name), encoding="utf-8"), 1) if bad.search(line)]
+    assert not hits, f"use lensforge_qt.fonts.fixed_font() instead of a named family: {hits}"

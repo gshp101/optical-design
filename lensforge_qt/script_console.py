@@ -12,12 +12,14 @@ import io
 import traceback
 
 import numpy as np
-from PySide6.QtGui import QFont, QKeySequence, QShortcut
+from PySide6.QtGui import QKeySequence, QShortcut
 from PySide6.QtWidgets import QHBoxLayout, QLabel, QPlainTextEdit, QPushButton, QSplitter, QVBoxLayout, QWidget
 from PySide6.QtCore import Qt
 
 import lensforge as lf
 from lensforge import optimize as opt
+
+from .fonts import fixed_font
 
 EXAMPLE = """# Python against the open lens: `lens`, `lf`, `opt`, `np` are defined.
 # Changes to `lens` become one undoable edit (Ctrl+Enter runs).
@@ -32,8 +34,7 @@ class ScriptConsole(QWidget):
         super().__init__(parent)
         self.doc = doc
         self.namespace = {}
-        mono = QFont("Monospace")
-        mono.setStyleHint(QFont.TypeWriter)
+        mono = fixed_font()
         self.editor = QPlainTextEdit(EXAMPLE)
         self.editor.setFont(mono)
         self.output = QPlainTextEdit()

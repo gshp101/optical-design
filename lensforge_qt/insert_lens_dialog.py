@@ -6,7 +6,6 @@ from __future__ import annotations
 import math
 import os
 
-from PySide6.QtGui import QFont
 from PySide6.QtWidgets import (QCheckBox, QDialog, QDialogButtonBox, QDoubleSpinBox, QFileDialog, QFormLayout,
                                QHBoxLayout, QLabel, QLineEdit, QPlainTextEdit, QPushButton, QSpinBox, QVBoxLayout)
 
@@ -14,6 +13,7 @@ import lensforge as lf
 from lensforge.compose import lens_surfaces
 
 from . import edits as E
+from .fonts import fixed_font
 
 FILE_FILTER = "Lens files (*.json *.zmx);;lensforge JSON (*.json);;Zemax ZMX (*.zmx);;All files (*)"
 
@@ -73,8 +73,7 @@ class InsertLensDialog(QDialog):
         form.addRow("", self.units)
         form.addRow("", self.copy_sd)
 
-        mono = QFont("monospace")
-        mono.setStyleHint(QFont.TypeWriter)
+        mono = fixed_font()
         self.preview = QPlainTextEdit(readOnly=True)
         self.preview.setFont(mono)
         self.preview.setLineWrapMode(QPlainTextEdit.NoWrap)
