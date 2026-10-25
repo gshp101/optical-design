@@ -134,3 +134,28 @@ def test_insert_lens_from_file_into_middle(tmp_path):
         lf.insert_lens(target, str(p), first=2, last=9)
     with pytest.raises(IndexError):
         lf.insert_lens(target, str(p), at=0)
+
+
+def test_insert_lens_copy_semi_diameters():
+    a = lf.samples.achromat()
+    a.surfaces[2].semi_diameter = 7.5  # one fixed, the others automatic
+    auto = a.copy().update_semi_diameters()
+    want = [auto[1], 7.5, auto[3]]
+
+    b = lf.OpticalSystem("b")
+    rng = lf.insert_lens(b, a)
+    assert all(b.surfaces[i].semi_diameter is None for i in rng)  # default: all automatic
+
+    b = lf.OpticalSystem("b")
+    rng = lf.insert_lens(b, a, scale=2.0, copy_semi_diameters=True)
+    assert [b.surfaces[i].semi_diameter for i in rng] == pytest.approx([2 * v for v in want])
+
+    b = lf.OpticalSystem("b")  # reversed: each surface keeps its own semi-diameter
+    rng = lf.insert_lens(b, a, reverse=True, copy_semi_diameters=True)
+    assert [b.surfaces[i].semi_diameter for i in rng] == pytest.approx(want[::-1])
+    assert a.surfaces[1].semi_diameter is None  # the source is not changed
+
+
+def test_copy_semi_diameters_skips_coordinate_breaks():
+    group = lens_surfaces(_tilted_system(), copy_semi_diameters=True)
+    assert all((s.semi_diameter is None) == s.is_coordinate_break for s in group)

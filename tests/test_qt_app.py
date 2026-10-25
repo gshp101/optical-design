@@ -738,6 +738,28 @@ def test_insert_lens_dialog_scaled_and_reversed(win, tmp_path):
     assert win.doc.system.num_surfaces == n0
 
 
+def test_insert_lens_dialog_copies_semi_diameters(win, tmp_path):
+    from lensforge_qt.insert_lens_dialog import InsertLensDialog
+    src = lf.samples.achromat()
+    src.surfaces[1].semi_diameter = 9.0
+    p = tmp_path / "doublet.lens.json"
+    lf.save(src, str(p))
+    win.doc.reset(lf.samples.singlet())
+    dlg = InsertLensDialog(win.doc, at=1, parent=win)
+    try:
+        dlg.load(str(p))
+        assert not dlg.copy_sd.isChecked() and not dlg.options()["copy_semi_diameters"]
+        dlg.copy_sd.setChecked(True)
+        dlg.scale.setValue(2.0)
+        assert "18" in dlg.preview.toPlainText()  # preview shows the copied, scaled value
+        dlg.accept()
+    finally:
+        dlg.close()
+    s = win.doc.system
+    assert s.surfaces[1].semi_diameter == pytest.approx(18.0)
+    assert all(s.surfaces[i].semi_diameter is not None for i in (1, 2, 3))  # automatic ones copied as fixed
+
+
 def test_insert_lens_menu_and_bad_file(win, tmp_path, monkeypatch):
     from lensforge_qt import insert_lens_dialog as M
     bad = tmp_path / "bad.json"
