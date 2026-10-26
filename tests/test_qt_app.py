@@ -809,6 +809,72 @@ def test_help_browser(win):
         dlg.close()
 
 
+
+# ---------------------------------------------------------------------- merit function editor help
+def test_every_operand_is_in_the_merit_function_help():
+    from lensforge_qt import mfe_help
+    filed = [n for names in mfe_help.OPERAND_GROUPS.values() for n in names]
+    assert len(filed) == len(set(filed)), "an operand is filed in two groups"
+    missing = sorted(set(opt.OPERANDS) - set(filed))
+    assert missing == [], f"add these operands to OPERAND_GROUPS in lensforge_qt/mfe_help.py: {missing}"
+    assert set(filed) <= set(opt.OPERANDS)
+    page = mfe_help.topic_text(mfe_help.ROOT + "/operands")
+    assert all(n in page for n in opt.OPERANDS)
+    assert mfe_help.operand_signature("REAY") == "surf=None, hx=0.0, hy=0.0, px=0.0, py=0.0, wave=None"
+    assert mfe_help.operand_signature("SUMM") == "a, b"
+
+
+def test_merit_function_help_pages(win):
+    from lensforge_qt import mfe_help
+    from PySide6.QtCore import QUrl
+    win.show_mfe()
+    win.mfe.act_help.trigger()  # the editor's Help button
+    dlg = win.dialogs["help"]
+    try:
+        assert dlg.tree.currentItem().data(0, Qt.UserRole) == mfe_help.ROOT
+        assert "Merit Function Editor" in dlg.page.toPlainText()
+        dlg.page.anchorClicked.emit(QUrl("help:mfe/weights"))  # links between pages
+        assert dlg.tree.currentItem().data(0, Qt.UserRole) == mfe_help.ROOT + "/weights"
+        text = dlg.page.toPlainText()
+        assert "Hard constraint" in text and "Only ratios matter" in text
+        for key, title in mfe_help.TOPICS:
+            assert dlg.show_command(key) and title.split(" (")[0] in dlg.page.toPlainText()
+        dlg.filter.setText("lagrange")  # search finds text inside topic pages
+        assert dlg.tree.currentItem().data(0, Qt.UserRole).startswith(mfe_help.TOPIC_PREFIX)
+        dlg.filter.setText("")
+        win.mfe.view.setFocus()
+        assert win.help_contents(False) is dlg  # F1 / Help Contents from the editor
+    finally:
+        dlg.close()
+    m = win.mfe.model
+    from lensforge_qt.mfe import C_WEIGHT
+    assert "hard constraint" in m.headerData(C_WEIGHT, Qt.Horizontal, Qt.ToolTipRole)
+
+
+def test_spot_size_merit_example():
+    """The help's worked example: the shipped file holds the merit function the help describes."""
+    s = lf.load(os.path.join(os.path.dirname(__file__), "..", "examples", "spot_size_merit.lens.json"))
+    mf = s.merit_function
+    types = [r.type for r in mf.rows]
+    assert types.count("RAYS") == len(s.fields) == 3
+    effl = mf.rows[types.index("EFFL")]
+    assert effl.target == 100 and effl.weight < 0
+    assert {"MNCG", "MNEG", "MNCA"} <= set(types)
+    assert len(opt.variables(s)) == 9
+    ev = mf.evaluate(s)
+    assert ev.error is None and 0.5 < ev.value < 1.5  # the unoptimised start
+    from lensforge_qt.main_window import _sample_list
+    assert "Spot Size Merit Example" in dict(_sample_list())
+
+
+def test_misspelt_operand_parameter_is_reported():
+    s = lf.samples.singlet()
+    mf = opt.MeritFunction()
+    mf.add("EFFL", 100, 1, focal=3)
+    ev = mf.evaluate(s)
+    assert ev.value == float("inf") and "focal" in ev.error
+
+
 # ---------------------------------------------------------------------- insert lens
 def test_insert_lens_dialog_scaled_and_reversed(win, tmp_path):
     from lensforge_qt.insert_lens_dialog import InsertLensDialog

@@ -165,7 +165,7 @@ class MeritFunction:
                 if not np.all(np.isfinite(b.values)):
                     raise OperandError("non-finite value")
             except (OperandError, ValueError, ZeroDivisionError, FloatingPointError, RuntimeError,
-                    IndexError, NotImplementedError) as e:
+                    IndexError, NotImplementedError, TypeError) as e:  # TypeError: misspelt parameter
                 err = f"row {len(blocks)} ({r.type}): {e}"
                 blocks.append(None)
                 scalars.append(math.nan)

@@ -172,8 +172,14 @@ HELP = {
     "Tools > Merit Function Editor": (
         "Show the merit function: the targets optimisation works towards.",
         "Opens the Merit Function Editor, a table of operands (focal length, spot size, wavefront, "
-        "boundaries ...) with targets and weights, their current values and contributions. The wizard "
-        "builds a default image-quality merit function."),
+        "boundaries ...) with targets and weights, their current values and contributions. The merit "
+        "function is the weighted RMS of the rows' errors: sqrt(&Sigma; W (Value &minus; Target)<sup>2</sup> / "
+        "&Sigma; W). A positive weight makes a row part of it, weight 0 only shows the row, a negative weight "
+        "makes it a hard constraint. The wizard builds a default image-quality merit function. The "
+        "<b>Merit Function Editor</b> pages of this help (the editor's Help button, or F1 in the editor) "
+        "explain every column, how weights work and how to balance them, the field and pupil coordinates "
+        "Hx, Hy, Px, Py used by ray operands, every operand with its parameters, and a worked example that "
+        "minimises the RMS spot size (File &gt; Sample Lenses &gt; Spot Size Merit Example)."),
     "Tools > Variables and Solves > Make All Curvatures Variable": (
         "Make every surface curvature an optimisation variable.",
         "Adds a variable for the curvature of every refracting or reflecting surface."),
@@ -309,6 +315,8 @@ SAMPLE_HELP = {
     "Cooke Triplet (optimised)": "Load the Cooke triplet optimised by the example script.",
     "Scripted Singlet": "Load the singlet built and optimised by the scripting example.",
     "Diffraction Grating Demo": "Load a transmission grating followed by a lens, showing the dispersed orders.",
+    "Spot Size Merit Example": "Load the Merit Function Editor help's example: a Cooke triplet with variables and "
+                               "a merit function that minimises the RMS spot size (run Tools > Optimization).",
 }
 
 SAMPLE_PREFIX = "File > Sample Lenses > "
@@ -348,7 +356,8 @@ materials into the cells; right-click a cell for variables, solves and surface t
 input rays, sample lenses.</li>
 <li><b>Edit</b>: undo/redo and surface editing.</li>
 <li><b>Analysis</b>: plots and reports, each in a window that updates as you edit.</li>
-<li><b>Tools</b>: optimisation, tolerancing, merit function and the Python shell.</li>
+<li><b>Tools</b>: optimisation, tolerancing, merit function and the Python shell. The <b>Merit Function
+Editor</b> pages below the Overview explain merit functions in detail, with a worked example.</li>
 <li><b>View</b>: the toolbar (View &gt; Customize Toolbar puts any command on it).</li>
 </ul>
 <p>Pick a command on the left to read about it, or type in the filter box. Hovering a toolbar button

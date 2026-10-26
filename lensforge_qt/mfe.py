@@ -2,7 +2,8 @@
 
 Rows are :class:`lensforge.optimize.Operand`; parameters are typed as
 ``name=value`` pairs (e.g. ``surf=4, hy=1, py=1``).  Values and % contribution
-are recomputed in the background after every change of the lens.
+are recomputed in the background after every change of the lens.  The help pages
+(columns, weights, operands, an example) are in mfe_help.py.
 """
 
 from __future__ import annotations
@@ -19,6 +20,7 @@ from PySide6.QtWidgets import (QAbstractItemView, QCheckBox, QComboBox, QComplet
 from lensforge import optimize as opt
 
 from . import edits as E
+from . import mfe_help
 from . import workers
 from .fonts import fixed_font
 
@@ -112,6 +114,8 @@ class MeritModel(QAbstractTableModel):
         return 0 if parent.isValid() else len(COLUMNS)
 
     def headerData(self, section, orientation, role=Qt.DisplayRole):
+        if role == Qt.ToolTipRole and orientation == Qt.Horizontal:
+            return mfe_help.COLUMN_TIPS[COLUMNS[section]]
         if role != Qt.DisplayRole:
             return None
         return COLUMNS[section] if orientation == Qt.Horizontal else str(section + 1)
@@ -149,7 +153,7 @@ class MeritModel(QAbstractTableModel):
         if role == Qt.TextAlignmentRole and c == C_BOUND:
             return int(Qt.AlignCenter)
         if role == Qt.ToolTipRole:
-            return opt.operand_help(row.type)
+            return mfe_help.operand_tooltip(row.type)
         if role == Qt.BackgroundRole:
             if row.type == "BLNK":
                 return QColor(245, 245, 245)
@@ -225,6 +229,7 @@ class MeritDelegate(QStyledItemDelegate):
 
 class MeritFunctionEditor(QWidget):
     statusMessage = Signal(str)
+    helpRequested = Signal(str)  # a help page key (mfe_help.ROOT)
 
     def __init__(self, doc, parent=None):
         super().__init__(parent)
@@ -244,13 +249,20 @@ class MeritFunctionEditor(QWidget):
                      (C_VALUE, 110), (C_CONTRIB, 80)):
             self.view.setColumnWidth(c, w)
         tb = QToolBar()
-        self.act_add = self._act(tb, "Add Row", self.add_row, "Ctrl+Shift+A")
-        self.act_insert = self._act(tb, "Insert Row", self.insert_row, "Insert")
-        self.act_delete = self._act(tb, "Delete Rows", self.delete_rows, "Shift+Delete")
+        self.act_add = self._act(tb, "Add Row", self.add_row, "Ctrl+Shift+A", "Add a blank row at the end.")
+        self.act_insert = self._act(tb, "Insert Row", self.insert_row, "Insert",
+                                    "Insert a blank row above the selected row.")
+        self.act_delete = self._act(tb, "Delete Rows", self.delete_rows, "Shift+Delete", "Delete the selected rows.")
         tb.addSeparator()
-        self._act(tb, "Wizard...", self.wizard)
-        self._act(tb, "Operands...", self.operand_list)
-        self._act(tb, "Clear", self.clear)
+        self._act(tb, "Wizard...", self.wizard, tip="Write a default RMS spot, wavefront or MTF merit function, "
+                  "with optional thickness limits.")
+        self._act(tb, "Operands...", self.operand_list, tip="List every operand with its description and insert "
+                  "one.")
+        self._act(tb, "Clear", self.clear, tip="Remove every row (undoable).")
+        tb.addSeparator()
+        self.act_help = self._act(tb, "Help", lambda: self.helpRequested.emit(mfe_help.ROOT),
+                                  tip="Merit Function Editor help: columns, weights, ray coordinates, every "
+                                  "operand and a worked example (F1).")
         self.label = QLabel("Merit function: -")
         self.label.setStyleSheet("font-weight: bold; padding: 2px 6px;")
         lay = QVBoxLayout(self)
@@ -260,9 +272,12 @@ class MeritFunctionEditor(QWidget):
         lay.addWidget(self.label)
         self.model.evaluated.connect(self._show_value)
 
-    def _act(self, tb, text, slot, shortcut=None):
+    def _act(self, tb, text, slot, shortcut=None, tip=""):
         a = QAction(text, self)
         a.triggered.connect(slot)
+        if tip:
+            a.setToolTip(f"{text} ({shortcut})\n{tip}" if shortcut else f"{text}\n{tip}")
+            a.setStatusTip(tip)
         if shortcut:
             a.setShortcut(QKeySequence(shortcut))
             a.setShortcutContext(Qt.WidgetWithChildrenShortcut)
