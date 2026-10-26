@@ -285,6 +285,9 @@ SAMPLE_ICONS = {
     "Diffraction Grating Demo": ('<path d="M7 3v18" stroke-width="2.4" stroke-dasharray="1 1"/>'
                                  f'<path d="M1 12h6" stroke="#999"/><path d="M7 12l15-8" stroke="{RED}"/>'
                                  f'<path d="M7 12h15" stroke="{GREY}"/><path d="M7 12l15 8" stroke="#3b6fd8"/>'),
+    "Spot Size Merit Example": (lens(7, 8, 2.2) + '<path d="M2 5h5l11 7M2 19h5l11-7" stroke-width="1.1"/>'
+                                f'<circle cx="19" cy="12" r="2.6" stroke="{RED}" stroke-width="1.4"/>'
+                                f'<circle cx="19" cy="12" r="0.8" fill="{RED}" stroke="none"/>'),
 }
 
 

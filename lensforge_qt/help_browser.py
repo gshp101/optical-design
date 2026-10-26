@@ -10,6 +10,7 @@ from PySide6.QtWidgets import (QDialog, QHBoxLayout, QLineEdit, QSplitter, QText
                                QTreeWidgetItem, QVBoxLayout, QWidget)
 
 from . import icons
+from . import mfe_help
 from .help_text import OVERVIEW, lookup
 
 ID_ROLE = Qt.UserRole
@@ -71,6 +72,8 @@ class HelpBrowser(QDialog):
         self.tree.currentItemChanged.connect(self._show)
         self.page = QTextBrowser()
         self.page.setOpenExternalLinks(False)
+        self.page.setOpenLinks(False)
+        self.page.anchorClicked.connect(self._link)
 
         top = QTreeWidgetItem(self.tree, ["Overview"])
         top.setData(0, ID_ROLE, ":overview")
@@ -89,6 +92,14 @@ class HelpBrowser(QDialog):
             h = lookup(iid)
             if h:
                 leaf.setToolTip(0, h[0])
+        # topic pages (the Merit Function Editor's), after the Tools menu: the first is the parent of the rest
+        topics = QTreeWidgetItem([mfe_help.TOPICS[0][1]])
+        topics.setData(0, ID_ROLE, mfe_help.TOPICS[0][0])
+        for key, title in mfe_help.TOPICS[1:]:
+            QTreeWidgetItem(topics, [title]).setData(0, ID_ROLE, key)
+        tools = nodes.get(("Tools",))
+        root = self.tree.invisibleRootItem()
+        root.insertChild(root.indexOfChild(tools) + 1 if tools is not None else root.childCount(), topics)
         self.tree.expandToDepth(0)
 
         left = QVBoxLayout()
@@ -111,6 +122,8 @@ class HelpBrowser(QDialog):
         key = item.data(0, ID_ROLE)
         if key == ":overview":
             self.page.setHtml(OVERVIEW)
+        elif key.startswith(mfe_help.TOPIC_PREFIX):
+            self.page.setHtml(mfe_help.topic_html(key) or "")
         elif key.startswith(":menu:"):
             path = key[len(":menu:"):]
             entries = [i for ids in self.by_menu.values() for i in ids if i.startswith(path + " > ")]
@@ -118,8 +131,13 @@ class HelpBrowser(QDialog):
         else:
             self.page.setHtml(command_html(key, self.actions_by_id.get(key)))
 
+    def _link(self, url):
+        """Links between topic pages are written help:mfe/weights."""
+        if url.scheme() == "help":
+            self.show_command(mfe_help.TOPIC_PREFIX + url.path())
+
     def show_command(self, item_id: str):
-        """Select a command's page (used by tests and by F1 on a menu item)."""
+        """Select a command's or topic's page (used by tests, F1 on a menu item and links)."""
         it = self._find(self.tree.invisibleRootItem(), item_id)
         if it is not None:
             self.tree.setCurrentItem(it)
@@ -143,7 +161,10 @@ class HelpBrowser(QDialog):
             for i in range(node.childCount()):
                 c = node.child(i)
                 key = c.data(0, ID_ROLE) or ""
-                if key.startswith(":"):
+                if key.startswith(mfe_help.TOPIC_PREFIX):
+                    sub = visit(c)  # the topic's own sub-pages
+                    ok = sub or not text or text in mfe_help.topic_text(key).lower()
+                elif key.startswith(":"):
                     ok = visit(c) or not text
                 else:
                     h = lookup(key) or ("", "")
@@ -164,7 +185,8 @@ class HelpBrowser(QDialog):
             c = node.child(i)
             if c.isHidden():
                 continue
-            if not (c.data(0, ID_ROLE) or ":").startswith(":"):
+            key = c.data(0, ID_ROLE) or ":"
+            if not key.startswith(":") or key.startswith(mfe_help.TOPIC_PREFIX):
                 return c
             f = self._first_visible_leaf(c)
             if f is not None:

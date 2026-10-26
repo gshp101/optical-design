@@ -7,7 +7,7 @@ import os
 
 from PySide6.QtCore import QSettings, Qt
 from PySide6.QtGui import QAction, QKeySequence
-from PySide6.QtWidgets import (QDockWidget, QFileDialog, QLabel, QMainWindow, QMenu, QMessageBox,
+from PySide6.QtWidgets import (QApplication, QDockWidget, QFileDialog, QLabel, QMainWindow, QMenu, QMessageBox,
                                QUndoView, QWhatsThis)
 
 import lensforge as lf
@@ -56,7 +56,8 @@ def _sample_list():
            ("Parabolic Mirror", lf.samples.parabolic_mirror), ("Classical Cassegrain", lf.samples.cassegrain)]
     for name, rel in (("Cooke Triplet (optimised)", "output/cooke_triplet.lens.json"),
                       ("Scripted Singlet", "best_singlet.lens.json"),
-                      ("Diffraction Grating Demo", "grating_demo.lens.json")):
+                      ("Diffraction Grating Demo", "grating_demo.lens.json"),
+                      ("Spot Size Merit Example", "spot_size_merit.lens.json")):
         p = os.path.join(EXAMPLES, rel)
         if os.path.exists(p):
             out.append((name, lambda p=p: lf.load(p)))
@@ -79,6 +80,7 @@ class MainWindow(QMainWindow):
         self.lde = LensDataEditor(self.doc)
         self.setCentralWidget(self.lde)
         self.mfe = MeritFunctionEditor(self.doc)
+        self.mfe.helpRequested.connect(self.help_contents)
         self.mfe_dock = self._dock("Merit Function Editor", self.mfe, Qt.BottomDockWidgetArea, "mfe")
         self.console = ScriptConsole(self.doc)
         self.console_dock = self._dock("Python Shell", self.console, Qt.BottomDockWidgetArea, "script")
@@ -578,6 +580,11 @@ class MainWindow(QMainWindow):
 
     def help_contents(self, item_id=None):
         from .help_browser import HelpBrowser
+        from .mfe_help import ROOT
+        if not isinstance(item_id, str) or not item_id:
+            # F1 from inside the Merit Function Editor opens its own help
+            focus = QApplication.focusWidget()
+            item_id = ROOT if focus is not None and self.mfe.isAncestorOf(focus) else None
         dlg = self.dialogs.get("help")
         if dlg is None:
             dlg = self.dialogs["help"] = HelpBrowser(self.toolbar_items, self)

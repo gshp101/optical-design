@@ -13,9 +13,10 @@ substitution, sensitivity and Monte Carlo tolerancing); see the tables below.
 
 ```bash
 pip install numpy pytest matplotlib # numpy is the only hard dependency; matplotlib only for lensforge.plot
-python -m pytest tests              # 235 tests (72 for the Qt app, offscreen), ~70 s
+python -m pytest tests              # 275 tests (84 for the Qt app, offscreen), ~70 s
 python examples/scripting_demo.py   # build, analyse and run a scripted design study
 python examples/optimization_demo.py # Cooke triplet: optimise, hammer, glass substitution, tolerancing (~2 min)
+python examples/spot_size_merit.py  # hand-built merit function minimising RMS spot size (the help's example)
 python examples/analysis_demo.py    # report + 16-panel plot gallery (examples/output/analysis_gallery.png)
 python examples/point_source_demo.py # rays from 3-D object points to the image plane
 python -m lensforge some_lens.zmx [--report]  # prescription, first-order data, spots [full analysis report]
@@ -66,7 +67,7 @@ python -m lensforge_qt --sample achromat            # singlet, achromat, parabol
 | Lens Data Editor (centre) | Spreadsheet of surfaces: type (combo), comment, radius, thickness, material (glass name completion, `nd,vd` model glass, index, MIRROR, or the material picker: "..." button in the cell, right-click or Ctrl+G opens a dialog with the catalog table, a clickable glass map, model glass and air/mirror/constant index), semi-diameter (automatic in grey, typed = fixed `U`), conic, Par 1-8 with headers per surface type (asphere terms, toroid radius X, coordinate-break decentres/tilts, paraxial focal length, binary-2 terms, grating lines/um and order). Cell markers: `V` variable, `M`/`C`/`F`/`E`/`T`/`S`/`P` solves. Right-click: make variable, solves (marginal/chief ray height and angle, F/#, concentric, edge thickness, position, pickup), surface type, stop, surface properties (apertures, obscurations, XY-polynomial terms). Insert / Ctrl+Insert / Shift+Delete insert and delete surfaces, renumbering variables, solves and merit operands. |
 | Input Rays (F5) | Rays drawn in the layout (rays per fan, fan plane, fields, wavelengths), pupil sampling of spot diagrams, fans and footprints, and user-defined rays (Hx, Hy, Px, Py, wavelength) drawn in red on the layout and listed in Analysis > Reports > User Ray Trace. Saved in the lens file's `"ui"` section and undoable. |
 | System Explorer (F2-F4) | Aperture type/value, ray aiming, field type and field table (weights, vignetting factors, equal-area helper), wavelengths with presets and primary, units, title, notes. |
-| Merit Function Editor (F6) | Operand spreadsheet (type with completion, `name=value` parameters, bound, target, weight, live value and % contribution computed in the background), wizard (default spot / wavefront / MTF merit with glass/air boundaries), searchable operand list. |
+| Merit Function Editor (F6) | Operand spreadsheet (type with completion, `name=value` parameters, bound, target, weight, live value and % contribution computed in the background), wizard (default spot / wavefront / MTF merit with glass/air boundaries), searchable operand list, column and operand tooltips. Its help pages (Help button or F1 in the editor) cover the columns, the merit function formula, weights, Hx/Hy/Px/Py ray coordinates, a reference of every operand generated from the code, and a worked spot-size example (File > Sample Lenses > Spot Size Merit Example). |
 | Toolbar | Hidden by default. Every menu command has its own icon and a tooltip saying what it does (name, shortcut, one-line description). View > Customize Toolbar (or right-click the toolbar) opens a dialog listing every menu command by menu; add, remove, reorder and separate buttons, choose icons only / icons with text / text only, or reset to the defaults. The layout, button style and whether the toolbar is shown are saved between sessions. |
 | Insert Lens (Ctrl+I) | File > Insert Lens copies a range of surfaces from a `.json` or `.zmx` file into the current lens before a chosen surface, with a scale factor (all lengths, aspheric/freeform/phase terms) and an option to reverse the surface order (curvatures and sag terms change sign, thicknesses and media shift, coordinate breaks are inverted). "Copy semi-diameters" brings in the lens's semi-diameters as fixed values (automatic ones computed in the source lens), otherwise the inserted surfaces are automatic. Preview with the group's focal length; one undo step. Scripting: `lf.insert_lens(lens, 'file.json', at=3, scale=0.5, reverse=True, copy_semi_diameters=True)`, plus `lf.scale_surface`, `lf.scale_system`, `lf.reverse_surfaces`, `lf.lens_surfaces`. |
 | Delete Surfaces (Ctrl+Shift+Delete) | Edit > Delete Surfaces deletes a contiguous range of surfaces chosen by first and last surface (prefilled from the rows selected in the Lens Data Editor, where shift-click selects a range; Shift+Delete on a multi-row selection does the same). The object and image surfaces cannot be deleted. A confirmation prompt lists the surfaces and the variables and solves that will be dropped; merit operands on deleted surfaces move to the surface before the range and later references are renumbered. One undo step. Scripting: `lf.delete_surfaces(lens, 2, 4)`. |
@@ -86,7 +87,8 @@ parsing, surface type changes, insert/delete with renumbering) so a web front en
 **Adding a menu command:** write its help in `lensforge_qt/help_text.py` (summary + description) and draw
 its icon in `lensforge_qt/icons.py` (24 x 24 SVG). The Qt tests fail for a command without help or an icon,
 for help or icons left behind by a removed command, for two commands sharing an icon, and for clashing
-shortcuts, so the help cannot fall behind the menus.
+shortcuts, so the help cannot fall behind the menus. A new merit function operand must be filed in a group
+in `OPERAND_GROUPS` (`lensforge_qt/mfe_help.py`); its reference entry is generated from the code.
 
 ## Analyses
 
