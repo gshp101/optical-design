@@ -28,7 +28,7 @@ from typing import Dict, List, Optional, Sequence
 
 import numpy as np
 
-from .operands import DEFAULT_BOUND, OPERAND_INFO, OPERANDS, Block, EvalContext, OperandError
+from .operands import DEFAULT_BOUND, OPERAND_INFO, OPERANDS, Block, EvalContext, OperandError, required_params
 
 
 @dataclass
@@ -54,6 +54,10 @@ class Operand:
         return self.weight < 0
 
     def compute(self, ctx) -> Block:
+        missing = [k for k in required_params(self.type) if k not in self.params]
+        if missing:
+            raise OperandError(f"missing parameter {', '.join(missing)} (e.g. "
+                               f"{', '.join(k + '=1' for k in missing)} in the Params column)")
         v = OPERANDS[self.type](ctx, **self.params)
         if not isinstance(v, Block):
             v = Block(np.array([float(v)]))
@@ -196,6 +200,24 @@ class MeritFunction:
         if den <= 0:
             den = 1.0
         return rv / math.sqrt(den), (np.concatenate(hard) if hard else np.zeros(0)), True
+
+    def problem(self, system=None) -> Optional[str]:
+        """Why this merit function cannot drive an optimisation, or None if it can.
+
+        Catches an empty merit function, one whose rows all have weight 0
+        (display only, so the merit is identically zero and nothing moves) and,
+        given ``system``, a row that cannot be evaluated for it."""
+        if not self.rows:
+            return "The merit function is empty."
+        if not any(r.weight != 0 for r in self.rows):
+            return ("Every merit function row has weight 0, which only displays its value, so the merit "
+                    "function is always 0 and the optimiser has nothing to reduce. Give at least one row a "
+                    "positive weight (or a negative weight for a hard constraint).")
+        if system is not None:
+            err = self._compute(system)[2]
+            if err is not None:
+                return f"The merit function cannot be evaluated: {err}."
+        return None
 
     def value(self, system) -> float:
         r, _, ok = self.residuals(system)

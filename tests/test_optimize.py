@@ -2,6 +2,7 @@
 damped least squares, global search, glass substitution and tolerancing."""
 
 import math
+import os
 
 import numpy as np
 import pytest
@@ -456,3 +457,45 @@ def test_variables_solves_and_merit_round_trip_json():
     assert [(v.surface, v.param, v.min) for v in r.variables] == [(1, "curvature", 0.0), (2, "glass.vd", 20.0)]
     assert [type(x).__name__ for x in r.solves] == ["MarginalRayHeight", "Pickup"]
     assert r.merit_function.value(r) == pytest.approx(s.merit_function.value(s), rel=1e-12)
+
+
+# ---------------------------------------------------------------------------
+# Merit functions that cannot drive an optimisation
+# ---------------------------------------------------------------------------
+
+SMITH_F7 = os.path.join(os.path.dirname(__file__), "..", "examples", "ModernLensDesignSmith", "Chapter6",
+                        "F7GaussTelescopeObjective.lens.json")
+
+
+def test_merit_with_only_weight_zero_rows_is_refused():
+    s = mono_lens()
+    opt.set_variable(s, 1, "curvature")
+    mf = opt.MeritFunction()
+    mf.add("POWR", 0.0, 0.0, surf=1)  # display only: the merit is identically 0
+    assert mf.value(s) == 0.0
+    assert "weight 0" in mf.problem(s)
+    with pytest.raises(ValueError, match="weight 0"):
+        opt.optimize(s, mf)
+    mf.rows[0].weight = 1.0
+    assert mf.problem(s) is None
+
+
+def test_missing_required_operand_parameter_is_named():
+    s = mono_lens()
+    assert opt.operands.required_params("POWR") == ["surf"]
+    mf = opt.MeritFunction([opt.Operand("POWR", 0.0, 1.0)])
+    assert "missing parameter surf" in mf.problem(s)
+    assert "missing parameter surf" in mf.evaluate(s).error
+
+
+def test_smith_f7_objective_optimizes_from_a_disturbed_start():
+    s = lf.load(SMITH_F7)
+    assert [v.name for v in s.variables] == ["S1.curvature", "S2.curvature", "S3.curvature", "S4.curvature",
+                                            "S4.thickness"]
+    assert s.merit_function.problem(s) is None
+    s.surfaces[1].curvature = 0.1  # far from the design: the optimiser must pull it back
+    m0 = s.merit_function.value(s)
+    res = opt.optimize(s, s.merit_function, cycles=100)
+    assert res.merit < 1e-3 * m0
+    assert s.paraxial().efl == pytest.approx(100.0, rel=1e-6)
+    assert s.surfaces[1].curvature != pytest.approx(0.1)

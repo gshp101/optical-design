@@ -130,11 +130,80 @@
     "merit_function": {
       "rows": [
         {
-          "type": "POWR",
+          "type": "EFFL",
+          "target": 100.0,
+          "weight": -1.0,
+          "bound": "=",
+          "params": {},
+          "comment": "hold the focal length at 100 mm"
+        },
+        {
+          "type": "BLNK",
           "target": 0.0,
           "weight": 0,
           "bound": "=",
           "params": {},
+          "comment": "Default merit: spot, centroid, 3 rings x 6 arms"
+        },
+        {
+          "type": "MNEG",
+          "target": 0.3,
+          "weight": 1.0,
+          "bound": ">",
+          "params": {},
+          "comment": ""
+        },
+        {
+          "type": "MNEA",
+          "target": 0.05,
+          "weight": 1.0,
+          "bound": ">",
+          "params": {},
+          "comment": ""
+        },
+        {
+          "type": "RAYS",
+          "target": 0.0,
+          "weight": 1.0,
+          "bound": "=",
+          "params": {
+            "field": 0,
+            "reference": "centroid",
+            "rings": 3,
+            "arms": 6,
+            "wavelengths": null,
+            "symmetric": null
+          },
+          "comment": ""
+        },
+        {
+          "type": "RAYS",
+          "target": 0.0,
+          "weight": 1.0,
+          "bound": "=",
+          "params": {
+            "field": 1,
+            "reference": "centroid",
+            "rings": 3,
+            "arms": 6,
+            "wavelengths": null,
+            "symmetric": null
+          },
+          "comment": ""
+        },
+        {
+          "type": "RAYS",
+          "target": 0.0,
+          "weight": 1.0,
+          "bound": "=",
+          "params": {
+            "field": 2,
+            "reference": "centroid",
+            "rings": 3,
+            "arms": 6,
+            "wavelengths": null,
+            "symmetric": null
+          },
           "comment": ""
         }
       ]

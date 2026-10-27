@@ -394,6 +394,29 @@ def test_optimization_dialog(win):
     d.close()
 
 
+def test_optimization_dialog_refuses_unweighted_merit(win, monkeypatch):
+    from lensforge_qt import opt_dialogs
+    shown = []
+    monkeypatch.setattr(opt_dialogs.QMessageBox, "warning", lambda *a: shown.append(a[2]))
+
+    def fn(s):
+        opt.set_variable(s, 1, "curvature")
+        s.merit_function = opt.MeritFunction()
+        s.merit_function.add("POWR", 0.0, 0.0)  # weight 0 and no surf: the Smith file as checked in
+    win.doc.reset(lf.samples.singlet())
+    win.doc.modify("problem", fn)
+    d = win.optimization()
+    assert "weight 0" in d.merit_label.text()
+    d.start()
+    assert shown and "weight 0" in shown[0] and not d.running
+    win.doc.modify("weight", lambda s: setattr(s.merit_function.rows[0], "weight", 1.0))
+    d.refresh_info()
+    assert "missing parameter surf" in d.merit_label.text()
+    d.start()
+    assert "missing parameter surf" in shown[1]
+    d.close()
+
+
 def test_stop_keeps_best_design():
     from lensforge_qt.opt_dialogs import run_optimization
     doc = LensDocument()

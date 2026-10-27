@@ -156,6 +156,7 @@ class OptimizationDialog(QDialog):
         self.info = QLabel()
         self.info.setWordWrap(True)
         self.merit_label = QLabel()
+        self.merit_label.setWordWrap(True)
         f = self.merit_label.font()
         f.setPointSizeF(f.pointSizeF() * 1.25)
         f.setBold(True)
@@ -213,9 +214,10 @@ class OptimizationDialog(QDialog):
         if mf is not None and mf.rows:
             try:
                 v = mf.value(s)
-            except Exception:  # noqa: BLE001
-                v = math.inf
-            self.merit_label.setText(f"Current merit function: {v:.10g}")
+                problem = mf.problem(s)
+            except Exception as e:  # noqa: BLE001
+                v, problem = math.inf, str(e)
+            self.merit_label.setText(f"Current merit function: {v:.10g}" + (f"\n{problem}" if problem else ""))
         else:
             self.merit_label.setText("No merit function (Tools > Merit Function Editor)")
 
@@ -230,6 +232,11 @@ class OptimizationDialog(QDialog):
         if mf is None or not mf.rows:
             QMessageBox.information(self, "Optimization", "The merit function is empty. Use the Merit Function "
                                     "Editor (its Wizard builds a default merit function).")
+            return
+        problem = mf.problem(s)
+        if problem:
+            QMessageBox.warning(self, "Optimization", problem + "\n\nFix it in the Merit Function Editor "
+                                "(Tools > Merit Function Editor).")
             return
         self.stop.clear()
         self.running = True

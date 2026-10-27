@@ -158,7 +158,11 @@ HELP = {
         "Optimise the variables to minimise the merit function.",
         "Runs damped least squares, Hammer, global (multi-start) or glass substitution optimisation on the "
         "lens's variables against the merit function, in the background with live progress. Stop keeps the "
-        "best design found so far; the result is one undo step."),
+        "best design found so far; the result is one undo step. Optimisation needs at least one variable and a "
+        "merit function with at least one row of non-zero weight: rows with weight 0 are only displayed, so a "
+        "merit function made only of them is always 0 and nothing changes. The dialog refuses to start, and "
+        "says why, when the merit function is empty, has no weighted rows, or has a row that cannot be "
+        "evaluated (for example POWR without its <code>surf</code> parameter)."),
     "Tools > Tolerancing": (
         "Estimate how manufacturing errors degrade the lens.",
         "Builds a tolerance list (radius, thickness, index, Abbe, decentre and tilt tolerances), then runs a "

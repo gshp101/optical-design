@@ -14,9 +14,10 @@ and pupil coordinates), ``field`` (field index or (hx, hy) tuple), ``freq``
 
 from __future__ import annotations
 
+import inspect
 import math
 from dataclasses import dataclass
-from typing import Callable, Dict, Optional
+from typing import Callable, Dict, List, Optional
 
 import numpy as np
 
@@ -123,6 +124,13 @@ def operand(name, doc, bound="="):
         DEFAULT_BOUND[name] = bound
         return fn
     return deco
+
+
+def required_params(name: str) -> List[str]:
+    """Parameters operand ``name`` cannot do without (e.g. ``["surf"]`` for POWR)."""
+    sig = inspect.signature(OPERANDS[name.upper()])
+    return [k for k, p in list(sig.parameters.items())[1:]
+            if p.default is inspect.Parameter.empty and p.kind in (p.POSITIONAL_OR_KEYWORD, p.KEYWORD_ONLY)]
 
 
 def _fieldspec(field, hx, hy):
