@@ -231,6 +231,9 @@ class OptimizationDialog(QDialog):
             QMessageBox.information(self, "Optimization", "The merit function is empty. Use the Merit Function "
                                     "Editor (its Wizard builds a default merit function).")
             return
+        if mf.copy().auto_weight():
+            self.doc.modify("Merit weight 1", lambda s: s.merit_function.auto_weight())
+            s, mf = self.doc.system, self.doc.system.merit_function
         self.stop.clear()
         self.running = True
         self.start_btn.setEnabled(False)
