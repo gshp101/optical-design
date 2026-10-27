@@ -344,6 +344,21 @@ def test_every_analysis_window(win, key):
     w.close()
 
 
+def test_open_analysis_reuses_existing_window(win):
+    win.close_analyses()
+    fan = win.open_analysis("ray_fan")
+    spot = win.open_analysis("spot")
+    assert win.open_analysis("ray_fan") is fan
+    assert len(win.analysis_windows) == 2
+    # the menu command does the same, and raises the existing window
+    win.toolbar_lookup[f"Analysis > {fan.spec.group} > {fan.spec.title}"].trigger()
+    assert len(win.analysis_windows) == 2
+    # scripts can still ask for a second copy
+    other = win.open_analysis("ray_fan", new=True)
+    assert other is not fan and len(win.analysis_windows) == 3
+    spot.close()
+
+
 def test_analysis_auto_update_and_settings(win):
     w = win.open_analysis("spot")
     n = w.updates
@@ -670,9 +685,9 @@ def test_customize_toolbar_applies_and_persists(win, qtbot, tmp_path, monkeypatc
 
     # the toolbar button runs the same command as the menu item
     btn = win.toolbar.widgetForAction(win.toolbar_lookup["Analysis > Layout > 2D Layout"])
-    n = len(win.analysis_windows)
+    win.close_analyses()
     btn.click()
-    assert len(win.analysis_windows) == n + 1
+    assert [w.spec.key for w in win.analysis_windows] == ["layout"]
 
     # a new session (same settings file) gets the same toolbar, shown
     w2 = MainWindow(settings=QSettings(str(tmp_path / "settings.ini"), QSettings.IniFormat))

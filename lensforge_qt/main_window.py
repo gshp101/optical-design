@@ -545,7 +545,17 @@ class MainWindow(QMainWindow):
         self.doc.modify("Automatic semi-diameters", fn)
 
     # ------------------------------------------------------------------ analyses
-    def open_analysis(self, key, settings=None) -> AnalysisWindow:
+    def open_analysis(self, key, settings=None, new=False) -> AnalysisWindow:
+        """Show the analysis *key*. An existing window of that type is brought to the front
+        instead of opening another, unless *new* is set or *settings* are given."""
+        if not new and settings is None:
+            for w in reversed(self.analysis_windows):
+                if w.spec.key == key:
+                    w.show()
+                    w.raise_()
+                    if w.isFloating():
+                        w.activateWindow()
+                    return w
         w = AnalysisWindow(key, self.doc, settings, self, on_rays=self.input_rays)
         w.closed.connect(self._analysis_closed)
         others = [x for x in self.analysis_windows if not x.isFloating()]
