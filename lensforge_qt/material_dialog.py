@@ -195,6 +195,9 @@ class MaterialDialog(QDialog):
             except Exception as e:  # noqa: BLE001
                 QMessageBox.critical(self, "Glass catalog", f"Could not load {path}:\n{e}")
                 return
+            main = self.parent().window() if self.parent() else None
+            if hasattr(main, "remember_agf"):
+                main.remember_agf(path)
             self._reload_catalogs()
 
     # -- model / other tabs ------------------------------------------------------------

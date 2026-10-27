@@ -68,6 +68,7 @@ class MainWindow(QMainWindow):
     def __init__(self, path=None, settings: QSettings = None):
         super().__init__()
         self.settings = settings or QSettings("lensforge", "lensforge-qt")
+        self._restore_agf_catalogs()
         self.doc = LensDocument()
         self.analysis_windows = []
         self.dialogs = {}
@@ -138,6 +139,7 @@ class MainWindow(QMainWindow):
         self.a_inspect = A("Ins&pect Lens File...", self.inspect_lens_dialog, "Ctrl+Shift+O",
                            "Show the system report of a lens file without opening it")
         self.a_agf = A("Load Glass Catalog (AGF)...", self.load_agf)
+        self.a_forget_agf = A("Forget Loaded Glass Catalogs", self.forget_agf_catalogs)
         self.a_export = A("Export Prescription...", self.export_prescription)
         self.a_quit = A("E&xit", self.close, QKeySequence.Quit)
         self.a_undo = self.doc.undo_stack.createUndoAction(self, "&Undo")
@@ -197,6 +199,7 @@ class MainWindow(QMainWindow):
         for name, fn in _sample_list():
             sm.addAction(name).triggered.connect(lambda _=False, n=name, f=fn: self.load_sample(n, f))
         m.addAction(self.a_agf)
+        m.addAction(self.a_forget_agf)
         m.addAction(self.a_export)
         m.addSeparator()
         m.addAction(self.a_quit)
@@ -460,7 +463,31 @@ class MainWindow(QMainWindow):
             except Exception as e:  # noqa: BLE001
                 QMessageBox.critical(self, "Glass catalog", f"Could not load {path}:\n{e}")
                 return
+            self.remember_agf(path)
             self.statusBar().showMessage(f"Loaded glass catalog {os.path.basename(path)}", 5000)
+
+    # AGF catalogs the user loaded are reloaded at every start until forgotten.
+    def _agf_paths(self):
+        v = self.settings.value("agf_catalogs", []) or []
+        return [v] if isinstance(v, str) else list(v)
+
+    def remember_agf(self, path):
+        path = os.path.abspath(path)
+        self.settings.setValue("agf_catalogs", [p for p in self._agf_paths() if p != path] + [path])
+
+    def _restore_agf_catalogs(self):
+        for path in self._agf_paths():
+            if os.path.exists(path):
+                try:
+                    lf.shared_library().load_agf(path)
+                except Exception:  # noqa: BLE001 - a bad file must not stop the app starting
+                    pass
+
+    def forget_agf_catalogs(self):
+        n = len(self._agf_paths())
+        self.settings.setValue("agf_catalogs", [])
+        self.statusBar().showMessage(f"Forgot {n} glass catalog(s); they stay loaded until the program closes",
+                                     5000)
 
     def export_prescription(self):
         path, _ = QFileDialog.getSaveFileName(self, "Export prescription", f"{self.doc.display_name}.txt",

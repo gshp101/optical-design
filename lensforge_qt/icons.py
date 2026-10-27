@@ -86,6 +86,9 @@ ICONS = {
     "File > Load Glass Catalog (AGF)": ('<path d="M5 4h12a2 2 0 0 1 2 2v14H7a2 2 0 0 1-2-2z" fill="#fff"/>'
                                         '<path d="M5 18a2 2 0 0 1 2-2h12"/>'
                                         f'<path d="M9 13l3-6 3 6z" fill="{GLASS}"/>'),
+    "File > Forget Loaded Glass Catalogs": ('<path d="M5 4h12a2 2 0 0 1 2 2v14H7a2 2 0 0 1-2-2z" fill="#fff"/>'
+                                            '<path d="M5 18a2 2 0 0 1 2-2h12"/>'
+                                            f'<path d="M9 8l6 6M15 8l-6 6" stroke="{RED}" stroke-width="2"/>'),
     "File > Export Prescription": (PAGE + '<path d="M8 10h6M8 13h6M8 16h3"/>'
                                    f'<path d="M14 18h8m-3-3 3 3-3 3" stroke="{GREEN}" stroke-width="2"/>'),
     "File > Exit": ('<path d="M13 3H5v18h8"/><path d="M5 3l6 2v16l-6 0" fill="' + GLASS + '"/>'

@@ -78,8 +78,15 @@ HELP = {
         "the lens."),
     "File > Load Glass Catalog (AGF)": (
         "Load a Zemax AGF glass catalog so its glasses can be used.",
-        "Adds the glasses of an .agf catalog file to the glass library for this session. They then appear in "
-        "the material picker and can be typed into the Material column."),
+        "Adds the glasses of an .agf catalog file to the glass library. They then appear in the material "
+        "picker and can be typed into the Material column. The catalog is remembered and loaded again every "
+        "time lensforge starts (also when loaded from the material picker), until you use File > Forget "
+        "Loaded Glass Catalogs. The built-in SCHOTT catalog already holds every current SCHOTT glass "
+        "(preferred and inquiry) plus common obsolete types."),
+    "File > Forget Loaded Glass Catalogs": (
+        "Stop loading your AGF catalogs at start-up.",
+        "Clears the list of AGF catalogs that lensforge loads at every start. Catalogs already loaded stay "
+        "available until the program closes. Built-in glasses are not affected."),
     "File > Export Prescription": (
         "Save the prescription report as a text file.",
         "Writes the Prescription Data report (surface data, materials, paraxial data) to a .txt file."),

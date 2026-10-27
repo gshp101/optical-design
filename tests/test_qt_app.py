@@ -1011,3 +1011,28 @@ def test_no_hard_coded_font_families():
     hits = [f"{name}:{i}" for name in sorted(os.listdir(pkg)) if name.endswith(".py")
             for i, line in enumerate(open(os.path.join(pkg, name), encoding="utf-8"), 1) if bad.search(line)]
     assert not hits, f"use lensforge_qt.fonts.fixed_font() instead of a named family: {hits}"
+
+
+def test_loaded_agf_catalog_is_remembered(win, tmp_path, monkeypatch):
+    from lensforge_qt import main_window
+    from lensforge_qt.main_window import MainWindow
+    agf = tmp_path / "mycat.agf"
+    agf.write_text("CC test\nNM MYGLASS 2 0 1.5168 64.17 0 1\n"
+                   "CD 1.03961212 0.00600069867 0.231792344 0.0200179144 1.01046945 103.560653\n")
+    monkeypatch.setattr(main_window.QFileDialog, "getOpenFileName", lambda *a, **k: (str(agf), ""))
+    lib = lf.shared_library()
+    try:
+        win.a_agf.trigger()
+        assert lib.find("MYGLASS") is not None
+        del lib.catalogs["MYCAT"]
+        # a new session (same settings file) loads the catalog again
+        w2 = MainWindow(settings=QSettings(str(tmp_path / "settings.ini"), QSettings.IniFormat))
+        w2.close()
+        assert lib.find("MYGLASS") is not None
+        win.a_forget_agf.trigger()
+        del lib.catalogs["MYCAT"]
+        w3 = MainWindow(settings=QSettings(str(tmp_path / "settings.ini"), QSettings.IniFormat))
+        w3.close()
+        assert lib.find("MYGLASS") is None
+    finally:
+        lib.catalogs.pop("MYCAT", None)
