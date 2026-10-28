@@ -1,0 +1,251 @@
+{
+  "format": "lensforge-1",
+  "name": "Shinohara, copy lens, USP 4,490,019 (1984) (Smith, Modern Lens Design, Fig. 11.7)",
+  "units": "mm",
+  "aperture": {
+    "type": "EPD",
+    "value": 18.0
+  },
+  "fields": {
+    "type": "ANGLE",
+    "values": [
+      {
+        "x": 0.0,
+        "y": 0.0,
+        "weight": 1.0,
+        "vdx": 0.0,
+        "vdy": 0.0,
+        "vcx": 0.0,
+        "vcy": 0.0
+      },
+      {
+        "x": 0.0,
+        "y": 16.751,
+        "weight": 1.0,
+        "vdx": 0.0,
+        "vdy": 0.0,
+        "vcx": 0.0,
+        "vcy": 0.0
+      },
+      {
+        "x": 0.0,
+        "y": 23.93,
+        "weight": 1.0,
+        "vdx": 0.0,
+        "vdy": 0.0,
+        "vcx": 0.0,
+        "vcy": 0.0
+      }
+    ]
+  },
+  "wavelengths": {
+    "values": [
+      {
+        "value": 0.5875618,
+        "weight": 1.0
+      },
+      {
+        "value": 0.4861,
+        "weight": 1.0
+      },
+      {
+        "value": 0.6563,
+        "weight": 1.0
+      }
+    ],
+    "primary": 0
+  },
+  "ray_aiming": "paraxial",
+  "notes": "Warren J. Smith, Modern Lens Design, 2nd ed., Figure 11.7, p. 192. Book: EFL 99.99, BFL 179.4, NA -0.045 (F/11.1), GIH 88.76 (HFOV=23.93), PTZ/F -7.663, VL 40.31, OD 179.38 (MAG -0.999). Glass: SSK5 entered as N-SSK5. Stop at surface 7 (the book's plane air surface). HFOV 23.93 from the book's distortion plot (the table gives only GIH). BFL here is the paraxial image distance for the finite object.",
+  "surfaces": [
+    {
+      "type": "STANDARD",
+      "curvature": 0.0,
+      "conic": 0.0,
+      "thickness": 179.38,
+      "material": null,
+      "comment": "OBJECT"
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.045647509928333406,
+      "conic": 0.0,
+      "thickness": 9.02,
+      "material": "N-SSK5",
+      "semi_diameter": 12.8
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.05262327000999842,
+      "conic": 0.0,
+      "thickness": 1.95,
+      "material": null,
+      "semi_diameter": 11.4
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.023758612497030172,
+      "conic": 0.0,
+      "thickness": 1.096,
+      "material": "LF2",
+      "semi_diameter": 8.6
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.07179781734635267,
+      "conic": 0.0,
+      "thickness": 0.18,
+      "material": null,
+      "semi_diameter": 8.6
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.06943480072212194,
+      "conic": 0.0,
+      "thickness": 4.097,
+      "material": "SK8",
+      "semi_diameter": 8.6
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.013460761879122356,
+      "conic": 0.0,
+      "thickness": 3.812,
+      "material": null,
+      "semi_diameter": 8.8
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.0,
+      "conic": 0.0,
+      "thickness": 3.812,
+      "material": null,
+      "semi_diameter": 6.9,
+      "stop": true
+    },
+    {
+      "type": "STANDARD",
+      "curvature": -0.013460761879122356,
+      "conic": 0.0,
+      "thickness": 4.097,
+      "material": "SK8",
+      "semi_diameter": 8.6
+    },
+    {
+      "type": "STANDARD",
+      "curvature": -0.06943480072212194,
+      "conic": 0.0,
+      "thickness": 0.18,
+      "material": null,
+      "semi_diameter": 8.6
+    },
+    {
+      "type": "STANDARD",
+      "curvature": -0.07179781734635267,
+      "conic": 0.0,
+      "thickness": 1.096,
+      "material": "LF2",
+      "semi_diameter": 8.6
+    },
+    {
+      "type": "STANDARD",
+      "curvature": -0.023758612497030172,
+      "conic": 0.0,
+      "thickness": 1.95,
+      "material": null,
+      "semi_diameter": 8.6
+    },
+    {
+      "type": "STANDARD",
+      "curvature": -0.05262327000999842,
+      "conic": 0.0,
+      "thickness": 9.02,
+      "material": "N-SSK5",
+      "semi_diameter": 11.4
+    },
+    {
+      "type": "STANDARD",
+      "curvature": -0.045647509928333406,
+      "conic": 0.0,
+      "thickness": 179.375,
+      "material": null,
+      "semi_diameter": 12.8
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.0,
+      "conic": 0.0,
+      "thickness": 0.0,
+      "material": null,
+      "comment": "IMAGE"
+    }
+  ],
+  "optimization": {
+    "variables": [
+      {
+        "surface": 1,
+        "param": "curvature"
+      },
+      {
+        "surface": 2,
+        "param": "curvature"
+      },
+      {
+        "surface": 3,
+        "param": "curvature"
+      },
+      {
+        "surface": 4,
+        "param": "curvature"
+      },
+      {
+        "surface": 5,
+        "param": "curvature"
+      },
+      {
+        "surface": 6,
+        "param": "curvature"
+      },
+      {
+        "surface": 8,
+        "param": "curvature"
+      },
+      {
+        "surface": 9,
+        "param": "curvature"
+      },
+      {
+        "surface": 10,
+        "param": "curvature"
+      },
+      {
+        "surface": 11,
+        "param": "curvature"
+      },
+      {
+        "surface": 12,
+        "param": "curvature"
+      },
+      {
+        "surface": 13,
+        "param": "curvature"
+      },
+      {
+        "surface": 13,
+        "param": "thickness"
+      }
+    ],
+    "merit_function": {
+      "rows": [
+        {
+          "type": "POWR",
+          "target": 0.0,
+          "weight": 0,
+          "bound": "=",
+          "params": {},
+          "comment": ""
+        }
+      ]
+    }
+  }
+}

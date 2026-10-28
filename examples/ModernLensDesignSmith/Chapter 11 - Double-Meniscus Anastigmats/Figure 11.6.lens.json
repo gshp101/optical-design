@@ -1,0 +1,227 @@
+{
+  "format": "lensforge-1",
+  "name": "F/4.5 34 deg Orthometar, US 1,792,917 (Smith, Modern Lens Design, Fig. 11.6)",
+  "units": "mm",
+  "aperture": {
+    "type": "EPD",
+    "value": 22.413
+  },
+  "fields": {
+    "type": "ANGLE",
+    "values": [
+      {
+        "x": 0.0,
+        "y": 0.0,
+        "weight": 1.0,
+        "vdx": 0.0,
+        "vdy": 0.0,
+        "vcx": 0.0,
+        "vcy": 0.0
+      },
+      {
+        "x": 0.0,
+        "y": 23.674,
+        "weight": 1.0,
+        "vdx": 0.0,
+        "vdy": 0.0,
+        "vcx": 0.0,
+        "vcy": 0.0
+      },
+      {
+        "x": 0.0,
+        "y": 33.82,
+        "weight": 1.0,
+        "vdx": 0.0,
+        "vdy": 0.0,
+        "vcx": 0.0,
+        "vcy": 0.0
+      }
+    ]
+  },
+  "wavelengths": {
+    "values": [
+      {
+        "value": 0.5875618,
+        "weight": 1.0
+      },
+      {
+        "value": 0.4861,
+        "weight": 1.0
+      },
+      {
+        "value": 0.6563,
+        "weight": 1.0
+      }
+    ],
+    "primary": 0
+  },
+  "ray_aiming": "paraxial",
+  "notes": "Warren J. Smith, Modern Lens Design, 2nd ed., Figure 11.6, p. 191. Book: EFL 101.6, BFL 88.29, NA -0.1103 (F/4.5), GIH 68.09 (HFOV=33.82), PTZ/F -5.651, VL 30.5, infinite conjugate. Stop at surface 6 (the book's plane air surface).",
+  "surfaces": [
+    {
+      "type": "STANDARD",
+      "curvature": 0.0,
+      "conic": 0.0,
+      "thickness": "inf",
+      "material": null,
+      "comment": "OBJECT"
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.03861003861003861,
+      "conic": 0.0,
+      "thickness": 5.1,
+      "material": "SK8",
+      "semi_diameter": 12.6
+    },
+    {
+      "type": "STANDARD",
+      "curvature": -0.01040582726326743,
+      "conic": 0.0,
+      "thickness": 2.3,
+      "material": "LLF2",
+      "semi_diameter": 12.5
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.05434782608695653,
+      "conic": 0.0,
+      "thickness": 0.8,
+      "material": null,
+      "semi_diameter": 9.9
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.04201680672268907,
+      "conic": 0.0,
+      "thickness": 3.5,
+      "material": "SK20",
+      "semi_diameter": 9.9
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.028169014084507043,
+      "conic": 0.0,
+      "thickness": 2.85,
+      "material": null,
+      "semi_diameter": 9.9
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.0,
+      "conic": 0.0,
+      "thickness": 2.85,
+      "material": null,
+      "semi_diameter": 9.4,
+      "stop": true
+    },
+    {
+      "type": "STANDARD",
+      "curvature": -0.030211480362537763,
+      "conic": 0.0,
+      "thickness": 4.0,
+      "material": "SK20",
+      "semi_diameter": 9.9
+    },
+    {
+      "type": "STANDARD",
+      "curvature": -0.04405286343612335,
+      "conic": 0.0,
+      "thickness": 1.6,
+      "material": null,
+      "semi_diameter": 9.9
+    },
+    {
+      "type": "STANDARD",
+      "curvature": -0.055248618784530384,
+      "conic": 0.0,
+      "thickness": 1.9,
+      "material": "LLF2",
+      "semi_diameter": 9.9
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.012919896640826873,
+      "conic": 0.0,
+      "thickness": 5.6,
+      "material": "SK8",
+      "semi_diameter": 12.5
+    },
+    {
+      "type": "STANDARD",
+      "curvature": -0.03937007874015748,
+      "conic": 0.0,
+      "thickness": 88.287,
+      "material": null,
+      "semi_diameter": 12.5
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.0,
+      "conic": 0.0,
+      "thickness": 0.0,
+      "material": null,
+      "comment": "IMAGE"
+    }
+  ],
+  "optimization": {
+    "variables": [
+      {
+        "surface": 1,
+        "param": "curvature"
+      },
+      {
+        "surface": 2,
+        "param": "curvature"
+      },
+      {
+        "surface": 3,
+        "param": "curvature"
+      },
+      {
+        "surface": 4,
+        "param": "curvature"
+      },
+      {
+        "surface": 5,
+        "param": "curvature"
+      },
+      {
+        "surface": 7,
+        "param": "curvature"
+      },
+      {
+        "surface": 8,
+        "param": "curvature"
+      },
+      {
+        "surface": 9,
+        "param": "curvature"
+      },
+      {
+        "surface": 10,
+        "param": "curvature"
+      },
+      {
+        "surface": 11,
+        "param": "curvature"
+      },
+      {
+        "surface": 11,
+        "param": "thickness"
+      }
+    ],
+    "merit_function": {
+      "rows": [
+        {
+          "type": "POWR",
+          "target": 0.0,
+          "weight": 0,
+          "bound": "=",
+          "params": {},
+          "comment": ""
+        }
+      ]
+    }
+  }
+}
