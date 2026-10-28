@@ -348,7 +348,8 @@ def lookup(item_id: str) -> Optional[Tuple[str, str]]:
     k = analysis_key(item_id)
     if k is not None and k in ANALYSIS_HELP:
         summary, details = ANALYSIS_HELP[k]
-        return summary, details + " Opens in a dockable window that updates when the lens changes."
+        return summary, details + (" Opens in a dockable window that updates when the lens changes. If this "
+                                   "analysis is already open, its window is brought to the front instead.")
     return None
 
 
@@ -362,7 +363,8 @@ materials into the cells; right-click a cell for variables, solves and surface t
 <li><b>File</b>: open, save, insert lenses from files, system settings (aperture, fields, wavelengths),
 input rays, sample lenses.</li>
 <li><b>Edit</b>: undo/redo and surface editing.</li>
-<li><b>Analysis</b>: plots and reports, each in a window that updates as you edit.</li>
+<li><b>Analysis</b>: plots and reports, each in a window that updates as you edit. Choosing an
+analysis that is already open brings its window to the front.</li>
 <li><b>Tools</b>: optimisation, tolerancing, merit function and the Python shell. The <b>Merit Function
 Editor</b> pages below the Overview explain merit functions in detail, with a worked example.</li>
 <li><b>View</b>: the toolbar (View &gt; Customize Toolbar puts any command on it).</li>
