@@ -1,0 +1,227 @@
+{
+  "format": "lensforge-1",
+  "name": "CCD lens from Mills College lens, F/3.5 (Smith, Modern Lens Design, Fig. 17.20)",
+  "units": "mm",
+  "aperture": {
+    "type": "EPD",
+    "value": 33.2158
+  },
+  "fields": {
+    "type": "ANGLE",
+    "values": [
+      {
+        "x": 0.0,
+        "y": 0.0,
+        "weight": 1.0,
+        "vdx": 0.0,
+        "vdy": 0.0,
+        "vcx": 0.0,
+        "vcy": 0.0
+      },
+      {
+        "x": 0.0,
+        "y": 4.088,
+        "weight": 1.0,
+        "vdx": 0.0,
+        "vdy": 0.0,
+        "vcx": 0.0,
+        "vcy": 0.0
+      },
+      {
+        "x": 0.0,
+        "y": 5.84,
+        "weight": 1.0,
+        "vdx": 0.0,
+        "vdy": 0.0,
+        "vcx": 0.0,
+        "vcy": 0.0
+      }
+    ]
+  },
+  "wavelengths": {
+    "values": [
+      {
+        "value": 0.78,
+        "weight": 1.0
+      },
+      {
+        "value": 0.768,
+        "weight": 1.0
+      },
+      {
+        "value": 0.792,
+        "weight": 1.0
+      }
+    ],
+    "primary": 0
+  },
+  "ray_aiming": "paraxial",
+  "notes": "Warren J. Smith, Modern Lens Design, 2nd ed., Figure 17.20, p. 325. Book: EFL 100.1, BFL 60.44, NA -0.1427 (F/3.5), GIH 11.9 (HFOV=5.84), PTZ/F -6.457, VL 69.8, OD 939.24 (MAG -0.113). Wavelengths 0.78, 0.768, 0.792 um as in the book (primary first). Glass: LAK9 entered as N-LAK9. Stop at surface 6 (the book's plane air surface). The book designs this lens for 0.768 to 0.792 um and prints indices at 0.78 um (LAK9 1.682, SF1 1.702). The table ends with a plane dummy surface of zero thickness (sa 13.5) after the image space; it has no optical effect and is left out. BFL here is the paraxial image distance for the finite object.",
+  "surfaces": [
+    {
+      "type": "STANDARD",
+      "curvature": 0.0,
+      "conic": 0.0,
+      "thickness": 939.24,
+      "material": null,
+      "comment": "OBJECT"
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.01812217973577862,
+      "conic": 0.0,
+      "thickness": 7.56,
+      "material": "N-LAK9",
+      "semi_diameter": 22.3
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.0052282934327406196,
+      "conic": 0.0,
+      "thickness": 1.247,
+      "material": null,
+      "semi_diameter": 21.4
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.028036335090277,
+      "conic": 0.0,
+      "thickness": 12.15,
+      "material": "N-LAK9",
+      "semi_diameter": 19.6
+    },
+    {
+      "type": "STANDARD",
+      "curvature": -9.078766653181673e-05,
+      "conic": 0.0,
+      "thickness": 5.4,
+      "material": "SF1",
+      "semi_diameter": 16.8
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.04219765381044814,
+      "conic": 0.0,
+      "thickness": 19.79,
+      "material": null,
+      "semi_diameter": 12.9
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.0,
+      "conic": 0.0,
+      "thickness": 3.213,
+      "material": null,
+      "semi_diameter": 8.6,
+      "stop": true
+    },
+    {
+      "type": "STANDARD",
+      "curvature": -0.03459489379367606,
+      "conic": 0.0,
+      "thickness": 5.4,
+      "material": "SF1",
+      "semi_diameter": 9.0
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.006778328328667585,
+      "conic": 0.0,
+      "thickness": 8.1,
+      "material": "N-LAK9",
+      "semi_diameter": 10.4
+    },
+    {
+      "type": "STANDARD",
+      "curvature": -0.02351447315822889,
+      "conic": 0.0,
+      "thickness": 0.192,
+      "material": null,
+      "semi_diameter": 11.6
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.007199838723612591,
+      "conic": 0.0,
+      "thickness": 6.75,
+      "material": "N-LAK9",
+      "semi_diameter": 12.0
+    },
+    {
+      "type": "STANDARD",
+      "curvature": -0.010404203298132447,
+      "conic": 0.0,
+      "thickness": 60.435,
+      "material": null,
+      "semi_diameter": 12.2
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.0,
+      "conic": 0.0,
+      "thickness": 0.0,
+      "material": null,
+      "comment": "IMAGE"
+    }
+  ],
+  "optimization": {
+    "variables": [
+      {
+        "surface": 1,
+        "param": "curvature"
+      },
+      {
+        "surface": 2,
+        "param": "curvature"
+      },
+      {
+        "surface": 3,
+        "param": "curvature"
+      },
+      {
+        "surface": 4,
+        "param": "curvature"
+      },
+      {
+        "surface": 5,
+        "param": "curvature"
+      },
+      {
+        "surface": 7,
+        "param": "curvature"
+      },
+      {
+        "surface": 8,
+        "param": "curvature"
+      },
+      {
+        "surface": 9,
+        "param": "curvature"
+      },
+      {
+        "surface": 10,
+        "param": "curvature"
+      },
+      {
+        "surface": 11,
+        "param": "curvature"
+      },
+      {
+        "surface": 11,
+        "param": "thickness"
+      }
+    ],
+    "merit_function": {
+      "rows": [
+        {
+          "type": "POWR",
+          "target": 0.0,
+          "weight": 0,
+          "bound": "=",
+          "params": {},
+          "comment": ""
+        }
+      ]
+    }
+  }
+}

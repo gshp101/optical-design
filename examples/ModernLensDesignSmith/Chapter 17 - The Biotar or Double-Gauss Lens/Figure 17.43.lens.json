@@ -1,0 +1,255 @@
+{
+  "format": "lensforge-1",
+  "name": "Tronnier/Schneider, DRP 565566 (1930), F/1.2 19 deg double Gauss (Smith, Modern Lens Design, Fig. 17.43)",
+  "units": "mm",
+  "aperture": {
+    "type": "EPD",
+    "value": 83.2415
+  },
+  "fields": {
+    "type": "ANGLE",
+    "values": [
+      {
+        "x": 0.0,
+        "y": 0.0,
+        "weight": 1.0,
+        "vdx": 0.0,
+        "vdy": 0.0,
+        "vcx": 0.0,
+        "vcy": 0.0
+      },
+      {
+        "x": 0.0,
+        "y": 13.146,
+        "weight": 1.0,
+        "vdx": 0.0,
+        "vdy": 0.0,
+        "vcx": 0.0,
+        "vcy": 0.0
+      },
+      {
+        "x": 0.0,
+        "y": 18.78,
+        "weight": 1.0,
+        "vdx": 0.0,
+        "vdy": 0.0,
+        "vcx": 0.0,
+        "vcy": 0.0
+      }
+    ]
+  },
+  "wavelengths": {
+    "values": [
+      {
+        "value": 0.5875618,
+        "weight": 1.0
+      },
+      {
+        "value": 0.4861,
+        "weight": 1.0
+      },
+      {
+        "value": 0.6563,
+        "weight": 1.0
+      }
+    ],
+    "primary": 0
+  },
+  "ray_aiming": "paraxial",
+  "notes": "Warren J. Smith, Modern Lens Design, 2nd ed., Figure 17.43, p. 349. Book: EFL 99.81, BFL 44.42, NA -0.417 (F/1.2), GIH 33.94 (HFOV=18.78), PTZ/F -2.225, VL 135.8, infinite conjugate. Glass: LLF3 entered as FEL3 (Hoya 560/471; the book gives 560/472); SK10 entered as N-SK10; SK4 entered as N-SK4. Stop at surface 6 (the book's plane air surface).",
+  "surfaces": [
+    {
+      "type": "STANDARD",
+      "curvature": 0.0,
+      "conic": 0.0,
+      "thickness": "inf",
+      "material": null,
+      "comment": "OBJECT"
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.010309278350515464,
+      "conic": 0.0,
+      "thickness": 12.6,
+      "material": "N-SK4",
+      "semi_diameter": 42.0
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.0021915406530791147,
+      "conic": 0.0,
+      "thickness": 1.3,
+      "material": null,
+      "semi_diameter": 42.0
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.01834862385321101,
+      "conic": 0.0,
+      "thickness": 24.0,
+      "material": "N-SK4",
+      "semi_diameter": 38.0
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.0,
+      "conic": 0.0,
+      "thickness": 4.0,
+      "material": "FEL3",
+      "semi_diameter": 38.0
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.030030030030030033,
+      "conic": 0.0,
+      "thickness": 15.0,
+      "material": null,
+      "semi_diameter": 27.0
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.0,
+      "conic": 0.0,
+      "thickness": 10.1,
+      "material": null,
+      "semi_diameter": 24.8,
+      "stop": true
+    },
+    {
+      "type": "STANDARD",
+      "curvature": -0.021645021645021644,
+      "conic": 0.0,
+      "thickness": 5.4,
+      "material": "SF9",
+      "semi_diameter": 26.0
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.01564945226917058,
+      "conic": 0.0,
+      "thickness": 26.2,
+      "material": "N-SK10",
+      "semi_diameter": 30.0
+    },
+    {
+      "type": "STANDARD",
+      "curvature": -0.01564945226917058,
+      "conic": 0.0,
+      "thickness": 0.6,
+      "material": null,
+      "semi_diameter": 30.0
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.010309278350515464,
+      "conic": 0.0,
+      "thickness": 9.1,
+      "material": "N-SK10",
+      "semi_diameter": 30.0
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.0,
+      "conic": 0.0,
+      "thickness": 0.6,
+      "material": null,
+      "semi_diameter": 30.0
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.007027406886858749,
+      "conic": 0.0,
+      "thickness": 2.9,
+      "material": "F2",
+      "semi_diameter": 34.0
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.010309278350515464,
+      "conic": 0.0,
+      "thickness": 24.0,
+      "material": "BAF12",
+      "semi_diameter": 34.0
+    },
+    {
+      "type": "STANDARD",
+      "curvature": -0.003222687721559781,
+      "conic": 0.0,
+      "thickness": 44.424,
+      "material": null,
+      "semi_diameter": 34.0
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.0,
+      "conic": 0.0,
+      "thickness": 0.0,
+      "material": null,
+      "comment": "IMAGE"
+    }
+  ],
+  "optimization": {
+    "variables": [
+      {
+        "surface": 1,
+        "param": "curvature"
+      },
+      {
+        "surface": 2,
+        "param": "curvature"
+      },
+      {
+        "surface": 3,
+        "param": "curvature"
+      },
+      {
+        "surface": 5,
+        "param": "curvature"
+      },
+      {
+        "surface": 7,
+        "param": "curvature"
+      },
+      {
+        "surface": 8,
+        "param": "curvature"
+      },
+      {
+        "surface": 9,
+        "param": "curvature"
+      },
+      {
+        "surface": 10,
+        "param": "curvature"
+      },
+      {
+        "surface": 12,
+        "param": "curvature"
+      },
+      {
+        "surface": 13,
+        "param": "curvature"
+      },
+      {
+        "surface": 14,
+        "param": "curvature"
+      },
+      {
+        "surface": 14,
+        "param": "thickness"
+      }
+    ],
+    "merit_function": {
+      "rows": [
+        {
+          "type": "POWR",
+          "target": 0.0,
+          "weight": 0,
+          "bound": "=",
+          "params": {},
+          "comment": ""
+        }
+      ]
+    }
+  }
+}
