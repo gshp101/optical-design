@@ -26,7 +26,12 @@ HELP = {
     "File > Open": (
         "Open a lens file (lensforge JSON or Zemax .zmx).",
         "Opens a lensforge .json lens, or imports a Zemax .zmx prescription (surfaces, glasses, fields, "
-        "wavelengths, aperture). Imported .zmx files are saved as new JSON files."),
+        "wavelengths, aperture). Imported .zmx files are saved as new JSON files. If the file uses a glass that "
+        "no loaded catalog has, it still opens, but a warning names the glass and its surfaces, the Material cell "
+        "turns red, and every analysis window is cleared and says why it cannot trace, so nothing from the "
+        "previous lens stays on screen. Pick a replacement glass (Ctrl+G) or load a catalog that has it "
+        "(File > Load Glass Catalog), and the analyses update. If the file cannot be read at all, the lens "
+        "already open stays as it was."),
     "File > Save": (
         "Save the lens to its file.",
         "Writes the lens, variables, solves, merit function and the Input Rays settings to its JSON file. "

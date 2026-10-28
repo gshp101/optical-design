@@ -184,6 +184,31 @@ class OpticalSystem:
     def material(self, index: int) -> Material:
         return self.library.resolve(self.surfaces[index].material)
 
+    def missing_materials(self) -> dict:
+        """Materials no loaded catalog knows, as {name: [surface indices]}.
+
+        A lens with missing materials loads, but cannot be traced until each is
+        replaced or a catalog that has it is loaded.
+        """
+        out = {}
+        for i, s in enumerate(self.surfaces):
+            try:
+                self.library.resolve(s.material)
+            except (KeyError, TypeError):
+                out.setdefault(str(s.material), []).append(i)
+        return out
+
+    def missing_materials_message(self) -> str:
+        """One sentence naming the missing materials and their surfaces ('' if none)."""
+        miss = self.missing_materials()
+        if not miss:
+            return ""
+        parts = [f"{name} (surface{'s' if len(rows) > 1 else ''} {', '.join(map(str, rows))})"
+                 for name, rows in miss.items()]
+        noun = "Glass" if len(miss) == 1 else "Glasses"
+        verb = "is" if len(miss) == 1 else "are"
+        return f"{noun} {'; '.join(parts)} {verb} not in any loaded glass catalog."
+
     def media(self, wavelength: float):
         """Refractive indices of the medium after each surface at ``wavelength`` (um).
 

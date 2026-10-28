@@ -34,6 +34,7 @@ KeyRole = Qt.UserRole + 2
 
 SOLVE_BG = QColor(225, 238, 255)
 VAR_BG = QColor(255, 246, 214)
+MISSING_BG = QColor(255, 205, 205)  # material no loaded catalog has
 
 
 class LensDataModel(QAbstractTableModel):
@@ -170,6 +171,8 @@ class LensDataModel(QAbstractTableModel):
         if role == MarkerRole:
             return self.marker(row, key)
         if role == Qt.BackgroundRole:
+            if key == "material" and self._missing(row):
+                return MISSING_BG
             if E.solve_on(self.system, row, key) is not None:
                 return SOLVE_BG
             if E.variable_on(self.system, row, key) is not None:
@@ -180,6 +183,13 @@ class LensDataModel(QAbstractTableModel):
         if role == Qt.ToolTipRole:
             return self.tooltip(row, key)
         return None
+
+    def _missing(self, row) -> bool:
+        try:
+            self.system.library.resolve(self.system.surfaces[row].material)
+        except (KeyError, TypeError):
+            return True
+        return False
 
     def marker(self, row, key):
         x = E.solve_on(self.system, row, key)
@@ -203,6 +213,8 @@ class LensDataModel(QAbstractTableModel):
         if key == "semi_diameter":
             parts.append("fixed (type a value; clear the cell for automatic)"
                          if self.system.surfaces[row].semi_diameter is not None else "automatic")
+        if key == "material" and self._missing(row):
+            parts.append(f"{self.system.surfaces[row].material} is not in any loaded glass catalog: this lens cannot be traced")
         if key == "material":
             parts.append("catalog glass (e.g. N-BK7, SCHOTT:N-SF6), model glass 'nd,vd', index, or MIRROR")
         return "\n".join(parts)
@@ -481,7 +493,10 @@ class LensDataEditor(QWidget):
         if key == "thickness" and math.isinf(self.doc.system.surfaces[row].thickness):
             return False
         if key == "material":
-            m = self.doc.system.material(row)
+            try:
+                m = self.doc.system.material(row)
+            except KeyError:  # missing glass
+                return False
             return not m.is_mirror and m.nd != 1.0
         return True
 
