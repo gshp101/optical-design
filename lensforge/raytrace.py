@@ -222,6 +222,13 @@ def trace(system, P, D, wavelength, opl0=None, first: int = 1, last: Optional[in
 # Ray generation from field / pupil coordinates
 # ---------------------------------------------------------------------------
 
+def _scale_spec(spec, t):
+    """Object description for the field point a fraction ``t`` of the way out from the axis."""
+    if spec[0] == "angle":
+        return ("angle", np.tan(t * np.arctan(spec[1])), np.tan(t * np.arctan(spec[2])))
+    return (spec[0], t * spec[1], t * spec[2]) + tuple(spec[3:])
+
+
 class RayGenerator:
     """Builds object-space rays for normalised field and pupil coordinates,
     with paraxial or real ray aiming."""
@@ -286,6 +293,39 @@ class RayGenerator:
         ax, ay = px * self.r_ep, py * self.r_ep
         if self.aiming != "real" or self.system.stop_index == 0:
             return ax, ay
+        ax, ay = self._solve_aim(spec, px, py, ax, ay)
+        sx, sy = self._stop_coords(spec, ax, ay)
+        bad = ~(np.isfinite(sx) & np.isfinite(sy))
+        if bad.any() and (spec[1] != 0 or spec[2] != 0):
+            # Wide fields (fisheyes): rays aimed at the paraxial pupil miss or hit TIR.
+            # Walk the field out from the axis, starting each step from the last solution.
+            ax, ay = ax.copy(), ay.copy()
+            ax[bad], ay[bad] = self._continue_aim(spec, px[bad], py[bad])
+        return ax, ay
+
+    def _continue_aim(self, spec, px, py):
+        """Aim by field continuation, with a step per ray that halves after a failure."""
+        ax, ay = px * self.r_ep, py * self.r_ep
+        t = np.zeros(px.shape)
+        dt = np.full(px.shape, 0.05)
+        for _ in range(200):
+            todo = (t < 1.0) & (dt > 1e-3)
+            if not todo.any():
+                break
+            tt = np.minimum(t[todo] + dt[todo], 1.0)
+            sp = _scale_spec(spec, tt)
+            cx, cy = self._solve_aim(sp, px[todo], py[todo], ax[todo], ay[todo])
+            sx, sy = self._stop_coords(sp, cx, cy)
+            ok = np.isfinite(sx) & np.isfinite(sy)
+            idx = np.flatnonzero(todo)
+            acc, rej = idx[ok], idx[~ok]
+            ax[acc], ay[acc], t[acc] = cx[ok], cy[ok], tt[ok]
+            dt[acc] *= 1.5
+            dt[rej] *= 0.5
+        return ax, ay
+
+    def _solve_aim(self, spec, px, py, ax, ay):
+        """Newton iteration for the aim points that put rays at (px, py) on the stop."""
         tx, ty = px * self.r_stop, py * self.r_stop
         h = 1e-6 * max(self.r_ep, 1e-9)
         tol = 1e-10 * max(self.r_stop, 1e-9)

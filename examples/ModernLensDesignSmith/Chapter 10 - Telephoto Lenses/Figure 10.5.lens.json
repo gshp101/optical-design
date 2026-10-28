@@ -1,0 +1,179 @@
+{
+  "format": "lensforge-1",
+  "name": "Sigler, super achromat telephoto (EFL 254) (Smith, Modern Lens Design, Fig. 10.5)",
+  "units": "mm",
+  "aperture": {
+    "type": "EPD",
+    "value": 17.96
+  },
+  "fields": {
+    "type": "ANGLE",
+    "values": [
+      {
+        "x": 0.0,
+        "y": 0.0,
+        "weight": 1.0,
+        "vdx": 0.0,
+        "vdy": 0.0,
+        "vcx": 0.0,
+        "vcy": 0.0
+      },
+      {
+        "x": 0.0,
+        "y": 3.5,
+        "weight": 1.0,
+        "vdx": 0.0,
+        "vdy": 0.0,
+        "vcx": 0.0,
+        "vcy": 0.0
+      },
+      {
+        "x": 0.0,
+        "y": 5.0,
+        "weight": 1.0,
+        "vdx": 0.0,
+        "vdy": 0.0,
+        "vcx": 0.0,
+        "vcy": 0.0
+      }
+    ]
+  },
+  "wavelengths": {
+    "values": [
+      {
+        "value": 0.5875618,
+        "weight": 1.0
+      },
+      {
+        "value": 0.4861,
+        "weight": 1.0
+      },
+      {
+        "value": 0.6563,
+        "weight": 1.0
+      }
+    ],
+    "primary": 0
+  },
+  "ray_aiming": "paraxial",
+  "notes": "Warren J. Smith, Modern Lens Design, 2nd ed., Figure 10.5, p. 175. Book: EFL 100, BFL 42.17, NA -0.0898 (F/5.6), GIH 8.75 (HFOV=5.00), PTZ/F -40.38, VL 41.11, infinite conjugate. Glass: KZFS9 entered as KZFSN9 (Schott, 1.599/46.9 as in the book); PK51 entered as PK51A. Stop at surface 4 (the book's plane air surface). HFOV 5.00 from the book's distortion plot (the table gives only GIH).",
+  "surfaces": [
+    {
+      "type": "STANDARD",
+      "curvature": 0.0,
+      "conic": 0.0,
+      "thickness": "inf",
+      "material": null,
+      "comment": "OBJECT"
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.04576449590407762,
+      "conic": 0.0,
+      "thickness": 5.008,
+      "material": "PK51A",
+      "semi_diameter": 9.5
+    },
+    {
+      "type": "STANDARD",
+      "curvature": -0.028946911364557404,
+      "conic": 0.0,
+      "thickness": 1.502,
+      "material": "KZFSN9",
+      "semi_diameter": 8.9
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.009199208868037349,
+      "conic": 0.0,
+      "thickness": 1.127,
+      "material": null,
+      "semi_diameter": 8.3
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.0,
+      "conic": 0.0,
+      "thickness": 26.965,
+      "material": null,
+      "semi_diameter": 8.1,
+      "stop": true
+    },
+    {
+      "type": "STANDARD",
+      "curvature": -0.0778089013383131,
+      "conic": 0.0,
+      "thickness": 1.502,
+      "material": "KZFS1",
+      "semi_diameter": 6.3
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.05047191238076011,
+      "conic": 0.0,
+      "thickness": 5.008,
+      "material": "BASF5",
+      "semi_diameter": 6.7
+    },
+    {
+      "type": "STANDARD",
+      "curvature": -0.04907252919815487,
+      "conic": 0.0,
+      "thickness": 42.174,
+      "material": null,
+      "semi_diameter": 7.4
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.0,
+      "conic": 0.0,
+      "thickness": 0.0,
+      "material": null,
+      "comment": "IMAGE"
+    }
+  ],
+  "optimization": {
+    "variables": [
+      {
+        "surface": 1,
+        "param": "curvature"
+      },
+      {
+        "surface": 2,
+        "param": "curvature"
+      },
+      {
+        "surface": 3,
+        "param": "curvature"
+      },
+      {
+        "surface": 5,
+        "param": "curvature"
+      },
+      {
+        "surface": 6,
+        "param": "curvature"
+      },
+      {
+        "surface": 7,
+        "param": "curvature"
+      },
+      {
+        "surface": 7,
+        "param": "thickness"
+      }
+    ],
+    "merit_function": {
+      "rows": [
+        {
+          "type": "POWR",
+          "target": 0.0,
+          "weight": 0,
+          "bound": "=",
+          "params": {},
+          "comment": ""
+        }
+      ]
+    }
+  }
+}

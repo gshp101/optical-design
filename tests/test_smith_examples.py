@@ -19,7 +19,8 @@ def test_matches_book(path):
     p = lens.paraxial()
     # 0.15 mm allows for glasses entered from rounded book nd/Vd (Fig. 6.6 LAK17, Figs 7.9/7.22 SF52)
     assert p.efl == pytest.approx(float(book["EFL"]), abs=0.15)
-    assert p.bfl == pytest.approx(float(book["BFL"]), abs=0.15)
+    # the book's BFL is the image distance for the actual object (the same as BFL at infinite conjugate)
+    assert p.image_distance == pytest.approx(float(book["BFL"]), abs=0.15)
     g = np.linspace(-1, 1, 11)
     X, Y = np.meshgrid(g, g)
     m = X**2 + Y**2 <= 1
@@ -32,4 +33,4 @@ def test_matches_book(path):
 
 
 def test_models_found():
-    assert len(MODELS) >= 45
+    assert len(MODELS) >= 80

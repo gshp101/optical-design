@@ -237,6 +237,24 @@ def test_real_ray_aiming_hits_stop_centre():
     np.testing.assert_allclose(rr.positions[st, :, :2], [[0, 0], [0, stop_r], [stop_r, 0]], atol=1e-8)
 
 
+def test_real_ray_aiming_fisheye_full_field():
+    # Fig. 9.16 (180 deg fisheye): a chief ray aimed at the paraxial pupil misses the front
+    # meniscus at 87.5 deg, so real aiming has to walk the field out from the axis
+    import os
+    from lensforge.raytrace import RayGenerator
+    path = os.path.join(os.path.dirname(__file__), "..", "examples", "ModernLensDesignSmith",
+                        "Chapter 9 - Reverse Telephoto Lenses", "Figure 9.16.lens.json")
+    s = lf.load(path)
+    g = RayGenerator(s, aiming="real")
+    spec = g.object_spec(0, 1)
+    zero = np.zeros(1)
+    sx, sy = g._stop_coords(spec, *g._solve_aim(spec, zero, zero, zero, zero))
+    assert not np.isfinite(sy).all()
+    r = s.trace(0, 1, zero, zero)
+    assert r.valid.all()
+    np.testing.assert_allclose(r.positions[s.stop_index, 0, :2], [0, 0], atol=1e-8)
+
+
 def test_real_image_height_field():
     s = samples.singlet()
     s.set_fields([0, 5, 10], "REAL_IMAGE_HEIGHT")
