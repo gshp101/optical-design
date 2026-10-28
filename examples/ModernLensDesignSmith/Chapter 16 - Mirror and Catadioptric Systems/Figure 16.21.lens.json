@@ -1,0 +1,155 @@
+{
+  "format": "lensforge-1",
+  "name": "Three mirror 5x afocal (Smith, Modern Lens Design, Fig. 16.21)",
+  "units": "mm",
+  "aperture": {
+    "type": "EPD",
+    "value": 23.3973
+  },
+  "fields": {
+    "type": "ANGLE",
+    "values": [
+      {
+        "x": 0.0,
+        "y": 0.0,
+        "weight": 1.0,
+        "vdx": 0.0,
+        "vdy": 0.0,
+        "vcx": 0.0,
+        "vcy": 0.0
+      },
+      {
+        "x": 0.0,
+        "y": 0.7,
+        "weight": 1.0,
+        "vdx": 0.0,
+        "vdy": 0.0,
+        "vcx": 0.0,
+        "vcy": 0.0
+      },
+      {
+        "x": 0.0,
+        "y": 1.0,
+        "weight": 1.0,
+        "vdx": 0.0,
+        "vdy": 0.0,
+        "vcx": 0.0,
+        "vcy": 0.0
+      }
+    ]
+  },
+  "wavelengths": {
+    "values": [
+      {
+        "value": 0.5875618,
+        "weight": 1.0
+      },
+      {
+        "value": 0.4861,
+        "weight": 1.0
+      },
+      {
+        "value": 0.6563,
+        "weight": 1.0
+      }
+    ],
+    "primary": 0
+  },
+  "ray_aiming": "paraxial",
+  "notes": "Warren J. Smith, Modern Lens Design, 2nd ed., Figure 16.21, p. 298. Book: EFL -5000, BFL 1000, NA 0.0087 (F/213.7), HFOV 1.00, VL 54.77, infinite conjugate. The book does not mark the stop; it is placed at surface 1, the plane entrance surface. The table gives thicknesses without sign; spaces after an odd number of reflections are entered negative, which reproduces the book's VL. Conic constants (kappa) and aspheric terms (ad, ae, af, ag on r^4, r^6, r^8, r^10) as in the book. The book decenters surface 2 by y = -32.000 (an off-axis aperture); it is entered as a coordinate break. As in the book (Afo 1000, MAG 5), an ideal lens of focal length 1000 follows the afocal system so it can be evaluated at a finite focus. EPD = EFL/F# (23.3973); the book's NA is a real marginal ray value that varies with the design's aberrations. The book's NA 0.0087 includes the off-axis aperture decenter, as in Fig 16.20. The three mirrors are not exactly afocal (focal length -4999.5 with the ideal lens), so the image lies 999.67 behind the ideal lens rather than 1000.",
+  "surfaces": [
+    {
+      "type": "STANDARD",
+      "curvature": 0.0,
+      "conic": 0.0,
+      "thickness": "inf",
+      "material": null,
+      "comment": "OBJECT"
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.0,
+      "conic": 0.0,
+      "thickness": 43.84,
+      "material": null,
+      "semi_diameter": 12.5,
+      "stop": true
+    },
+    {
+      "type": "COORDBRK",
+      "thickness": 0.0,
+      "material": null,
+      "decenter_y": -32.0
+    },
+    {
+      "type": "STANDARD",
+      "curvature": -0.009928021841648052,
+      "conic": -1.0,
+      "thickness": -33.514,
+      "material": "MIRROR",
+      "semi_diameter": 44.0
+    },
+    {
+      "type": "STANDARD",
+      "curvature": -0.02168773992062287,
+      "conic": -3.016,
+      "thickness": 100.0,
+      "material": "MIRROR",
+      "semi_diameter": 17.0
+    },
+    {
+      "type": "STANDARD",
+      "curvature": -0.013365588954677288,
+      "conic": -1.0,
+      "thickness": -55.56,
+      "material": "MIRROR",
+      "semi_diameter": 15.0
+    },
+    {
+      "type": "PARAXIAL",
+      "thickness": -1000.0,
+      "material": null,
+      "focal_length": 1000.0
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.0,
+      "conic": 0.0,
+      "thickness": 0.0,
+      "material": null,
+      "comment": "IMAGE"
+    }
+  ],
+  "optimization": {
+    "variables": [
+      {
+        "surface": 3,
+        "param": "curvature"
+      },
+      {
+        "surface": 4,
+        "param": "curvature"
+      },
+      {
+        "surface": 5,
+        "param": "curvature"
+      },
+      {
+        "surface": 6,
+        "param": "thickness"
+      }
+    ],
+    "merit_function": {
+      "rows": [
+        {
+          "type": "POWR",
+          "target": 0.0,
+          "weight": 0,
+          "bound": "=",
+          "params": {},
+          "comment": ""
+        }
+      ]
+    }
+  }
+}

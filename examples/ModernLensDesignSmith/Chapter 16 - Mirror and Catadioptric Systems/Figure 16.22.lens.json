@@ -1,0 +1,167 @@
+{
+  "format": "lensforge-1",
+  "name": "Maksutov Cassegrain F/10 1.5 deg HFOV (Smith, Modern Lens Design, Fig. 16.22)",
+  "units": "mm",
+  "aperture": {
+    "type": "EPD",
+    "value": 9.9091
+  },
+  "fields": {
+    "type": "ANGLE",
+    "values": [
+      {
+        "x": 0.0,
+        "y": 0.0,
+        "weight": 1.0,
+        "vdx": 0.0,
+        "vdy": 0.0,
+        "vcx": 0.0,
+        "vcy": 0.0
+      },
+      {
+        "x": 0.0,
+        "y": 1.043,
+        "weight": 1.0,
+        "vdx": 0.0,
+        "vdy": 0.0,
+        "vcx": 0.0,
+        "vcy": 0.0
+      },
+      {
+        "x": 0.0,
+        "y": 1.49,
+        "weight": 1.0,
+        "vdx": 0.0,
+        "vdy": 0.0,
+        "vcx": 0.0,
+        "vcy": 0.0
+      }
+    ]
+  },
+  "wavelengths": {
+    "values": [
+      {
+        "value": 0.5875618,
+        "weight": 1.0
+      },
+      {
+        "value": 0.4861,
+        "weight": 1.0
+      },
+      {
+        "value": 0.6563,
+        "weight": 1.0
+      }
+    ],
+    "primary": 0
+  },
+  "ray_aiming": "paraxial",
+  "notes": "Warren J. Smith, Modern Lens Design, 2nd ed., Figure 16.22 (page number not visible in the photos). Book: EFL 99.89, BFL 3.314, NA -0.0496 (F/10.0), GIH 2.6 (HFOV=1.49), PTZ/F -0.1751, VL 17.26, infinite conjugate. The book does not mark the stop; it is placed at surface 1, the corrector. The table gives thicknesses without sign; spaces after an odd number of reflections are entered negative, which reproduces the book's VL. The secondary mirror is the rear surface of the corrector (surfaces 2 and 4). Central obscuration and baffles are not modelled.",
+  "surfaces": [
+    {
+      "type": "STANDARD",
+      "curvature": 0.0,
+      "conic": 0.0,
+      "thickness": "inf",
+      "material": null,
+      "comment": "OBJECT"
+    },
+    {
+      "type": "STANDARD",
+      "curvature": -0.084774499830451,
+      "conic": 0.0,
+      "thickness": 0.831,
+      "material": "BK8",
+      "semi_diameter": 5.0,
+      "stop": true
+    },
+    {
+      "type": "STANDARD",
+      "curvature": -0.07982120051085569,
+      "conic": 0.0,
+      "thickness": 15.763,
+      "material": null,
+      "semi_diameter": 5.5
+    },
+    {
+      "type": "STANDARD",
+      "curvature": -0.02518193951298129,
+      "conic": 0.0,
+      "thickness": -15.763,
+      "material": "MIRROR",
+      "semi_diameter": 6.0
+    },
+    {
+      "type": "STANDARD",
+      "curvature": -0.07982120051085569,
+      "conic": 0.0,
+      "thickness": 16.096,
+      "material": "MIRROR",
+      "semi_diameter": 2.0
+    },
+    {
+      "type": "STANDARD",
+      "curvature": -0.15035333032626674,
+      "conic": 0.0,
+      "thickness": 0.333,
+      "material": "BK8",
+      "semi_diameter": 2.0
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.0,
+      "conic": 0.0,
+      "thickness": 3.314,
+      "material": null,
+      "semi_diameter": 2.1
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.0,
+      "conic": 0.0,
+      "thickness": 0.0,
+      "material": null,
+      "comment": "IMAGE"
+    }
+  ],
+  "optimization": {
+    "variables": [
+      {
+        "surface": 1,
+        "param": "curvature"
+      },
+      {
+        "surface": 2,
+        "param": "curvature"
+      },
+      {
+        "surface": 3,
+        "param": "curvature"
+      },
+      {
+        "surface": 4,
+        "param": "curvature"
+      },
+      {
+        "surface": 5,
+        "param": "curvature"
+      },
+      {
+        "surface": 6,
+        "param": "thickness"
+      }
+    ],
+    "merit_function": {
+      "rows": [
+        {
+          "type": "POWR",
+          "target": 0.0,
+          "weight": 0,
+          "bound": "=",
+          "params": {},
+          "comment": ""
+        }
+      ]
+    }
+  }
+}

@@ -55,14 +55,17 @@ def book_values(notes):
 
 
 def petzval_ratio(lens, efl):
-    """Petzval radius over EFL, -1/(EFL * sum c (n' - n)/(n n')), with d-line indices."""
-    lib = lf.shared_library()
-    total, n0 = 0.0, 1.0
-    for s in lens.surfaces[1:-1]:
-        n1 = lib.resolve(s.material).nd if s.material else 1.0
-        total += s.curvature * (n1 - n0) / (n0 * n1)
-        n0 = n1
-    return -1.0 / total / efl
+    """Petzval radius over EFL, -1/(EFL * sum c (n' - n)/(n n')), with d-line indices.
+
+    Indices change sign after each reflection, so a mirror contributes 2c/n."""
+    _, _, n = lens.media(0.5875618)
+    total = 0.0
+    for k in range(1, len(lens.surfaces) - 1):
+        s = lens.surfaces[k]
+        if s.is_coordinate_break or not hasattr(s, "paraxial_curvature"):
+            continue
+        total += s.paraxial_curvature * (n[k] - n[k - 1]) / (n[k - 1] * n[k])
+    return -1.0 / total / efl if total else float("inf")
 
 
 def full_field_transmission(lens, wavelength):
@@ -105,10 +108,10 @@ def analyse(path):
     p = lens.paraxial()
     surfs = lens.surfaces
     # the book's EFL is -1/u' (n' f); it differs from f only when the image lies in a medium (immersion objectives)
-    efl = p.efl * p.n_image
+    efl = p.efl * abs(p.n_image)
     model = {
         "EFL": efl,
-        "BFL": p.image_distance,
+        "BFL": p.image_distance * math.copysign(1.0, p.n_image),  # the book prints distances after a mirror unsigned
         "NA": -1.0 / (2.0 * p.working_fnum),
         "GIH": p.paraxial_image_height,
         "VL": sum(s.thickness for s in surfs[1:-2]),
@@ -240,7 +243,9 @@ def render(chapter, results):
                "GIH is the paraxial image height at the largest field, VL is the sum of all thicknesses except "
                "the last, and PTZ/F is −1/(EFL Σ c(n′−n)/(n n′)). Where the image lies inside an immersion "
                "medium of index n′ (Chapter 15), the book's EFL is n′ times the focal length, and the model's EFL "
-               "is given the same way.</li>")
+               "is given the same way. After an odd number of mirrors (Chapter 16) light travels backwards and "
+               "n′ is negative; the book prints EFL and BFL with the sign they would have unfolded, and so does the "
+               "model.</li>")
     out.append("<li>NA reflects the entrance pupil entered in the model rather than the prescription, so it "
                "is shown but not graded. Chapter 6 models use EPD = 100/F# from the book's rounded F/#, which "
                "puts NA a few tenths of a percent from the book's value; later chapters use EPD = 2 EFL |NA|, "
