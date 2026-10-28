@@ -1,0 +1,171 @@
+{
+  "format": "lensforge-1",
+  "name": "Symmetrical eyepiece 25deg HFOV (Smith, Modern Lens Design, Fig. 7.11)",
+  "units": "mm",
+  "aperture": {
+    "type": "EPD",
+    "value": 17.9
+  },
+  "fields": {
+    "type": "ANGLE",
+    "values": [
+      {
+        "x": 0.0,
+        "y": 0.0,
+        "weight": 1.0,
+        "vdx": 0.0,
+        "vdy": 0.0,
+        "vcx": 0.0,
+        "vcy": 0.0
+      },
+      {
+        "x": 0.0,
+        "y": 17.619,
+        "weight": 1.0,
+        "vdx": 0.0,
+        "vdy": 0.0,
+        "vcx": 0.0,
+        "vcy": 0.0
+      },
+      {
+        "x": 0.0,
+        "y": 25.17,
+        "weight": 1.0,
+        "vdx": 0.0,
+        "vdy": 0.0,
+        "vcx": 0.0,
+        "vcy": 0.0
+      }
+    ]
+  },
+  "wavelengths": {
+    "values": [
+      {
+        "value": 0.5875618,
+        "weight": 1.0
+      },
+      {
+        "value": 0.4861,
+        "weight": 1.0
+      },
+      {
+        "value": 0.6563,
+        "weight": 1.0
+      }
+    ],
+    "primary": 0
+  },
+  "ray_aiming": "paraxial",
+  "notes": "Warren J. Smith, Modern Lens Design, 2nd ed., Figure 7.11, p. 102. Book: EFL 100, BFL 65.44, NA -0.0895 (F/5.6), GIH 47.0 (HFOV=25.17), PTZ/F -1.345, VL 102.82, infinite conjugate. As in the book, the eyepiece is traced from the eye side: the stop (surface 1) is the exit pupil.",
+  "surfaces": [
+    {
+      "type": "STANDARD",
+      "curvature": 0.0,
+      "conic": 0.0,
+      "thickness": "inf",
+      "material": null,
+      "comment": "OBJECT"
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.004223900518694984,
+      "conic": 0.0,
+      "thickness": 12.694,
+      "material": "SF61",
+      "semi_diameter": 50.8,
+      "stop": true
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.010686386612094853,
+      "conic": 0.0,
+      "thickness": 36.813,
+      "material": "SK1",
+      "semi_diameter": 50.8
+    },
+    {
+      "type": "STANDARD",
+      "curvature": -0.006438569607376025,
+      "conic": 0.0,
+      "thickness": 3.808,
+      "material": null,
+      "semi_diameter": 50.8
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.006438569607376025,
+      "conic": 0.0,
+      "thickness": 36.813,
+      "material": "SK1",
+      "semi_diameter": 50.8
+    },
+    {
+      "type": "STANDARD",
+      "curvature": -0.010688671077524931,
+      "conic": 0.0,
+      "thickness": 12.694,
+      "material": "SF61",
+      "semi_diameter": 50.8
+    },
+    {
+      "type": "STANDARD",
+      "curvature": -0.004223900518694984,
+      "conic": 0.0,
+      "thickness": 65.443,
+      "material": null,
+      "semi_diameter": 50.8
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.0,
+      "conic": 0.0,
+      "thickness": 0.0,
+      "material": null,
+      "comment": "IMAGE"
+    }
+  ],
+  "optimization": {
+    "variables": [
+      {
+        "surface": 1,
+        "param": "curvature"
+      },
+      {
+        "surface": 2,
+        "param": "curvature"
+      },
+      {
+        "surface": 3,
+        "param": "curvature"
+      },
+      {
+        "surface": 4,
+        "param": "curvature"
+      },
+      {
+        "surface": 5,
+        "param": "curvature"
+      },
+      {
+        "surface": 6,
+        "param": "curvature"
+      },
+      {
+        "surface": 6,
+        "param": "thickness"
+      }
+    ],
+    "merit_function": {
+      "rows": [
+        {
+          "type": "POWR",
+          "target": 0.0,
+          "weight": 0,
+          "bound": "=",
+          "params": {},
+          "comment": ""
+        }
+      ]
+    }
+  }
+}
