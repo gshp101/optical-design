@@ -56,7 +56,7 @@
     "primary": 0
   },
   "ray_aiming": "paraxial",
-  "notes": "Warren J. Smith, Modern Lens Design, 2nd ed., Figure 13.5 (page number not visible in the photos). Book: EFL 101.5, BFL 13.2, NA -0.3124 (F/1.6), GIH 12.08 (HFOV=6.79), PTZ/F -2.988, VL 133.51, infinite conjugate. Glass: DBC1 entered as model glass 1.611,58.8 (no dispersion data found); EDF3 entered as FD20 (Hoya 720/293, same nd and V as the book). The book does not mark the stop; it is placed at surface 5, the front of the rear group, after the long air space (the table has no plane stop row; the smallest semi-apertures belong to the rear group or field flattener near the image).",
+  "notes": "Warren J. Smith, Modern Lens Design, 2nd ed., Figure 13.5, p. 227. Book: EFL 101.5, BFL 13.2, NA -0.3124 (F/1.6), GIH 12.08 (HFOV=6.79), PTZ/F -2.988, VL 133.51, infinite conjugate. Glass: DBC1 entered as model glass 1.611,58.8 (no dispersion data found); EDF3 entered as FD20 (Hoya 720/293, same nd and V as the book). The book does not mark the stop; it is placed at surface 5, the front of the rear group, after the long air space (the table has no plane stop row; the smallest semi-apertures belong to the rear group or field flattener near the image).",
   "surfaces": [
     {
       "type": "STANDARD",
