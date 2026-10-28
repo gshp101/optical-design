@@ -1,10 +1,10 @@
 {
   "format": "lensforge-1",
-  "name": "New lens",
+  "name": "F/7 1deg HFOV Gauss telescope objective (Smith, Modern Lens Design, Fig. 6.1)",
   "units": "mm",
   "aperture": {
     "type": "EPD",
-    "value": 7.0
+    "value": 14.285714285714286
   },
   "fields": {
     "type": "ANGLE",
@@ -56,7 +56,7 @@
     "primary": 0
   },
   "ray_aiming": "paraxial",
-  "notes": "",
+  "notes": "Warren J. Smith, Modern Lens Design, 2nd ed., Figure 6.1, p. 65. Book: EFL 100, BFL 94.93, NA -0.0713 (F/7.0), GIH 1.75, PTZ/F -1.583, VL 2.10, infinite conjugate. BK7 entered as N-BK7 (same nd/Vd).",
   "surfaces": [
     {
       "type": "STANDARD",
@@ -71,29 +71,33 @@
       "curvature": 0.05664438654129376,
       "conic": 0.0,
       "thickness": 1.4,
-      "material": "1.517,64.2",
-      "stop": true
+      "material": "N-BK7",
+      "stop": true,
+      "semi_diameter": 7.2
     },
     {
       "type": "STANDARD",
       "curvature": 0.01855356413967123,
       "conic": 0.0,
       "thickness": 0.1,
-      "material": null
+      "material": null,
+      "semi_diameter": 7.2
     },
     {
       "type": "STANDARD",
       "curvature": 0.060496067755595885,
       "conic": 0.0,
       "thickness": 0.6,
-      "material": "1.717,29.5"
+      "material": "SF1",
+      "semi_diameter": 7.2
     },
     {
       "type": "STANDARD",
       "curvature": 0.07648183556405354,
       "conic": 0.0,
       "thickness": 94.931,
-      "material": null
+      "material": null,
+      "semi_diameter": 7.2
     },
     {
       "type": "STANDARD",
