@@ -1,0 +1,187 @@
+{
+  "format": "lensforge-1",
+  "name": "Tessar, Zeit. f. Inst. 1907, Rudolph/Zeiss (Smith, Modern Lens Design, Fig. 12.1)",
+  "units": "mm",
+  "aperture": {
+    "type": "EPD",
+    "value": 15.8917
+  },
+  "fields": {
+    "type": "ANGLE",
+    "values": [
+      {
+        "x": 0.0,
+        "y": 0.0,
+        "weight": 1.0,
+        "vdx": 0.0,
+        "vdy": 0.0,
+        "vcx": 0.0,
+        "vcy": 0.0
+      },
+      {
+        "x": 0.0,
+        "y": 21.077,
+        "weight": 1.0,
+        "vdx": 0.0,
+        "vdy": 0.0,
+        "vcx": 0.0,
+        "vcy": 0.0
+      },
+      {
+        "x": 0.0,
+        "y": 30.11,
+        "weight": 1.0,
+        "vdx": 0.0,
+        "vdy": 0.0,
+        "vcx": 0.0,
+        "vcy": 0.0
+      }
+    ]
+  },
+  "wavelengths": {
+    "values": [
+      {
+        "value": 0.5875618,
+        "weight": 1.0
+      },
+      {
+        "value": 0.4861,
+        "weight": 1.0
+      },
+      {
+        "value": 0.6563,
+        "weight": 1.0
+      }
+    ],
+    "primary": 0
+  },
+  "ray_aiming": "paraxial",
+  "notes": "Warren J. Smith, Modern Lens Design, 2nd ed., Figure 12.1, p. 198. Book: EFL 100.2, BFL 91.59, NA -0.0793 (F/6.3), GIH 58.12 (HFOV=30.11), PTZ/F -4.082, VL 14.2, infinite conjugate. Glass: BAF3 entered as N-BAF3; KF9 entered as N-KF9; SK2 entered as N-SK2; SK4 entered as N-SK4. Stop at surface 5 (the book's plane air surface).",
+  "surfaces": [
+    {
+      "type": "STANDARD",
+      "curvature": 0.0,
+      "conic": 0.0,
+      "thickness": "inf",
+      "material": null,
+      "comment": "OBJECT"
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.04975124378109452,
+      "conic": 0.0,
+      "thickness": 3.1,
+      "material": "N-SK4",
+      "semi_diameter": 8.1
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.0,
+      "conic": 0.0,
+      "thickness": 1.7,
+      "material": null,
+      "semi_diameter": 8.1
+    },
+    {
+      "type": "STANDARD",
+      "curvature": -0.015151515151515152,
+      "conic": 0.0,
+      "thickness": 1.0,
+      "material": "N-BAF3",
+      "semi_diameter": 7.7
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.05319148936170213,
+      "conic": 0.0,
+      "thickness": 2.4,
+      "material": null,
+      "semi_diameter": 7.7
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.0,
+      "conic": 0.0,
+      "thickness": 1.9,
+      "material": null,
+      "semi_diameter": 7.1,
+      "stop": true
+    },
+    {
+      "type": "STANDARD",
+      "curvature": -0.012330456226880395,
+      "conic": 0.0,
+      "thickness": 1.0,
+      "material": "N-KF9",
+      "semi_diameter": 7.4
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.04926108374384236,
+      "conic": 0.0,
+      "thickness": 3.1,
+      "material": "N-SK2",
+      "semi_diameter": 7.4
+    },
+    {
+      "type": "STANDARD",
+      "curvature": -0.02976190476190476,
+      "conic": 0.0,
+      "thickness": 91.592,
+      "material": null,
+      "semi_diameter": 7.4
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.0,
+      "conic": 0.0,
+      "thickness": 0.0,
+      "material": null,
+      "comment": "IMAGE"
+    }
+  ],
+  "optimization": {
+    "variables": [
+      {
+        "surface": 1,
+        "param": "curvature"
+      },
+      {
+        "surface": 3,
+        "param": "curvature"
+      },
+      {
+        "surface": 4,
+        "param": "curvature"
+      },
+      {
+        "surface": 6,
+        "param": "curvature"
+      },
+      {
+        "surface": 7,
+        "param": "curvature"
+      },
+      {
+        "surface": 8,
+        "param": "curvature"
+      },
+      {
+        "surface": 8,
+        "param": "thickness"
+      }
+    ],
+    "merit_function": {
+      "rows": [
+        {
+          "type": "POWR",
+          "target": 0.0,
+          "weight": 0,
+          "bound": "=",
+          "params": {},
+          "comment": ""
+        }
+      ]
+    }
+  }
+}
