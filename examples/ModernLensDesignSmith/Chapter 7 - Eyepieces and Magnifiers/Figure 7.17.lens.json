@@ -1,0 +1,191 @@
+{
+  "format": "lensforge-1",
+  "name": "Von Hofe eyepiece 37.5deg HFOV (Smith, Modern Lens Design, Fig. 7.17)",
+  "units": "mm",
+  "aperture": {
+    "type": "EPD",
+    "value": 20.016
+  },
+  "fields": {
+    "type": "ANGLE",
+    "values": [
+      {
+        "x": 0.0,
+        "y": 0.0,
+        "weight": 1.0,
+        "vdx": 0.0,
+        "vdy": 0.0,
+        "vcx": 0.0,
+        "vcy": 0.0
+      },
+      {
+        "x": 0.0,
+        "y": 26.32,
+        "weight": 1.0,
+        "vdx": 0.0,
+        "vdy": 0.0,
+        "vcx": 0.0,
+        "vcy": 0.0
+      },
+      {
+        "x": 0.0,
+        "y": 37.6,
+        "weight": 1.0,
+        "vdx": 0.0,
+        "vdy": 0.0,
+        "vcx": 0.0,
+        "vcy": 0.0
+      }
+    ]
+  },
+  "wavelengths": {
+    "values": [
+      {
+        "value": 0.5875618,
+        "weight": 1.0
+      },
+      {
+        "value": 0.4861,
+        "weight": 1.0
+      },
+      {
+        "value": 0.6563,
+        "weight": 1.0
+      }
+    ],
+    "primary": 0
+  },
+  "ray_aiming": "paraxial",
+  "notes": "Warren J. Smith, Modern Lens Design, 2nd ed., Figure 7.17, p. 108. Book: EFL 99.88, BFL 43.61, NA -0.1002 (F/5.0), GIH 76.91 (HFOV=37.60), PTZ/F -1.416, VL 151.69, infinite conjugate. Glass: LAK14 entered as N-LAK14; SF8 entered as N-SF8; SK4 entered as N-SK4. As in the book, the eyepiece is traced from the eye side: the stop (surface 1) is the exit pupil.",
+  "surfaces": [
+    {
+      "type": "STANDARD",
+      "curvature": 0.0,
+      "conic": 0.0,
+      "thickness": "inf",
+      "material": null,
+      "comment": "OBJECT"
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.0,
+      "conic": 0.0,
+      "thickness": 29.06,
+      "material": "N-SK4",
+      "semi_diameter": 73.5,
+      "stop": true
+    },
+    {
+      "type": "STANDARD",
+      "curvature": -0.008216926869350863,
+      "conic": 0.0,
+      "thickness": 0.78,
+      "material": null,
+      "semi_diameter": 73.5
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.002485089463220676,
+      "conic": 0.0,
+      "thickness": 6.32,
+      "material": "N-SF8",
+      "semi_diameter": 82.5
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.00949667616334283,
+      "conic": 0.0,
+      "thickness": 82.11,
+      "material": "N-LAK14",
+      "semi_diameter": 82.5
+    },
+    {
+      "type": "STANDARD",
+      "curvature": -0.00949667616334283,
+      "conic": 0.0,
+      "thickness": 6.32,
+      "material": "N-SF8",
+      "semi_diameter": 82.5
+    },
+    {
+      "type": "STANDARD",
+      "curvature": -0.002485089463220676,
+      "conic": 0.0,
+      "thickness": 0.78,
+      "material": null,
+      "semi_diameter": 82.5
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.007194244604316547,
+      "conic": 0.0,
+      "thickness": 26.32,
+      "material": "FN11",
+      "semi_diameter": 80.5
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.0023020257826887663,
+      "conic": 0.0,
+      "thickness": 43.61,
+      "material": null,
+      "semi_diameter": 80.5
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.0,
+      "conic": 0.0,
+      "thickness": 0.0,
+      "material": null,
+      "comment": "IMAGE"
+    }
+  ],
+  "optimization": {
+    "variables": [
+      {
+        "surface": 2,
+        "param": "curvature"
+      },
+      {
+        "surface": 3,
+        "param": "curvature"
+      },
+      {
+        "surface": 4,
+        "param": "curvature"
+      },
+      {
+        "surface": 5,
+        "param": "curvature"
+      },
+      {
+        "surface": 6,
+        "param": "curvature"
+      },
+      {
+        "surface": 7,
+        "param": "curvature"
+      },
+      {
+        "surface": 8,
+        "param": "curvature"
+      },
+      {
+        "surface": 8,
+        "param": "thickness"
+      }
+    ],
+    "merit_function": {
+      "rows": [
+        {
+          "type": "POWR",
+          "target": 0.0,
+          "weight": 0,
+          "bound": "=",
+          "params": {},
+          "comment": ""
+        }
+      ]
+    }
+  }
+}

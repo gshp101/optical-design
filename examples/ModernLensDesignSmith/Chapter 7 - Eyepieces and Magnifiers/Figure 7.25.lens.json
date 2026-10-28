@@ -1,0 +1,207 @@
+{
+  "format": "lensforge-1",
+  "name": "Scidmore eyepiece 30deg HFOV (Smith, Modern Lens Design, Fig. 7.25)",
+  "units": "mm",
+  "aperture": {
+    "type": "EPD",
+    "value": 20.0178
+  },
+  "fields": {
+    "type": "ANGLE",
+    "values": [
+      {
+        "x": 0.0,
+        "y": 0.0,
+        "weight": 1.0,
+        "vdx": 0.0,
+        "vdy": 0.0,
+        "vcx": 0.0,
+        "vcy": 0.0
+      },
+      {
+        "x": 0.0,
+        "y": 21.077,
+        "weight": 1.0,
+        "vdx": 0.0,
+        "vdy": 0.0,
+        "vcx": 0.0,
+        "vcy": 0.0
+      },
+      {
+        "x": 0.0,
+        "y": 30.11,
+        "weight": 1.0,
+        "vdx": 0.0,
+        "vdy": 0.0,
+        "vcx": 0.0,
+        "vcy": 0.0
+      }
+    ]
+  },
+  "wavelengths": {
+    "values": [
+      {
+        "value": 0.5875618,
+        "weight": 1.0
+      },
+      {
+        "value": 0.4861,
+        "weight": 1.0
+      },
+      {
+        "value": 0.6563,
+        "weight": 1.0
+      }
+    ],
+    "primary": 0
+  },
+  "ray_aiming": "paraxial",
+  "notes": "Warren J. Smith, Modern Lens Design, 2nd ed., Figure 7.25, p. 117. Book: EFL 101.1, BFL 44.36, NA -0.099 (F/5.1), GIH 58.63 (HFOV=30.11), PTZ/F -1.722, VL 154.7, infinite conjugate. Glass: SF8 entered as N-SF8; SK16 entered as N-SK16. As in the book, the eyepiece is traced from the eye side: the stop (surface 1) is the exit pupil.",
+  "surfaces": [
+    {
+      "type": "STANDARD",
+      "curvature": 0.0,
+      "conic": 0.0,
+      "thickness": "inf",
+      "material": null,
+      "comment": "OBJECT"
+    },
+    {
+      "type": "STANDARD",
+      "curvature": -0.0005691519635742744,
+      "conic": 0.0,
+      "thickness": 9.6,
+      "material": "N-SF8",
+      "semi_diameter": 64.0,
+      "stop": true
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.00619962802231866,
+      "conic": 0.0,
+      "thickness": 41.5,
+      "material": "N-SK16",
+      "semi_diameter": 64.0
+    },
+    {
+      "type": "STANDARD",
+      "curvature": -0.008203445447087777,
+      "conic": 0.0,
+      "thickness": 0.9,
+      "material": null,
+      "semi_diameter": 64.0
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.003306878306878307,
+      "conic": 0.0,
+      "thickness": 36.7,
+      "material": "N-SK16",
+      "semi_diameter": 72.0
+    },
+    {
+      "type": "STANDARD",
+      "curvature": -0.00708215297450425,
+      "conic": 0.0,
+      "thickness": 9.6,
+      "material": "SF2",
+      "semi_diameter": 72.0
+    },
+    {
+      "type": "STANDARD",
+      "curvature": -0.003306878306878307,
+      "conic": 0.0,
+      "thickness": 0.9,
+      "material": null,
+      "semi_diameter": 72.0
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.006596306068601583,
+      "conic": 0.0,
+      "thickness": 45.9,
+      "material": "N-SK16",
+      "semi_diameter": 70.0
+    },
+    {
+      "type": "STANDARD",
+      "curvature": -0.006596306068601583,
+      "conic": 0.0,
+      "thickness": 9.6,
+      "material": "N-SF8",
+      "semi_diameter": 70.0
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.004537205081669692,
+      "conic": 0.0,
+      "thickness": 44.357,
+      "material": null,
+      "semi_diameter": 70.0
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.0,
+      "conic": 0.0,
+      "thickness": 0.0,
+      "material": null,
+      "comment": "IMAGE"
+    }
+  ],
+  "optimization": {
+    "variables": [
+      {
+        "surface": 1,
+        "param": "curvature"
+      },
+      {
+        "surface": 2,
+        "param": "curvature"
+      },
+      {
+        "surface": 3,
+        "param": "curvature"
+      },
+      {
+        "surface": 4,
+        "param": "curvature"
+      },
+      {
+        "surface": 5,
+        "param": "curvature"
+      },
+      {
+        "surface": 6,
+        "param": "curvature"
+      },
+      {
+        "surface": 7,
+        "param": "curvature"
+      },
+      {
+        "surface": 8,
+        "param": "curvature"
+      },
+      {
+        "surface": 9,
+        "param": "curvature"
+      },
+      {
+        "surface": 9,
+        "param": "thickness"
+      }
+    ],
+    "merit_function": {
+      "rows": [
+        {
+          "type": "POWR",
+          "target": 0.0,
+          "weight": 0,
+          "bound": "=",
+          "params": {},
+          "comment": ""
+        }
+      ]
+    }
+  }
+}

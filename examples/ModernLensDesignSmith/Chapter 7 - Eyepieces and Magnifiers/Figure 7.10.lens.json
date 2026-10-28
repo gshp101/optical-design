@@ -1,0 +1,179 @@
+{
+  "format": "lensforge-1",
+  "name": "Plossl eyepiece MIL-HDBK-141 (Smith, Modern Lens Design, Fig. 7.10)",
+  "units": "mm",
+  "aperture": {
+    "type": "EPD",
+    "value": 20.0152
+  },
+  "fields": {
+    "type": "ANGLE",
+    "values": [
+      {
+        "x": 0.0,
+        "y": 0.0,
+        "weight": 1.0,
+        "vdx": 0.0,
+        "vdy": 0.0,
+        "vcx": 0.0,
+        "vcy": 0.0
+      },
+      {
+        "x": 0.0,
+        "y": 14.0,
+        "weight": 1.0,
+        "vdx": 0.0,
+        "vdy": 0.0,
+        "vcx": 0.0,
+        "vcy": 0.0
+      },
+      {
+        "x": 0.0,
+        "y": 20.0,
+        "weight": 1.0,
+        "vdx": 0.0,
+        "vdy": 0.0,
+        "vcx": 0.0,
+        "vcy": 0.0
+      }
+    ]
+  },
+  "wavelengths": {
+    "values": [
+      {
+        "value": 0.5875618,
+        "weight": 1.0
+      },
+      {
+        "value": 0.4861,
+        "weight": 1.0
+      },
+      {
+        "value": 0.6563,
+        "weight": 1.0
+      }
+    ],
+    "primary": 0
+  },
+  "ray_aiming": "paraxial",
+  "notes": "Warren J. Smith, Modern Lens Design, 2nd ed., Figure 7.10, p. 100. Book: EFL 101.6, BFL 75.23, NA -0.0985 (F/5.1), GIH 36.98 (HFOV=20.00), PTZ/F -1.308, VL 161.64, infinite conjugate. Glass: BK7 entered as N-BK7. As in the book, the eyepiece is traced from the eye side: the stop (surface 1) is the exit pupil.",
+  "surfaces": [
+    {
+      "type": "STANDARD",
+      "curvature": 0.0,
+      "conic": 0.0,
+      "thickness": "inf",
+      "material": null,
+      "comment": "OBJECT"
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.0,
+      "conic": 0.0,
+      "thickness": 85.4,
+      "material": null,
+      "semi_diameter": 10.0,
+      "stop": true
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.005337489458458319,
+      "conic": 0.0,
+      "thickness": 5.912,
+      "material": "SF12",
+      "semi_diameter": 48.0
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.012170039796030133,
+      "conic": 0.0,
+      "thickness": 32.104,
+      "material": "N-BK7",
+      "semi_diameter": 48.0
+    },
+    {
+      "type": "STANDARD",
+      "curvature": -0.006770022341073725,
+      "conic": 0.0,
+      "thickness": 0.204,
+      "material": null,
+      "semi_diameter": 48.0
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.006770022341073725,
+      "conic": 0.0,
+      "thickness": 32.104,
+      "material": "N-BK7",
+      "semi_diameter": 48.0
+    },
+    {
+      "type": "STANDARD",
+      "curvature": -0.012170039796030133,
+      "conic": 0.0,
+      "thickness": 5.912,
+      "material": "SF12",
+      "semi_diameter": 48.0
+    },
+    {
+      "type": "STANDARD",
+      "curvature": -0.005337489458458319,
+      "conic": 0.0,
+      "thickness": 75.23,
+      "material": null,
+      "semi_diameter": 48.0
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.0,
+      "conic": 0.0,
+      "thickness": 0.0,
+      "material": null,
+      "comment": "IMAGE"
+    }
+  ],
+  "optimization": {
+    "variables": [
+      {
+        "surface": 2,
+        "param": "curvature"
+      },
+      {
+        "surface": 3,
+        "param": "curvature"
+      },
+      {
+        "surface": 4,
+        "param": "curvature"
+      },
+      {
+        "surface": 5,
+        "param": "curvature"
+      },
+      {
+        "surface": 6,
+        "param": "curvature"
+      },
+      {
+        "surface": 7,
+        "param": "curvature"
+      },
+      {
+        "surface": 7,
+        "param": "thickness"
+      }
+    ],
+    "merit_function": {
+      "rows": [
+        {
+          "type": "POWR",
+          "target": 0.0,
+          "weight": 0,
+          "bound": "=",
+          "params": {},
+          "comment": ""
+        }
+      ]
+    }
+  }
+}
