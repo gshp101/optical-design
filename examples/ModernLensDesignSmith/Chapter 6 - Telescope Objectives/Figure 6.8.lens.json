@@ -1,0 +1,147 @@
+{
+  "format": "lensforge-1",
+  "name": "F/7 1deg HFOV Fraunhofer objective (FK54/KZFS2) (Smith, Modern Lens Design, Fig. 6.8)",
+  "units": "mm",
+  "aperture": {
+    "type": "EPD",
+    "value": 14.285714285714286
+  },
+  "fields": {
+    "type": "ANGLE",
+    "values": [
+      {
+        "x": 0.0,
+        "y": 0.0,
+        "weight": 1.0,
+        "vdx": 0.0,
+        "vdy": 0.0,
+        "vcx": 0.0,
+        "vcy": 0.0
+      },
+      {
+        "x": 0.0,
+        "y": 0.7,
+        "weight": 1.0,
+        "vdx": 0.0,
+        "vdy": 0.0,
+        "vcx": 0.0,
+        "vcy": 0.0
+      },
+      {
+        "x": 0.0,
+        "y": 1.0,
+        "weight": 1.0,
+        "vdx": 0.0,
+        "vdy": 0.0,
+        "vcx": 0.0,
+        "vcy": 0.0
+      }
+    ]
+  },
+  "wavelengths": {
+    "values": [
+      {
+        "value": 0.5875618,
+        "weight": 1.0
+      },
+      {
+        "value": 0.4861,
+        "weight": 1.0
+      },
+      {
+        "value": 0.6563,
+        "weight": 1.0
+      }
+    ],
+    "primary": 0
+  },
+  "ray_aiming": "paraxial",
+  "notes": "Warren J. Smith, Modern Lens Design, 2nd ed., Figure 6.8, p. 73. Book: EFL 100, BFL 93.44, NA -0.0714 (F/7.0), GIH 1.75, PTZ/F -1.364, VL 4.49, infinite conjugate. Glass: KZFS2 entered as N-KZFS2.",
+  "surfaces": [
+    {
+      "type": "STANDARD",
+      "curvature": 0.0,
+      "conic": 0.0,
+      "thickness": "inf",
+      "material": null,
+      "comment": "OBJECT"
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.024582708522825042,
+      "conic": 0.0,
+      "thickness": 2.1,
+      "material": "FK54",
+      "semi_diameter": 7.2,
+      "stop": true
+    },
+    {
+      "type": "STANDARD",
+      "curvature": -0.03669455452810803,
+      "conic": 0.0,
+      "thickness": 1.789,
+      "material": null,
+      "semi_diameter": 7.2
+    },
+    {
+      "type": "STANDARD",
+      "curvature": -0.03862942789817283,
+      "conic": 0.0,
+      "thickness": 0.6,
+      "material": "N-KZFS2",
+      "semi_diameter": 7.2
+    },
+    {
+      "type": "STANDARD",
+      "curvature": -0.007054126311185728,
+      "conic": 0.0,
+      "thickness": 93.44,
+      "material": null,
+      "semi_diameter": 7.2
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.0,
+      "conic": 0.0,
+      "thickness": 0.0,
+      "material": null,
+      "comment": "IMAGE"
+    }
+  ],
+  "optimization": {
+    "variables": [
+      {
+        "surface": 1,
+        "param": "curvature"
+      },
+      {
+        "surface": 2,
+        "param": "curvature"
+      },
+      {
+        "surface": 3,
+        "param": "curvature"
+      },
+      {
+        "surface": 4,
+        "param": "curvature"
+      },
+      {
+        "surface": 4,
+        "param": "thickness"
+      }
+    ],
+    "merit_function": {
+      "rows": [
+        {
+          "type": "POWR",
+          "target": 0.0,
+          "weight": 0,
+          "bound": "=",
+          "params": {},
+          "comment": ""
+        }
+      ]
+    }
+  }
+}
