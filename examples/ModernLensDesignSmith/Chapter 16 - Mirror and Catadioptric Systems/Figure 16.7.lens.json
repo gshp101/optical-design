@@ -1,0 +1,144 @@
+{
+  "format": "lensforge-1",
+  "name": "Ritchey-Chretien F/5 (Bob Hilbert) (Smith, Modern Lens Design, Fig. 16.7)",
+  "units": "mm",
+  "aperture": {
+    "type": "EPD",
+    "value": 20.32
+  },
+  "fields": {
+    "type": "ANGLE",
+    "values": [
+      {
+        "x": 0.0,
+        "y": 0.0,
+        "weight": 1.0,
+        "vdx": 0.0,
+        "vdy": 0.0,
+        "vcx": 0.0,
+        "vcy": 0.0
+      },
+      {
+        "x": 0.0,
+        "y": 0.203,
+        "weight": 1.0,
+        "vdx": 0.0,
+        "vdy": 0.0,
+        "vcx": 0.0,
+        "vcy": 0.0
+      },
+      {
+        "x": 0.0,
+        "y": 0.29,
+        "weight": 1.0,
+        "vdx": 0.0,
+        "vdy": 0.0,
+        "vcx": 0.0,
+        "vcy": 0.0
+      }
+    ]
+  },
+  "wavelengths": {
+    "values": [
+      {
+        "value": 0.5875618,
+        "weight": 1.0
+      },
+      {
+        "value": 0.4861,
+        "weight": 1.0
+      },
+      {
+        "value": 0.6563,
+        "weight": 1.0
+      }
+    ],
+    "primary": 0
+  },
+  "ray_aiming": "paraxial",
+  "notes": "Warren J. Smith, Modern Lens Design, 2nd ed., Figure 16.7 (page number not visible in the photos). Book: EFL 101.6, BFL 40.64, NA -0.1 (F/5.0), GIH 0.51 (HFOV=0.29), PTZ/F INF, VL -36.58, infinite conjugate. The book does not mark the stop; it is placed at surface 1, the primary mirror. The table gives thicknesses without sign; spaces after an odd number of reflections are entered negative, which reproduces the book's VL. Conic constants (kappa) and aspheric terms (ad, ae, af, ag on r^4, r^6, r^8, r^10) as in the book. Central obscuration and baffles are not modelled. Book lists sa 0.0 on some surfaces; left as automatic semi-diameter.",
+  "surfaces": [
+    {
+      "type": "STANDARD",
+      "curvature": 0.0,
+      "conic": 0.0,
+      "thickness": "inf",
+      "material": null,
+      "comment": "OBJECT"
+    },
+    {
+      "type": "EVENASPH",
+      "curvature": -0.008202099737532808,
+      "conic": -0.384,
+      "thickness": -36.577,
+      "material": "MIRROR",
+      "coefficients": [
+        0.0,
+        7.76e-08,
+        0.0,
+        -3.815e-13,
+        0.0
+      ],
+      "semi_diameter": 10.2,
+      "stop": true
+    },
+    {
+      "type": "EVENASPH",
+      "curvature": -0.008202099737532808,
+      "conic": -14.689,
+      "thickness": 0.0,
+      "material": "MIRROR",
+      "coefficients": [
+        0.0,
+        1.28e-06,
+        2.106e-08,
+        -1.227e-09,
+        0.0
+      ],
+      "semi_diameter": 4.7
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.0,
+      "conic": 0.0,
+      "thickness": 40.64,
+      "material": null
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.0,
+      "conic": 0.0,
+      "thickness": 0.0,
+      "material": null,
+      "comment": "IMAGE"
+    }
+  ],
+  "optimization": {
+    "variables": [
+      {
+        "surface": 1,
+        "param": "curvature"
+      },
+      {
+        "surface": 2,
+        "param": "curvature"
+      },
+      {
+        "surface": 3,
+        "param": "thickness"
+      }
+    ],
+    "merit_function": {
+      "rows": [
+        {
+          "type": "POWR",
+          "target": 0.0,
+          "weight": 0,
+          "bound": "=",
+          "params": {},
+          "comment": ""
+        }
+      ]
+    }
+  }
+}

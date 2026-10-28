@@ -1,0 +1,170 @@
+{
+  "format": "lensforge-1",
+  "name": "Baker F/3.5 0.5 deg three mirror system (Smith, Modern Lens Design, Fig. 16.20)",
+  "units": "mm",
+  "aperture": {
+    "type": "EPD",
+    "value": 28.5714
+  },
+  "fields": {
+    "type": "ANGLE",
+    "values": [
+      {
+        "x": 0.0,
+        "y": 0.0,
+        "weight": 1.0,
+        "vdx": 0.0,
+        "vdy": 0.0,
+        "vcx": 0.0,
+        "vcy": 0.0
+      },
+      {
+        "x": 0.0,
+        "y": 0.35,
+        "weight": 1.0,
+        "vdx": 0.0,
+        "vdy": 0.0,
+        "vcx": 0.0,
+        "vcy": 0.0
+      },
+      {
+        "x": 0.0,
+        "y": 0.5,
+        "weight": 1.0,
+        "vdx": 0.0,
+        "vdy": 0.0,
+        "vcx": 0.0,
+        "vcy": 0.0
+      }
+    ]
+  },
+  "wavelengths": {
+    "values": [
+      {
+        "value": 0.5875618,
+        "weight": 1.0
+      },
+      {
+        "value": 0.4861,
+        "weight": 1.0
+      },
+      {
+        "value": 0.6563,
+        "weight": 1.0
+      }
+    ],
+    "primary": 0
+  },
+  "ray_aiming": "paraxial",
+  "notes": "Warren J. Smith, Modern Lens Design, 2nd ed., Figure 16.20, p. 297. Book: EFL 100, BFL 0, NA -0.5114 (F/3.5), GIH 0.87 (HFOV=0.50), PTZ/F -17.02, VL 3.01, infinite conjugate. The book does not mark the stop; it is placed at surface 1, the plane entrance surface (sa 0.0 in the book). The book gives BFL 0 and counts the last space in VL, so a zero-thickness dummy surface ends the table. The table gives thicknesses without sign; spaces after an odd number of reflections are entered negative, which reproduces the book's VL. Conic constants (kappa) and aspheric terms (ad, ae, af, ag on r^4, r^6, r^8, r^10) as in the book. The book decenters surface 2 by y = -36.960 (an off-axis aperture); it is entered as a coordinate break. EPD = EFL/F# (28.5714); the book's NA is a real marginal ray value that varies with the design's aberrations. The book's NA 0.5114 is close to the slope of the ray through the outer edge of the off-axis aperture ((36.96 + 14.29)/100), not the F/3.5 value. The model's PTZ/F is -1.31, not the book's -17.02, although EFL, BFL, GIH and VL match. The paraxial Petzval sum depends only on the radii, and the book's PTZ/F for Figs 16.3 to 16.5 (same radii, different conics) also changes with the conics, so the book seems to compute it differently for aspheric mirrors. Book lists sa 0.0 on some surfaces; left as automatic semi-diameter.",
+  "surfaces": [
+    {
+      "type": "STANDARD",
+      "curvature": 0.0,
+      "conic": 0.0,
+      "thickness": "inf",
+      "material": null,
+      "comment": "OBJECT"
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.0,
+      "conic": 0.0,
+      "thickness": 40.0,
+      "material": null,
+      "stop": true
+    },
+    {
+      "type": "COORDBRK",
+      "thickness": 0.0,
+      "material": null,
+      "decenter_y": -36.96
+    },
+    {
+      "type": "EVENASPH",
+      "curvature": -0.009404771981303314,
+      "conic": -1.144,
+      "thickness": -35.443,
+      "material": "MIRROR",
+      "coefficients": [
+        0.0,
+        0.0,
+        4.919e-13,
+        1.712e-17,
+        0.0
+      ],
+      "semi_diameter": 52.0
+    },
+    {
+      "type": "EVENASPH",
+      "curvature": -0.02821431594390994,
+      "conic": -1.281,
+      "thickness": 31.786,
+      "material": "MIRROR",
+      "coefficients": [
+        0.0,
+        0.0,
+        -2.548e-10,
+        -2.032e-14,
+        -9.979e-18
+      ],
+      "semi_diameter": 19.0
+    },
+    {
+      "type": "STANDARD",
+      "curvature": -0.014999925000374998,
+      "conic": 0.0,
+      "thickness": -33.334,
+      "material": "MIRROR",
+      "semi_diameter": 20.0
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.0,
+      "conic": 0.0,
+      "thickness": -0.0,
+      "material": null,
+      "semi_diameter": 20.0
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.0,
+      "conic": 0.0,
+      "thickness": 0.0,
+      "material": null,
+      "comment": "IMAGE"
+    }
+  ],
+  "optimization": {
+    "variables": [
+      {
+        "surface": 3,
+        "param": "curvature"
+      },
+      {
+        "surface": 4,
+        "param": "curvature"
+      },
+      {
+        "surface": 5,
+        "param": "curvature"
+      },
+      {
+        "surface": 6,
+        "param": "thickness"
+      }
+    ],
+    "merit_function": {
+      "rows": [
+        {
+          "type": "POWR",
+          "target": 0.0,
+          "weight": 0,
+          "bound": "=",
+          "params": {},
+          "comment": ""
+        }
+      ]
+    }
+  }
+}
