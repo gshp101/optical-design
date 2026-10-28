@@ -56,7 +56,7 @@
     "primary": 0
   },
   "ray_aiming": "paraxial",
-  "notes": "Warren J. Smith, Modern Lens Design, 2nd ed., Figure 13.13 (page number not visible in the photos). Book: EFL 99.97, BFL 25.68, NA -0.5483 (F/0.91), GIH 12.0 (HFOV=6.84), PTZ/F -0.8335, VL 176.8, infinite conjugate. Glass: SKN18 entered as SK18A; SSK2 entered as N-SSK2. Stop at surface 5 (the book's plane air surface).",
+  "notes": "Warren J. Smith, Modern Lens Design, 2nd ed., Figure 13.13, p. 237. Book: EFL 99.97, BFL 25.68, NA -0.5483 (F/0.91), GIH 12.0 (HFOV=6.84), PTZ/F -0.8335, VL 176.8, infinite conjugate. Glass: SKN18 entered as SK18A; SSK2 entered as N-SSK2. Stop at surface 5 (the book's plane air surface).",
   "surfaces": [
     {
       "type": "STANDARD",

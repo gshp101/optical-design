@@ -56,7 +56,7 @@
     "primary": 0
   },
   "ray_aiming": "paraxial",
-  "notes": "Warren J. Smith, Modern Lens Design, 2nd ed., Figure 13.9 (page number not visible in the photos). Book: EFL 99.86, BFL 9.881, NA -0.3571 (F/1.4), GIH 21.97 (HFOV=12.41), PTZ/F -21.77, VL 153.6, infinite conjugate. Glass: BK7 entered as N-BK7; LAFN2 entered as N-LAF2 (same nd and V as the book). Stop at surface 6 (the book's plane air surface).",
+  "notes": "Warren J. Smith, Modern Lens Design, 2nd ed., Figure 13.9, p. 232. Book: EFL 99.86, BFL 9.881, NA -0.3571 (F/1.4), GIH 21.97 (HFOV=12.41), PTZ/F -21.77, VL 153.6, infinite conjugate. Glass: BK7 entered as N-BK7; LAFN2 entered as N-LAF2 (same nd and V as the book). Stop at surface 6 (the book's plane air surface).",
   "surfaces": [
     {
       "type": "STANDARD",
