@@ -124,6 +124,7 @@ def analyse(path):
     first = [rows[k][3] for k in FIRST_ORDER if k in rows and k not in ungraded]
     overall = max(first, key=GRADES.index) if first else "off"
     glass = re.search(r"Glass: (.*?\.)(?: [A-Z]|$)", lens.notes)
+    disc = re.search(r"Discrepancy with the book: (.*?\.)(?= [A-Z]|$)", lens.notes)
     return {
         "fig": "%d.%d" % figure_key(path),
         "file": os.path.basename(path),
@@ -138,6 +139,8 @@ def analyse(path):
         "transmission": full_field_transmission(lens, w0),
         "glass": glass.group(1).rstrip(".") if glass else "",
         "ungraded": ungraded,
+        # a sentence in the notes starting "Discrepancy with the book:" is listed in the report
+        "discrepancy": disc.group(1) if disc else "",
     }
 
 
@@ -224,7 +227,8 @@ def render(chapter, results):
         out.append(f"<td>{rays}</td><td class='l name'>{html.escape(r['glass']) or '–'}</td></tr>")
     out.append("</tbody></table></div>")
 
-    off = [r for r in results if r["overall"] != "exact"]
+    off = [r for r in results if r["overall"] != "exact" and not r["discrepancy"]]
+    disc = [r for r in results if r["discrepancy"]]
     ungraded = [r for r in results if r["ungraded"]]
     ptz = [r for r in results if "PTZF" in r["rows"] and r["rows"]["PTZF"][3] == "off"]
     out.append("<h2>Notes</h2><ul class='notes'>")
@@ -252,6 +256,10 @@ def render(chapter, results):
             f"Fig {r['fig']} ({', '.join(k for k in FIRST_ORDER if k in r['rows'] and r['rows'][k][3] != 'exact' and k not in r['ungraded'])})"
             for r in off) + ". These use glasses entered from the book's rounded nd/Vd or a modern substitute "
             "with slightly different dispersion (see the glass column).</li>")
+    if disc:
+        out.append("<li><b>Discrepancies with the book</b> (the model is entered as printed):<ul>" + "".join(
+            f"<li>Fig {r['fig']}: {html.escape(r['discrepancy'][0].upper() + r['discrepancy'][1:])}</li>"
+            for r in disc) + "</ul></li>")
     if ungraded:
         out.append("<li>The book's GIH is not the paraxial image height on Fig " + ", ".join(r["fig"] for r in ungraded)
                    + ", so it is shown but not graded into Match (see the notes in the model file).</li>")
