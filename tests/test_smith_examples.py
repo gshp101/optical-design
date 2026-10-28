@@ -41,4 +41,4 @@ def test_matches_book(path):
 
 
 def test_models_found():
-    assert len(MODELS) >= 125
+    assert len(MODELS) >= 140
