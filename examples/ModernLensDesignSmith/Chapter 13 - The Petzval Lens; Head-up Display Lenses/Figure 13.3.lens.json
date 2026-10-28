@@ -56,7 +56,7 @@
     "primary": 0
   },
   "ray_aiming": "paraxial",
-  "notes": "Warren J. Smith, Modern Lens Design, 2nd ed., Figure 13.3 (page number not visible in the photos). Book: EFL 95.84, BFL 46.65, NA -0.3095 (F/1.61), GIH 15.33 (HFOV=9.09), PTZ/F -1.16, VL 87.06, infinite conjugate. Glass: BK7 entered as N-BK7. The book does not mark the stop; it is placed at surface 5, the front of the rear group, after the long air space (the table has no plane stop row; the smallest semi-apertures belong to the rear group or field flattener near the image).",
+  "notes": "Warren J. Smith, Modern Lens Design, 2nd ed., Figure 13.3, p. 225. Book: EFL 95.84, BFL 46.65, NA -0.3095 (F/1.61), GIH 15.33 (HFOV=9.09), PTZ/F -1.16, VL 87.06, infinite conjugate. Glass: BK7 entered as N-BK7. The book does not mark the stop; it is placed at surface 5, the front of the rear group, after the long air space (the table has no plane stop row; the smallest semi-apertures belong to the rear group or field flattener near the image).",
   "surfaces": [
     {
       "type": "STANDARD",
