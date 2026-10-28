@@ -1,0 +1,183 @@
+{
+  "format": "lensforge-1",
+  "name": "Tessar, USP 4,213,674 (Smith, Modern Lens Design, Fig. 12.10)",
+  "units": "mm",
+  "aperture": {
+    "type": "EPD",
+    "value": 35.1
+  },
+  "fields": {
+    "type": "ANGLE",
+    "values": [
+      {
+        "x": 0.0,
+        "y": 0.0,
+        "weight": 1.0,
+        "vdx": 0.0,
+        "vdy": 0.0,
+        "vcx": 0.0,
+        "vcy": 0.0
+      },
+      {
+        "x": 0.0,
+        "y": 18.599,
+        "weight": 1.0,
+        "vdx": 0.0,
+        "vdy": 0.0,
+        "vcx": 0.0,
+        "vcy": 0.0
+      },
+      {
+        "x": 0.0,
+        "y": 26.57,
+        "weight": 1.0,
+        "vdx": 0.0,
+        "vdy": 0.0,
+        "vcx": 0.0,
+        "vcy": 0.0
+      }
+    ]
+  },
+  "wavelengths": {
+    "values": [
+      {
+        "value": 0.5875618,
+        "weight": 1.0
+      },
+      {
+        "value": 0.4861,
+        "weight": 1.0
+      },
+      {
+        "value": 0.6563,
+        "weight": 1.0
+      }
+    ],
+    "primary": 0
+  },
+  "ray_aiming": "paraxial",
+  "notes": "Warren J. Smith, Modern Lens Design, 2nd ed., Figure 12.10, p. 207. Book: EFL 100, BFL 82.2, NA -0.1755 (F/2.8), GIH 50.0 (HFOV=26.57), PTZ/F -4.02, VL 37.81, infinite conjugate. Glass: LSF14 entered as LAH64 (Ohara, same nd and V as the book); SF14 entered as N-SF14. The book does not mark the stop; it is placed at surface 5, the front of the cemented rear doublet, closing the air space after the negative element where a Tessar's stop sits (the table has no plane stop row).",
+  "surfaces": [
+    {
+      "type": "STANDARD",
+      "curvature": 0.0,
+      "conic": 0.0,
+      "thickness": "inf",
+      "material": null,
+      "comment": "OBJECT"
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.026443833298074888,
+      "conic": 0.0,
+      "thickness": 11.602,
+      "material": "N-SF14",
+      "semi_diameter": 24.7
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.011493063935914675,
+      "conic": 0.0,
+      "thickness": 6.446,
+      "material": null,
+      "semi_diameter": 21.5
+    },
+    {
+      "type": "STANDARD",
+      "curvature": -0.010543296045209654,
+      "conic": 0.0,
+      "thickness": 2.149,
+      "material": "SF1",
+      "semi_diameter": 19.5
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.02842362571769655,
+      "conic": 0.0,
+      "thickness": 3.438,
+      "material": null,
+      "semi_diameter": 16.8
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.00754460749179524,
+      "conic": 0.0,
+      "thickness": 2.149,
+      "material": "KF1",
+      "semi_diameter": 16.8,
+      "stop": true
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.02674869600106995,
+      "conic": 0.0,
+      "thickness": 12.032,
+      "material": "LAH64",
+      "semi_diameter": 16.0
+    },
+    {
+      "type": "STANDARD",
+      "curvature": -0.01627498209751969,
+      "conic": 0.0,
+      "thickness": 82.199,
+      "material": null,
+      "semi_diameter": 15.2
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.0,
+      "conic": 0.0,
+      "thickness": 0.0,
+      "material": null,
+      "comment": "IMAGE"
+    }
+  ],
+  "optimization": {
+    "variables": [
+      {
+        "surface": 1,
+        "param": "curvature"
+      },
+      {
+        "surface": 2,
+        "param": "curvature"
+      },
+      {
+        "surface": 3,
+        "param": "curvature"
+      },
+      {
+        "surface": 4,
+        "param": "curvature"
+      },
+      {
+        "surface": 5,
+        "param": "curvature"
+      },
+      {
+        "surface": 6,
+        "param": "curvature"
+      },
+      {
+        "surface": 7,
+        "param": "curvature"
+      },
+      {
+        "surface": 7,
+        "param": "thickness"
+      }
+    ],
+    "merit_function": {
+      "rows": [
+        {
+          "type": "POWR",
+          "target": 0.0,
+          "weight": 0,
+          "bound": "=",
+          "params": {},
+          "comment": ""
+        }
+      ]
+    }
+  }
+}

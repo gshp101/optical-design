@@ -1,0 +1,199 @@
+{
+  "format": "lensforge-1",
+  "name": "Heliar, DRP 636166 (1933), Deser/Voigtlander (Smith, Modern Lens Design, Fig. 12.17)",
+  "units": "mm",
+  "aperture": {
+    "type": "EPD",
+    "value": 35.7146
+  },
+  "fields": {
+    "type": "ANGLE",
+    "values": [
+      {
+        "x": 0.0,
+        "y": 0.0,
+        "weight": 1.0,
+        "vdx": 0.0,
+        "vdy": 0.0,
+        "vcx": 0.0,
+        "vcy": 0.0
+      },
+      {
+        "x": 0.0,
+        "y": 17.619,
+        "weight": 1.0,
+        "vdx": 0.0,
+        "vdy": 0.0,
+        "vcx": 0.0,
+        "vcy": 0.0
+      },
+      {
+        "x": 0.0,
+        "y": 25.17,
+        "weight": 1.0,
+        "vdx": 0.0,
+        "vdy": 0.0,
+        "vcx": 0.0,
+        "vcy": 0.0
+      }
+    ]
+  },
+  "wavelengths": {
+    "values": [
+      {
+        "value": 0.5875618,
+        "weight": 1.0
+      },
+      {
+        "value": 0.4861,
+        "weight": 1.0
+      },
+      {
+        "value": 0.6563,
+        "weight": 1.0
+      }
+    ],
+    "primary": 0
+  },
+  "ray_aiming": "paraxial",
+  "notes": "Warren J. Smith, Modern Lens Design, 2nd ed., Figure 12.17, p. 214. Book: EFL 99.65, BFL 78.63, NA -0.1792 (F/2.8), GIH 46.84 (HFOV=25.17), PTZ/F -3.213, VL 45.0, infinite conjugate. Stop at surface 6 (the book's plane air surface).",
+  "surfaces": [
+    {
+      "type": "STANDARD",
+      "curvature": 0.0,
+      "conic": 0.0,
+      "thickness": "inf",
+      "material": null,
+      "comment": "OBJECT"
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.023255813953488372,
+      "conic": 0.0,
+      "thickness": 9.0,
+      "material": "SSKN5",
+      "semi_diameter": 18.3
+    },
+    {
+      "type": "STANDARD",
+      "curvature": -0.011764705882352941,
+      "conic": 0.0,
+      "thickness": 3.0,
+      "material": "LF5",
+      "semi_diameter": 18.3
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.0,
+      "conic": 0.0,
+      "thickness": 7.0,
+      "material": null,
+      "semi_diameter": 18.3
+    },
+    {
+      "type": "STANDARD",
+      "curvature": -0.017241379310344827,
+      "conic": 0.0,
+      "thickness": 4.0,
+      "material": "LF5",
+      "semi_diameter": 15.7
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.028985507246376812,
+      "conic": 0.0,
+      "thickness": 5.0,
+      "material": null,
+      "semi_diameter": 15.7
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.0,
+      "conic": 0.0,
+      "thickness": 4.0,
+      "material": null,
+      "semi_diameter": 14.1,
+      "stop": true
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.007692307692307693,
+      "conic": 0.0,
+      "thickness": 10.0,
+      "material": "SSKN5",
+      "semi_diameter": 15.2
+    },
+    {
+      "type": "STANDARD",
+      "curvature": -0.04878048780487805,
+      "conic": 0.0,
+      "thickness": 3.0,
+      "material": "BASF3",
+      "semi_diameter": 15.2
+    },
+    {
+      "type": "STANDARD",
+      "curvature": -0.017391304347826087,
+      "conic": 0.0,
+      "thickness": 78.635,
+      "material": null,
+      "semi_diameter": 15.2
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.0,
+      "conic": 0.0,
+      "thickness": 0.0,
+      "material": null,
+      "comment": "IMAGE"
+    }
+  ],
+  "optimization": {
+    "variables": [
+      {
+        "surface": 1,
+        "param": "curvature"
+      },
+      {
+        "surface": 2,
+        "param": "curvature"
+      },
+      {
+        "surface": 4,
+        "param": "curvature"
+      },
+      {
+        "surface": 5,
+        "param": "curvature"
+      },
+      {
+        "surface": 7,
+        "param": "curvature"
+      },
+      {
+        "surface": 8,
+        "param": "curvature"
+      },
+      {
+        "surface": 9,
+        "param": "curvature"
+      },
+      {
+        "surface": 9,
+        "param": "thickness"
+      }
+    ],
+    "merit_function": {
+      "rows": [
+        {
+          "type": "POWR",
+          "target": 0.0,
+          "weight": 0,
+          "bound": "=",
+          "params": {},
+          "comment": ""
+        }
+      ]
+    }
+  }
+}
