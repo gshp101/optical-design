@@ -10,17 +10,25 @@ import lensforge as lf
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 MODELS = sorted(glob.glob(os.path.join(HERE, "..", "examples", "ModernLensDesignSmith", "*", "Figure *.lens.json")))
+# Figures entered exactly as printed whose printed table does not reproduce the book's own EFL/BFL
+BOOK_TABLE_MISMATCH = {
+    "Figure 13.14": "the table gives the last surface as plane; a radius near -340 would reproduce the book's EFL",
+}
 
 
 @pytest.mark.parametrize("path", MODELS, ids=[os.path.basename(p).removesuffix(".lens.json") for p in MODELS])
 def test_matches_book(path):
     lens = lf.load(path)
+    name = os.path.basename(path).removesuffix(".lens.json")
     book = dict(re.findall(r"\b(EFL|BFL) (-?[\d.]+)", lens.notes))
     p = lens.paraxial()
+    if name in BOOK_TABLE_MISMATCH:
+        p = None
     # 0.15 mm allows for glasses entered from rounded book nd/Vd (Fig. 6.6 LAK17, Figs 7.9/7.22 SF52)
-    assert p.efl == pytest.approx(float(book["EFL"]), abs=0.15)
-    # the book's BFL is the image distance for the actual object (the same as BFL at infinite conjugate)
-    assert p.image_distance == pytest.approx(float(book["BFL"]), abs=0.15)
+    if p is not None:
+        assert p.efl == pytest.approx(float(book["EFL"]), abs=0.15)
+        # the book's BFL is the image distance for the actual object (the same as BFL at infinite conjugate)
+        assert p.image_distance == pytest.approx(float(book["BFL"]), abs=0.15)
     g = np.linspace(-1, 1, 11)
     X, Y = np.meshgrid(g, g)
     m = X**2 + Y**2 <= 1
@@ -33,4 +41,4 @@ def test_matches_book(path):
 
 
 def test_models_found():
-    assert len(MODELS) >= 110
+    assert len(MODELS) >= 125

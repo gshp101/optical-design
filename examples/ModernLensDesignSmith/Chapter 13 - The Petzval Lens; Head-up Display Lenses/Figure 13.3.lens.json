@@ -1,0 +1,195 @@
+{
+  "format": "lensforge-1",
+  "name": "F/1.6 9 deg HFOV Petzval (Smith, Modern Lens Design, Fig. 13.3)",
+  "units": "mm",
+  "aperture": {
+    "type": "EPD",
+    "value": 59.325
+  },
+  "fields": {
+    "type": "ANGLE",
+    "values": [
+      {
+        "x": 0.0,
+        "y": 0.0,
+        "weight": 1.0,
+        "vdx": 0.0,
+        "vdy": 0.0,
+        "vcx": 0.0,
+        "vcy": 0.0
+      },
+      {
+        "x": 0.0,
+        "y": 6.363,
+        "weight": 1.0,
+        "vdx": 0.0,
+        "vdy": 0.0,
+        "vcx": 0.0,
+        "vcy": 0.0
+      },
+      {
+        "x": 0.0,
+        "y": 9.09,
+        "weight": 1.0,
+        "vdx": 0.0,
+        "vdy": 0.0,
+        "vcx": 0.0,
+        "vcy": 0.0
+      }
+    ]
+  },
+  "wavelengths": {
+    "values": [
+      {
+        "value": 0.5875618,
+        "weight": 1.0
+      },
+      {
+        "value": 0.4861,
+        "weight": 1.0
+      },
+      {
+        "value": 0.6563,
+        "weight": 1.0
+      }
+    ],
+    "primary": 0
+  },
+  "ray_aiming": "paraxial",
+  "notes": "Warren J. Smith, Modern Lens Design, 2nd ed., Figure 13.3 (page number not visible in the photos). Book: EFL 95.84, BFL 46.65, NA -0.3095 (F/1.61), GIH 15.33 (HFOV=9.09), PTZ/F -1.16, VL 87.06, infinite conjugate. Glass: BK7 entered as N-BK7. The book does not mark the stop; it is placed at surface 5, the front of the rear group, after the long air space (the table has no plane stop row; the smallest semi-apertures belong to the rear group or field flattener near the image).",
+  "surfaces": [
+    {
+      "type": "STANDARD",
+      "curvature": 0.0,
+      "conic": 0.0,
+      "thickness": "inf",
+      "material": null,
+      "comment": "OBJECT"
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.018867924528301886,
+      "conic": 0.0,
+      "thickness": 19.5,
+      "material": "N-BK7",
+      "semi_diameter": 30.0
+    },
+    {
+      "type": "STANDARD",
+      "curvature": -0.002173913043478261,
+      "conic": 0.0,
+      "thickness": 2.565,
+      "material": null,
+      "semi_diameter": 30.0
+    },
+    {
+      "type": "STANDARD",
+      "curvature": -0.007158196134574088,
+      "conic": 0.0,
+      "thickness": 5.0,
+      "material": "F2",
+      "semi_diameter": 30.0
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.004166666666666667,
+      "conic": 0.0,
+      "thickness": 37.05,
+      "material": null,
+      "semi_diameter": 26.3
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.01680672268907563,
+      "conic": 0.0,
+      "thickness": 17.0,
+      "material": "N-BK7",
+      "semi_diameter": 21.5,
+      "stop": true
+    },
+    {
+      "type": "STANDARD",
+      "curvature": -0.023696682464454975,
+      "conic": 0.0,
+      "thickness": 0.94,
+      "material": null,
+      "semi_diameter": 21.5
+    },
+    {
+      "type": "STANDARD",
+      "curvature": -0.02631578947368421,
+      "conic": 0.0,
+      "thickness": 5.0,
+      "material": "F2",
+      "semi_diameter": 21.5
+    },
+    {
+      "type": "STANDARD",
+      "curvature": -0.006211180124223602,
+      "conic": 0.0,
+      "thickness": 46.646,
+      "material": null,
+      "semi_diameter": 21.5
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.0,
+      "conic": 0.0,
+      "thickness": 0.0,
+      "material": null,
+      "comment": "IMAGE"
+    }
+  ],
+  "optimization": {
+    "variables": [
+      {
+        "surface": 1,
+        "param": "curvature"
+      },
+      {
+        "surface": 2,
+        "param": "curvature"
+      },
+      {
+        "surface": 3,
+        "param": "curvature"
+      },
+      {
+        "surface": 4,
+        "param": "curvature"
+      },
+      {
+        "surface": 5,
+        "param": "curvature"
+      },
+      {
+        "surface": 6,
+        "param": "curvature"
+      },
+      {
+        "surface": 7,
+        "param": "curvature"
+      },
+      {
+        "surface": 8,
+        "param": "curvature"
+      },
+      {
+        "surface": 8,
+        "param": "thickness"
+      }
+    ],
+    "merit_function": {
+      "rows": [
+        {
+          "type": "POWR",
+          "target": 0.0,
+          "weight": 0,
+          "bound": "=",
+          "params": {},
+          "comment": ""
+        }
+      ]
+    }
+  }
+}
