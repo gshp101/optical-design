@@ -1,0 +1,199 @@
+{
+  "format": "lensforge-1",
+  "name": "Petzval F/1.5 10 deg, USP 2744445, Werfeli (Smith, Modern Lens Design, Fig. 13.4)",
+  "units": "mm",
+  "aperture": {
+    "type": "EPD",
+    "value": 66.4463
+  },
+  "fields": {
+    "type": "ANGLE",
+    "values": [
+      {
+        "x": 0.0,
+        "y": 0.0,
+        "weight": 1.0,
+        "vdx": 0.0,
+        "vdy": 0.0,
+        "vcx": 0.0,
+        "vcy": 0.0
+      },
+      {
+        "x": 0.0,
+        "y": 7.14,
+        "weight": 1.0,
+        "vdx": 0.0,
+        "vdy": 0.0,
+        "vcx": 0.0,
+        "vcy": 0.0
+      },
+      {
+        "x": 0.0,
+        "y": 10.2,
+        "weight": 1.0,
+        "vdx": 0.0,
+        "vdy": 0.0,
+        "vcx": 0.0,
+        "vcy": 0.0
+      }
+    ]
+  },
+  "wavelengths": {
+    "values": [
+      {
+        "value": 0.5875618,
+        "weight": 1.0
+      },
+      {
+        "value": 0.4861,
+        "weight": 1.0
+      },
+      {
+        "value": 0.6563,
+        "weight": 1.0
+      }
+    ],
+    "primary": 0
+  },
+  "ray_aiming": "paraxial",
+  "notes": "Warren J. Smith, Modern Lens Design, 2nd ed., Figure 13.4, p. 226. Book: EFL 99.56, BFL 37.63, NA -0.3337 (F/1.5), GIH 17.92 (HFOV=10.20), PTZ/F -1.198, VL 119.2, infinite conjugate. Glass: LAK12 entered as N-LAK12; SF8 entered as N-SF8. Stop at surface 5 (the book's plane air surface).",
+  "surfaces": [
+    {
+      "type": "STANDARD",
+      "curvature": 0.0,
+      "conic": 0.0,
+      "thickness": "inf",
+      "material": null,
+      "comment": "OBJECT"
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.011135857461024499,
+      "conic": 0.0,
+      "thickness": 17.5,
+      "material": "N-LAK12",
+      "semi_diameter": 33.2
+    },
+    {
+      "type": "STANDARD",
+      "curvature": -0.0061648480364959,
+      "conic": 0.0,
+      "thickness": 1.15,
+      "material": null,
+      "semi_diameter": 33.2
+    },
+    {
+      "type": "STANDARD",
+      "curvature": -0.007602250266078759,
+      "conic": 0.0,
+      "thickness": 10.0,
+      "material": "N-SF8",
+      "semi_diameter": 33.2
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.0027340332458442697,
+      "conic": 0.0,
+      "thickness": 33.8,
+      "material": null,
+      "semi_diameter": 33.0
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.0,
+      "conic": 0.0,
+      "thickness": 40.0,
+      "material": null,
+      "semi_diameter": 24.3,
+      "stop": true
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.017286084701815037,
+      "conic": 0.0,
+      "thickness": 12.5,
+      "material": "N-LAK12",
+      "semi_diameter": 20.0
+    },
+    {
+      "type": "STANDARD",
+      "curvature": -0.01422475106685633,
+      "conic": 0.0,
+      "thickness": 1.75,
+      "material": null,
+      "semi_diameter": 20.0
+    },
+    {
+      "type": "STANDARD",
+      "curvature": -0.016680567139282735,
+      "conic": 0.0,
+      "thickness": 2.5,
+      "material": "SF13",
+      "semi_diameter": 20.0
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.0,
+      "conic": 0.0,
+      "thickness": 37.632,
+      "material": null,
+      "semi_diameter": 20.0
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.0,
+      "conic": 0.0,
+      "thickness": 0.0,
+      "material": null,
+      "comment": "IMAGE"
+    }
+  ],
+  "optimization": {
+    "variables": [
+      {
+        "surface": 1,
+        "param": "curvature"
+      },
+      {
+        "surface": 2,
+        "param": "curvature"
+      },
+      {
+        "surface": 3,
+        "param": "curvature"
+      },
+      {
+        "surface": 4,
+        "param": "curvature"
+      },
+      {
+        "surface": 6,
+        "param": "curvature"
+      },
+      {
+        "surface": 7,
+        "param": "curvature"
+      },
+      {
+        "surface": 8,
+        "param": "curvature"
+      },
+      {
+        "surface": 9,
+        "param": "thickness"
+      }
+    ],
+    "merit_function": {
+      "rows": [
+        {
+          "type": "POWR",
+          "target": 0.0,
+          "weight": 0,
+          "bound": "=",
+          "params": {},
+          "comment": ""
+        }
+      ]
+    }
+  }
+}

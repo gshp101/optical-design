@@ -1,0 +1,223 @@
+{
+  "format": "lensforge-1",
+  "name": "D. P. Feder curved field F/1 lens (Smith, Modern Lens Design, Fig. 13.14)",
+  "units": "mm",
+  "aperture": {
+    "type": "EPD",
+    "value": 99.9601
+  },
+  "fields": {
+    "type": "ANGLE",
+    "values": [
+      {
+        "x": 0.0,
+        "y": 0.0,
+        "weight": 1.0,
+        "vdx": 0.0,
+        "vdy": 0.0,
+        "vcx": 0.0,
+        "vcy": 0.0
+      },
+      {
+        "x": 0.0,
+        "y": 10.5,
+        "weight": 1.0,
+        "vdx": 0.0,
+        "vdy": 0.0,
+        "vcx": 0.0,
+        "vcy": 0.0
+      },
+      {
+        "x": 0.0,
+        "y": 15.0,
+        "weight": 1.0,
+        "vdx": 0.0,
+        "vdy": 0.0,
+        "vcx": 0.0,
+        "vcy": 0.0
+      }
+    ]
+  },
+  "wavelengths": {
+    "values": [
+      {
+        "value": 0.5875618,
+        "weight": 1.0
+      },
+      {
+        "value": 0.4861,
+        "weight": 1.0
+      },
+      {
+        "value": 0.6563,
+        "weight": 1.0
+      }
+    ],
+    "primary": 0
+  },
+  "ray_aiming": "paraxial",
+  "notes": "Warren J. Smith, Modern Lens Design, 2nd ed., Figure 13.14, p. 238. Book: EFL 101.4, BFL 17.04, NA -0.4929 (F/1.01), GIH 27.16 (HFOV=15.00), PTZ/F -0.8344, VL 161.8, infinite conjugate. Glass: BSC1 entered as model glass 1.511,63.5 (no dispersion data found); C2 entered as model glass 1.513,60.5 (no dispersion data found); EDF2 entered as model glass 1.689,30.9 (no dispersion data found). The book does not mark the stop; it is placed at surface 7, the front of the rear group, after the long air space (the table has no plane stop row; the smallest semi-apertures belong to the rear group or field flattener near the image). The book designs this lens for a curved image surface, but its table gives no image radius, so the image here is plane. Entered exactly as printed, the table gives EFL 104.0 instead of the book's 101.4: the last surface reads as plane (blank radius), and a radius near -340 there would reproduce the book's EFL and BFL, so a radius may be missing from the printed table. The table has been checked against the book: the first radius is 163.2 and the last surface has no radius (it looks flat in the layout drawing).",
+  "surfaces": [
+    {
+      "type": "STANDARD",
+      "curvature": 0.0,
+      "conic": 0.0,
+      "thickness": "inf",
+      "material": null,
+      "comment": "OBJECT"
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.006127450980392158,
+      "conic": 0.0,
+      "thickness": 16.27,
+      "material": "1.513,60.5",
+      "semi_diameter": 50.0
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.0,
+      "conic": 0.0,
+      "thickness": 0.01,
+      "material": null,
+      "semi_diameter": 50.0
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.008628127696289905,
+      "conic": 0.0,
+      "thickness": 32.5,
+      "material": "1.513,60.5",
+      "semi_diameter": 47.4
+    },
+    {
+      "type": "STANDARD",
+      "curvature": -0.00745156482861401,
+      "conic": 0.0,
+      "thickness": 1.22,
+      "material": null,
+      "semi_diameter": 43.5
+    },
+    {
+      "type": "STANDARD",
+      "curvature": -0.007770007770007771,
+      "conic": 0.0,
+      "thickness": 4.0,
+      "material": "1.689,30.9",
+      "semi_diameter": 42.6
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.0022935779816513763,
+      "conic": 0.0,
+      "thickness": 40.7,
+      "material": null,
+      "semi_diameter": 40.2
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.010462439840970915,
+      "conic": 0.0,
+      "thickness": 26.5,
+      "material": "1.511,63.5",
+      "semi_diameter": 34.7,
+      "stop": true
+    },
+    {
+      "type": "STANDARD",
+      "curvature": -0.011710973181871413,
+      "conic": 0.0,
+      "thickness": 8.1,
+      "material": "1.689,30.9",
+      "semi_diameter": 34.1
+    },
+    {
+      "type": "STANDARD",
+      "curvature": -0.003782148260211801,
+      "conic": 0.0,
+      "thickness": 13.0,
+      "material": null,
+      "semi_diameter": 34.3
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.009310986964618248,
+      "conic": 0.0,
+      "thickness": 19.5,
+      "material": "1.511,63.5",
+      "semi_diameter": 32.7
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.0,
+      "conic": 0.0,
+      "thickness": 17.041,
+      "material": null,
+      "semi_diameter": 30.3
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.0,
+      "conic": 0.0,
+      "thickness": 0.0,
+      "material": null,
+      "comment": "IMAGE"
+    }
+  ],
+  "optimization": {
+    "variables": [
+      {
+        "surface": 1,
+        "param": "curvature"
+      },
+      {
+        "surface": 3,
+        "param": "curvature"
+      },
+      {
+        "surface": 4,
+        "param": "curvature"
+      },
+      {
+        "surface": 5,
+        "param": "curvature"
+      },
+      {
+        "surface": 6,
+        "param": "curvature"
+      },
+      {
+        "surface": 7,
+        "param": "curvature"
+      },
+      {
+        "surface": 8,
+        "param": "curvature"
+      },
+      {
+        "surface": 9,
+        "param": "curvature"
+      },
+      {
+        "surface": 10,
+        "param": "curvature"
+      },
+      {
+        "surface": 11,
+        "param": "thickness"
+      }
+    ],
+    "merit_function": {
+      "rows": [
+        {
+          "type": "POWR",
+          "target": 0.0,
+          "weight": 0,
+          "bound": "=",
+          "params": {},
+          "comment": ""
+        }
+      ]
+    }
+  }
+}

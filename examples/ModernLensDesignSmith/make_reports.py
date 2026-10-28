@@ -205,7 +205,7 @@ def render(chapter, results):
     out.append("<th>Rays</th><th class='l'>Glass substitutions</th></tr></thead><tbody>")
     for r in results:
         out.append(f"<tr><td class='l'><b>{r['fig']}</b></td>"
-                   f"<td class='l name'>{html.escape(r['name'])}<small>p. {r['page']} · F/{r['fnum']} · "
+                   f"<td class='l name'>{html.escape(r['name'])}<small>p. {r['page'] or '?'} · F/{r['fnum']} · "
                    f"HFOV {r['hfov']:g}° · {r['nsurf']} surfaces</small></td>"
                    f"<td class='l'><span class='badge {r['overall']}'>{GRADE_TEXT[r['overall']]}</span></td>")
         for key, _, d in QUANTITIES:
