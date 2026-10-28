@@ -56,7 +56,7 @@
     "primary": 0
   },
   "ray_aiming": "paraxial",
-  "notes": "Warren J. Smith, Modern Lens Design, 2nd ed., Figure 13.10 (page number not visible in the photos). Book: EFL 101.3, BFL 28.56, NA -0.3613 (F/1.39), GIH 12.06 (HFOV=6.79), PTZ/F -2.845, VL 147.08, infinite conjugate. Glass: DBC1 entered as model glass 1.611,58.8 (no dispersion data found); EDF1 entered as SF2 (the book lists EDF1 here as 1.649/33.8, matching Schott SF2); EDF2 entered as model glass 1.689,30.9 (no dispersion data found); LAK22 entered as N-LAK22; SK16 entered as N-SK16. The book does not mark the stop; it is placed at surface 5, the front of the rear group, after the long air space (the table has no plane stop row; the smallest semi-apertures belong to the rear group or field flattener near the image).",
+  "notes": "Warren J. Smith, Modern Lens Design, 2nd ed., Figure 13.10, p. 233. Book: EFL 101.3, BFL 28.56, NA -0.3613 (F/1.39), GIH 12.06 (HFOV=6.79), PTZ/F -2.845, VL 147.08, infinite conjugate. Glass: DBC1 entered as model glass 1.611,58.8 (no dispersion data found); EDF1 entered as SF2 (the book lists EDF1 here as 1.649/33.8, matching Schott SF2); EDF2 entered as model glass 1.689,30.9 (no dispersion data found); LAK22 entered as N-LAK22; SK16 entered as N-SK16. The book does not mark the stop; it is placed at surface 5, the front of the rear group, after the long air space (the table has no plane stop row; the smallest semi-apertures belong to the rear group or field flattener near the image).",
   "surfaces": [
     {
       "type": "STANDARD",
