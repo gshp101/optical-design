@@ -104,13 +104,15 @@ def analyse(path):
     w0 = lens.wavelengths[lens.primary_wavelength].value
     p = lens.paraxial()
     surfs = lens.surfaces
+    # the book's EFL is -1/u' (n' f); it differs from f only when the image lies in a medium (immersion objectives)
+    efl = p.efl * p.n_image
     model = {
-        "EFL": p.efl,
+        "EFL": efl,
         "BFL": p.image_distance,
         "NA": -1.0 / (2.0 * p.working_fnum),
         "GIH": p.paraxial_image_height,
         "VL": sum(s.thickness for s in surfs[1:-2]),
-        "PTZF": petzval_ratio(lens, p.efl),
+        "PTZF": petzval_ratio(lens, efl),
     }
     rows = {}
     for key, _, _ in QUANTITIES:
@@ -232,7 +234,9 @@ def render(chapter, results):
                "<span class='badge close'>Close</span> within 0.5 %, <span class='badge off'>Off</span> anything larger.</li>")
     out.append("<li>Model values are paraxial at the primary wavelength (d line). NA is 1/(2 × working F/#), "
                "GIH is the paraxial image height at the largest field, VL is the sum of all thicknesses except "
-               "the last, and PTZ/F is −1/(EFL Σ c(n′−n)/(n n′)).</li>")
+               "the last, and PTZ/F is −1/(EFL Σ c(n′−n)/(n n′)). Where the image lies inside an immersion "
+               "medium of index n′ (Chapter 15), the book's EFL is n′ times the focal length, and the model's EFL "
+               "is given the same way.</li>")
     out.append("<li>NA reflects the entrance pupil entered in the model rather than the prescription, so it "
                "is shown but not graded. Chapter 6 models use EPD = 100/F# from the book's rounded F/#, which "
                "puts NA a few tenths of a percent from the book's value; later chapters use EPD = 2 EFL |NA|, "
