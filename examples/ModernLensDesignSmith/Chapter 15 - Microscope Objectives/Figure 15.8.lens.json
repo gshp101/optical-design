@@ -1,0 +1,259 @@
+{
+  "format": "lensforge-1",
+  "name": "Masaki Matsubara, USP 4037934, .95 NA 60x microscope objective #1 (Smith, Modern Lens Design, Fig. 15.8)",
+  "units": "mm",
+  "aperture": {
+    "type": "EPD",
+    "value": 184.2125
+  },
+  "fields": {
+    "type": "ANGLE",
+    "values": [
+      {
+        "x": 0.0,
+        "y": 0.0,
+        "weight": 1.0,
+        "vdx": 0.0,
+        "vdy": 0.0,
+        "vcx": 0.0,
+        "vcy": 0.0
+      },
+      {
+        "x": 0.0,
+        "y": 2.289,
+        "weight": 1.0,
+        "vdx": 0.0,
+        "vdy": 0.0,
+        "vcx": 0.0,
+        "vcy": 0.0
+      },
+      {
+        "x": 0.0,
+        "y": 3.27,
+        "weight": 1.0,
+        "vdx": 0.0,
+        "vdy": 0.0,
+        "vcx": 0.0,
+        "vcy": 0.0
+      }
+    ]
+  },
+  "wavelengths": {
+    "values": [
+      {
+        "value": 0.5875618,
+        "weight": 1.0
+      },
+      {
+        "value": 0.4861,
+        "weight": 1.0
+      },
+      {
+        "value": 0.6563,
+        "weight": 1.0
+      }
+    ],
+    "primary": 0
+  },
+  "ray_aiming": "paraxial",
+  "notes": "Warren J. Smith, Modern Lens Design, 2nd ed., Figure 15.8, p. 267. Book: EFL 100, BFL -0.001501, NA -0.9472 (F/0.53), GIH 5.56 (HFOV=3.27), PTZ/F -1.853, VL 527.46, OD 5834.39 (MAG -0.016). Glass: CAF entered as CAF2 (calcium fluoride). The book does not mark the stop; it is placed at surface 1, surface 1, the rear (long-conjugate) end of the objective, where a microscope objective's aperture stop usually sits (the table has no plane stop row). BFL here is the paraxial image distance for the finite object.",
+  "surfaces": [
+    {
+      "type": "STANDARD",
+      "curvature": 0.0,
+      "conic": 0.0,
+      "thickness": 5834.39,
+      "material": null,
+      "comment": "OBJECT"
+    },
+    {
+      "type": "STANDARD",
+      "curvature": -0.001327820223764264,
+      "conic": 0.0,
+      "thickness": 76.28,
+      "material": "FK51",
+      "semi_diameter": 92.0,
+      "stop": true
+    },
+    {
+      "type": "STANDARD",
+      "curvature": -0.008263779852904718,
+      "conic": 0.0,
+      "thickness": 17.373,
+      "material": "PCD4",
+      "semi_diameter": 94.0
+    },
+    {
+      "type": "STANDARD",
+      "curvature": -0.0017307296236874577,
+      "conic": 0.0,
+      "thickness": 6.889,
+      "material": null,
+      "semi_diameter": 101.3
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.0012363598598462463,
+      "conic": 0.0,
+      "thickness": 93.153,
+      "material": "PCD4",
+      "semi_diameter": 103.7
+    },
+    {
+      "type": "STANDARD",
+      "curvature": -0.0006113500810650208,
+      "conic": 0.0,
+      "thickness": 77.878,
+      "material": null,
+      "semi_diameter": 105.3
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.007174579031575323,
+      "conic": 0.0,
+      "thickness": 107.531,
+      "material": "CAF2",
+      "semi_diameter": 104.3
+    },
+    {
+      "type": "STANDARD",
+      "curvature": -0.005706980778888737,
+      "conic": 0.0,
+      "thickness": 13.878,
+      "material": "SF3",
+      "semi_diameter": 94.0
+    },
+    {
+      "type": "STANDARD",
+      "curvature": -0.0004695600644799881,
+      "conic": 0.0,
+      "thickness": 15.576,
+      "material": null,
+      "semi_diameter": 89.7
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.008604593131813762,
+      "conic": 0.0,
+      "thickness": 41.635,
+      "material": "CAF2",
+      "semi_diameter": 78.3
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.0017503907747404607,
+      "conic": 0.0,
+      "thickness": 1.697,
+      "material": null,
+      "semi_diameter": 71.7
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.016947141864524548,
+      "conic": 0.0,
+      "thickness": 58.907,
+      "material": "LAF28",
+      "semi_diameter": 54.0
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.014226977194155558,
+      "conic": 0.0,
+      "thickness": 10.667,
+      "material": null,
+      "semi_diameter": 30.0
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.0,
+      "conic": 0.0,
+      "thickness": 6.0,
+      "material": "K3",
+      "semi_diameter": 33.3
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.0,
+      "conic": 0.0,
+      "thickness": 0.002,
+      "material": null,
+      "semi_diameter": 33.3
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.0,
+      "conic": 0.0,
+      "thickness": 0.0,
+      "material": null,
+      "comment": "IMAGE"
+    }
+  ],
+  "optimization": {
+    "variables": [
+      {
+        "surface": 1,
+        "param": "curvature"
+      },
+      {
+        "surface": 2,
+        "param": "curvature"
+      },
+      {
+        "surface": 3,
+        "param": "curvature"
+      },
+      {
+        "surface": 4,
+        "param": "curvature"
+      },
+      {
+        "surface": 5,
+        "param": "curvature"
+      },
+      {
+        "surface": 6,
+        "param": "curvature"
+      },
+      {
+        "surface": 7,
+        "param": "curvature"
+      },
+      {
+        "surface": 8,
+        "param": "curvature"
+      },
+      {
+        "surface": 9,
+        "param": "curvature"
+      },
+      {
+        "surface": 10,
+        "param": "curvature"
+      },
+      {
+        "surface": 11,
+        "param": "curvature"
+      },
+      {
+        "surface": 12,
+        "param": "curvature"
+      },
+      {
+        "surface": 14,
+        "param": "thickness"
+      }
+    ],
+    "merit_function": {
+      "rows": [
+        {
+          "type": "POWR",
+          "target": 0.0,
+          "weight": 0,
+          "bound": "=",
+          "params": {},
+          "comment": ""
+        }
+      ]
+    }
+  }
+}

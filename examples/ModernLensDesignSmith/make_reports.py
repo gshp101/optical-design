@@ -104,13 +104,15 @@ def analyse(path):
     w0 = lens.wavelengths[lens.primary_wavelength].value
     p = lens.paraxial()
     surfs = lens.surfaces
+    # the book's EFL is -1/u' (n' f); it differs from f only when the image lies in a medium (immersion objectives)
+    efl = p.efl * p.n_image
     model = {
-        "EFL": p.efl,
+        "EFL": efl,
         "BFL": p.image_distance,
         "NA": -1.0 / (2.0 * p.working_fnum),
         "GIH": p.paraxial_image_height,
         "VL": sum(s.thickness for s in surfs[1:-2]),
-        "PTZF": petzval_ratio(lens, p.efl),
+        "PTZF": petzval_ratio(lens, efl),
     }
     rows = {}
     for key, _, _ in QUANTITIES:
@@ -122,6 +124,7 @@ def analyse(path):
     first = [rows[k][3] for k in FIRST_ORDER if k in rows and k not in ungraded]
     overall = max(first, key=GRADES.index) if first else "off"
     glass = re.search(r"Glass: (.*?\.)(?: [A-Z]|$)", lens.notes)
+    disc = re.search(r"Discrepancy with the book: (.*?\.)(?= [A-Z]|$)", lens.notes)
     return {
         "fig": "%d.%d" % figure_key(path),
         "file": os.path.basename(path),
@@ -136,6 +139,8 @@ def analyse(path):
         "transmission": full_field_transmission(lens, w0),
         "glass": glass.group(1).rstrip(".") if glass else "",
         "ungraded": ungraded,
+        # a sentence in the notes starting "Discrepancy with the book:" is listed in the report
+        "discrepancy": disc.group(1) if disc else "",
     }
 
 
@@ -222,7 +227,8 @@ def render(chapter, results):
         out.append(f"<td>{rays}</td><td class='l name'>{html.escape(r['glass']) or '–'}</td></tr>")
     out.append("</tbody></table></div>")
 
-    off = [r for r in results if r["overall"] != "exact"]
+    off = [r for r in results if r["overall"] != "exact" and not r["discrepancy"]]
+    disc = [r for r in results if r["discrepancy"]]
     ungraded = [r for r in results if r["ungraded"]]
     ptz = [r for r in results if "PTZF" in r["rows"] and r["rows"]["PTZF"][3] == "off"]
     out.append("<h2>Notes</h2><ul class='notes'>")
@@ -232,7 +238,9 @@ def render(chapter, results):
                "<span class='badge close'>Close</span> within 0.5 %, <span class='badge off'>Off</span> anything larger.</li>")
     out.append("<li>Model values are paraxial at the primary wavelength (d line). NA is 1/(2 × working F/#), "
                "GIH is the paraxial image height at the largest field, VL is the sum of all thicknesses except "
-               "the last, and PTZ/F is −1/(EFL Σ c(n′−n)/(n n′)).</li>")
+               "the last, and PTZ/F is −1/(EFL Σ c(n′−n)/(n n′)). Where the image lies inside an immersion "
+               "medium of index n′ (Chapter 15), the book's EFL is n′ times the focal length, and the model's EFL "
+               "is given the same way.</li>")
     out.append("<li>NA reflects the entrance pupil entered in the model rather than the prescription, so it "
                "is shown but not graded. Chapter 6 models use EPD = 100/F# from the book's rounded F/#, which "
                "puts NA a few tenths of a percent from the book's value; later chapters use EPD = 2 EFL |NA|, "
@@ -248,6 +256,10 @@ def render(chapter, results):
             f"Fig {r['fig']} ({', '.join(k for k in FIRST_ORDER if k in r['rows'] and r['rows'][k][3] != 'exact' and k not in r['ungraded'])})"
             for r in off) + ". These use glasses entered from the book's rounded nd/Vd or a modern substitute "
             "with slightly different dispersion (see the glass column).</li>")
+    if disc:
+        out.append("<li><b>Discrepancies with the book</b> (the model is entered as printed):<ul>" + "".join(
+            f"<li>Fig {r['fig']}: {html.escape(r['discrepancy'][0].upper() + r['discrepancy'][1:])}</li>"
+            for r in disc) + "</ul></li>")
     if ungraded:
         out.append("<li>The book's GIH is not the paraxial image height on Fig " + ", ".join(r["fig"] for r in ungraded)
                    + ", so it is shown but not graded into Match (see the notes in the model file).</li>")
