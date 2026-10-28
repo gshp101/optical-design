@@ -1,0 +1,231 @@
+{
+  "format": "lensforge-1",
+  "name": "1.9 mm NA 1.3 93x micro-objective (MIL-141) (Smith, Modern Lens Design, Fig. 15.2)",
+  "units": "mm",
+  "aperture": {
+    "type": "EPD",
+    "value": 252.0891
+  },
+  "fields": {
+    "type": "ANGLE",
+    "values": [
+      {
+        "x": 0.0,
+        "y": 0.0,
+        "weight": 1.0,
+        "vdx": 0.0,
+        "vdy": 0.0,
+        "vcx": 0.0,
+        "vcy": 0.0
+      },
+      {
+        "x": 0.0,
+        "y": 2.289,
+        "weight": 1.0,
+        "vdx": 0.0,
+        "vdy": 0.0,
+        "vcx": 0.0,
+        "vcy": 0.0
+      },
+      {
+        "x": 0.0,
+        "y": 3.27,
+        "weight": 1.0,
+        "vdx": 0.0,
+        "vdy": 0.0,
+        "vcx": 0.0,
+        "vcy": 0.0
+      }
+    ]
+  },
+  "wavelengths": {
+    "values": [
+      {
+        "value": 0.5875618,
+        "weight": 1.0
+      },
+      {
+        "value": 0.4861,
+        "weight": 1.0
+      },
+      {
+        "value": 0.6563,
+        "weight": 1.0
+      }
+    ],
+    "primary": 0
+  },
+  "ray_aiming": "paraxial",
+  "notes": "Warren J. Smith, Modern Lens Design, 2nd ed., Figure 15.2, p. 260. Book: EFL 151.5, BFL 0, NA -1.2886 (F/0.6), GIH 5.61 (HFOV=3.27), PTZ/F -0.5468, VL 405.64, OD 9049.37 (MAG -0.016). Glass: BK7 entered as N-BK7; CAF entered as CAF2 (calcium fluoride); K5 entered as N-K5. The book does not mark the stop; it is placed at surface 1, surface 1, the rear (long-conjugate) end of the objective, where a microscope objective's aperture stop usually sits (the table has no plane stop row). The book image lies at the back of the K5 layer (BFL 0); a zero-thickness dummy surface inside the K5 ends the table so the image stays in the immersion medium. The book prints sa 423.0 on surface 10; 42.3 (as on the surfaces either side) is used. The table is printed above the caption of Figure 15.2 on p. 260. The book's EFL 151.5 is n' f with n' = 1.515; with the K5 index 1.522 the model gives 152.2 (its focal length in air is 100.0). BFL here is the paraxial image distance for the finite object.",
+  "surfaces": [
+    {
+      "type": "STANDARD",
+      "curvature": 0.0,
+      "conic": 0.0,
+      "thickness": 9049.37,
+      "material": null,
+      "comment": "OBJECT"
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.0038832689357901485,
+      "conic": 0.0,
+      "thickness": 93.453,
+      "material": "CAF2",
+      "semi_diameter": 125.2,
+      "stop": true
+    },
+    {
+      "type": "STANDARD",
+      "curvature": -0.004709295206879338,
+      "conic": 0.0,
+      "thickness": 57.11,
+      "material": "F2",
+      "semi_diameter": 125.2
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.0004407552252633843,
+      "conic": 0.0,
+      "thickness": 4.673,
+      "material": null,
+      "semi_diameter": 125.2
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.00517769861651893,
+      "conic": 0.0,
+      "thickness": 74.762,
+      "material": "CAF2",
+      "semi_diameter": 114.8
+    },
+    {
+      "type": "STANDARD",
+      "curvature": -0.0035668553533148573,
+      "conic": 0.0,
+      "thickness": 36.343,
+      "material": "BAF2",
+      "semi_diameter": 114.8
+    },
+    {
+      "type": "STANDARD",
+      "curvature": -5.85085058495634e-05,
+      "conic": 0.0,
+      "thickness": 13.032,
+      "material": null,
+      "semi_diameter": 114.8
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.009441622448401533,
+      "conic": 0.0,
+      "thickness": 59.187,
+      "material": "BK1",
+      "semi_diameter": 88.3
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.002360416755182295,
+      "conic": 0.0,
+      "thickness": 1.038,
+      "material": null,
+      "semi_diameter": 88.3
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.02360439041661749,
+      "conic": 0.0,
+      "thickness": 50.88,
+      "material": "N-BK7",
+      "semi_diameter": 42.3
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.0,
+      "conic": 0.0,
+      "thickness": 5.815,
+      "material": "N-BK7",
+      "semi_diameter": 42.3
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.0,
+      "conic": 0.0,
+      "thickness": 9.345,
+      "material": "N-K5",
+      "semi_diameter": 42.3
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.0,
+      "conic": 0.0,
+      "thickness": 0.0,
+      "material": "N-K5",
+      "semi_diameter": 42.3
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.0,
+      "conic": 0.0,
+      "thickness": 0.0,
+      "material": null,
+      "comment": "IMAGE"
+    }
+  ],
+  "optimization": {
+    "variables": [
+      {
+        "surface": 1,
+        "param": "curvature"
+      },
+      {
+        "surface": 2,
+        "param": "curvature"
+      },
+      {
+        "surface": 3,
+        "param": "curvature"
+      },
+      {
+        "surface": 4,
+        "param": "curvature"
+      },
+      {
+        "surface": 5,
+        "param": "curvature"
+      },
+      {
+        "surface": 6,
+        "param": "curvature"
+      },
+      {
+        "surface": 7,
+        "param": "curvature"
+      },
+      {
+        "surface": 8,
+        "param": "curvature"
+      },
+      {
+        "surface": 9,
+        "param": "curvature"
+      },
+      {
+        "surface": 12,
+        "param": "thickness"
+      }
+    ],
+    "merit_function": {
+      "rows": [
+        {
+          "type": "POWR",
+          "target": 0.0,
+          "weight": 0,
+          "bound": "=",
+          "params": {},
+          "comment": ""
+        }
+      ]
+    }
+  }
+}
