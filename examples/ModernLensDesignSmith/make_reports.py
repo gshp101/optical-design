@@ -106,7 +106,7 @@ def analyse(path):
     surfs = lens.surfaces
     model = {
         "EFL": p.efl,
-        "BFL": p.bfl,
+        "BFL": p.image_distance,
         "NA": -1.0 / (2.0 * p.working_fnum),
         "GIH": p.paraxial_image_height,
         "VL": sum(s.thickness for s in surfs[1:-2]),
@@ -117,7 +117,9 @@ def analyse(path):
         if key in book:
             b, unit = book[key]
             rows[key] = (b, model[key], model[key] - b, grade(b, unit, model[key]))
-    first = [rows[k][3] for k in FIRST_ORDER if k in rows]
+    # a model's notes can flag a book GIH that is not a paraxial value (e.g. Fig. 9.17); it is then not graded
+    ungraded = {"GIH"} if re.search(r"book's GIH [\d.]+ is not the paraxial", lens.notes) else set()
+    first = [rows[k][3] for k in FIRST_ORDER if k in rows and k not in ungraded]
     overall = max(first, key=GRADES.index) if first else "off"
     glass = re.search(r"Glass: (.*?\.)(?: [A-Z]|$)", lens.notes)
     return {
@@ -133,6 +135,7 @@ def analyse(path):
         "trace_ok": axial_ok(lens),
         "transmission": full_field_transmission(lens, w0),
         "glass": glass.group(1).rstrip(".") if glass else "",
+        "ungraded": ungraded,
     }
 
 
@@ -220,6 +223,7 @@ def render(chapter, results):
     out.append("</tbody></table></div>")
 
     off = [r for r in results if r["overall"] != "exact"]
+    ungraded = [r for r in results if r["ungraded"]]
     ptz = [r for r in results if "PTZF" in r["rows"] and r["rows"]["PTZF"][3] == "off"]
     out.append("<h2>Notes</h2><ul class='notes'>")
     out.append("<li><b>Match</b> is the worst grade among the first-order quantities EFL, BFL, GIH and VL. "
@@ -231,17 +235,22 @@ def render(chapter, results):
                "the last, and PTZ/F is −1/(EFL Σ c(n′−n)/(n n′)).</li>")
     out.append("<li>NA reflects the entrance pupil entered in the model rather than the prescription, so it "
                "is shown but not graded. Chapter 6 models use EPD = 100/F# from the book's rounded F/#, which "
-               "puts NA a few tenths of a percent from the book's value; Chapter 7 models use EPD = 2 EFL |NA|.</li>")
+               "puts NA a few tenths of a percent from the book's value; later chapters use EPD = 2 EFL |NA|, "
+               "or for a finite object the EPD that gives the book's working NA.</li>")
     out.append("<li>PTZ/F is shown for reference but not graded into Match. Where it differs by a few percent "
                "while EFL, BFL and VL agree, the difference is most likely in how the book's software defines "
                "it rather than in the prescription.</li>")
     out.append("<li><b>Rays</b>: a full axial beam and the chief rays at 0.7 and 1.0 field are traced at every "
-               "wavelength. Vignetting at full field is reported when the book's semi-apertures clip the beam.</li>")
+               "wavelength. Vignetting at full field is reported when the book's semi-apertures clip the beam. "
+               "Models with a half field of 60° or more use real ray aiming.</li>")
     if off:
         out.append("<li>Models not graded Exact: " + ", ".join(
-            f"Fig {r['fig']} ({', '.join(k for k in FIRST_ORDER if k in r['rows'] and r['rows'][k][3] != 'exact')})"
+            f"Fig {r['fig']} ({', '.join(k for k in FIRST_ORDER if k in r['rows'] and r['rows'][k][3] != 'exact' and k not in r['ungraded'])})"
             for r in off) + ". These use glasses entered from the book's rounded nd/Vd or a modern substitute "
             "with slightly different dispersion (see the glass column).</li>")
+    if ungraded:
+        out.append("<li>The book's GIH is not the paraxial image height on Fig " + ", ".join(r["fig"] for r in ungraded)
+                   + ", so it is shown but not graded into Match (see the notes in the model file).</li>")
     if ptz:
         out.append("<li>PTZ/F differs by more than 0.5 % on Fig " + ", ".join(r["fig"] for r in ptz) + ".</li>")
     out.append("</ul></main></body></html>\n")
