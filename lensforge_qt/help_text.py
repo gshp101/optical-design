@@ -87,7 +87,9 @@ HELP = {
         "picker and can be typed into the Material column. The catalog is remembered and loaded again every "
         "time lensforge starts (also when loaded from the material picker), until you use File > Forget "
         "Loaded Glass Catalogs. The built-in SCHOTT catalog already holds every current SCHOTT glass "
-        "(preferred and inquiry) plus common obsolete types."),
+        "(preferred and inquiry) plus common obsolete types, and the built-in INFRARED catalog holds "
+        "GERMANIUM, SILICON, ZNSE, ZNS_BROAD and AMTIR1 (type these names in the Material column; they "
+        "have no visible-light index, so the picker, which lists glasses by nd and Vd, leaves them out)."),
     "File > Forget Loaded Glass Catalogs": (
         "Stop loading your AGF catalogs at start-up.",
         "Clears the list of AGF catalogs that lensforge loads at every start. Catalogs already loaded stay "

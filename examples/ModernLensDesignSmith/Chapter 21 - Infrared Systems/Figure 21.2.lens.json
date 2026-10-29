@@ -1,0 +1,147 @@
+{
+  "format": "lensforge-1",
+  "name": "I.R. doublet F/1.5 8-12 um, Fischer, SPIE 531 (germanium/ZnS) (Smith, Modern Lens Design, Fig. 21.2)",
+  "units": "mm",
+  "aperture": {
+    "type": "EPD",
+    "value": 66.62
+  },
+  "fields": {
+    "type": "ANGLE",
+    "values": [
+      {
+        "x": 0.0,
+        "y": 0.0,
+        "weight": 1.0,
+        "vdx": 0.0,
+        "vdy": 0.0,
+        "vcx": 0.0,
+        "vcy": 0.0
+      },
+      {
+        "x": 0.0,
+        "y": 1.603,
+        "weight": 1.0,
+        "vdx": 0.0,
+        "vdy": 0.0,
+        "vcx": 0.0,
+        "vcy": 0.0
+      },
+      {
+        "x": 0.0,
+        "y": 2.29,
+        "weight": 1.0,
+        "vdx": 0.0,
+        "vdy": 0.0,
+        "vcx": 0.0,
+        "vcy": 0.0
+      }
+    ]
+  },
+  "wavelengths": {
+    "values": [
+      {
+        "value": 10.0,
+        "weight": 1.0
+      },
+      {
+        "value": 8.0,
+        "weight": 1.0
+      },
+      {
+        "value": 12.0,
+        "weight": 1.0
+      }
+    ],
+    "primary": 0
+  },
+  "ray_aiming": "paraxial",
+  "notes": "Warren J. Smith, Modern Lens Design, 2nd ed., Figure 21.2, p. 396. Book: EFL 100, BFL 85.11, NA -0.3331 (F/1.5), GIH 4.0 (HFOV=2.29), PTZ/F -4.701, VL 24.17, infinite conjugate. Wavelengths 10, 8, 12 um as in the book (primary first). Glass: GERMA entered as GERMANIUM (Zemax INFRARED catalog); ZNS entered as ZNS_BROAD (zinc sulfide, Zemax INFRARED catalog). The book does not mark the stop; it is placed at surface 1, the front surface, whose semi-aperture matches the axial beam (the book does not mark the stop). Infrared materials come from the Zemax INFRARED catalog; the book lists their indices at the primary wavelength from older data, so small differences in EFL are expected.",
+  "surfaces": [
+    {
+      "type": "STANDARD",
+      "curvature": 0.0,
+      "conic": 0.0,
+      "thickness": "inf",
+      "material": null,
+      "comment": "OBJECT"
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.009159186664224217,
+      "conic": 0.0,
+      "thickness": 8.79,
+      "material": "GERMANIUM",
+      "semi_diameter": 33.3,
+      "stop": true
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.006097932800780535,
+      "conic": 0.0,
+      "thickness": 8.71,
+      "material": null,
+      "semi_diameter": 33.3
+    },
+    {
+      "type": "STANDARD",
+      "curvature": -0.010492078480747036,
+      "conic": 0.0,
+      "thickness": 6.67,
+      "material": "ZNS_BROAD",
+      "semi_diameter": 32.0
+    },
+    {
+      "type": "STANDARD",
+      "curvature": -0.010183299389002037,
+      "conic": 0.0,
+      "thickness": 85.114,
+      "material": null,
+      "semi_diameter": 32.0
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.0,
+      "conic": 0.0,
+      "thickness": 0.0,
+      "material": null,
+      "comment": "IMAGE"
+    }
+  ],
+  "optimization": {
+    "variables": [
+      {
+        "surface": 1,
+        "param": "curvature"
+      },
+      {
+        "surface": 2,
+        "param": "curvature"
+      },
+      {
+        "surface": 3,
+        "param": "curvature"
+      },
+      {
+        "surface": 4,
+        "param": "curvature"
+      },
+      {
+        "surface": 4,
+        "param": "thickness"
+      }
+    ],
+    "merit_function": {
+      "rows": [
+        {
+          "type": "POWR",
+          "target": 0.0,
+          "weight": 0,
+          "bound": "=",
+          "params": {},
+          "comment": ""
+        }
+      ]
+    }
+  }
+}
