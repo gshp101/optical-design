@@ -576,6 +576,23 @@ def test_input_rays_dialog(win, tmp_path):
     assert "User ray 1" in rep.text.toPlainText()
 
 
+def test_input_rays_pattern_preview(win):
+    from lensforge import pupil_grid
+    from lensforge_qt.rays_dialog import InputRaysDialog
+    d = InputRaysDialog(win.doc, win)
+    try:
+        d.pattern.setCurrentIndex(d.pattern.findData("hexapolar"))
+        d.rings.setValue(2)
+        assert d.preview.count == 1 + 6 + 12
+        d.pattern.setCurrentIndex(d.pattern.findData("square"))
+        d.rings.setValue(8)
+        assert d.preview.count == len(pupil_grid("square", 8)[0])  # the rays the spot diagram traces
+        img = d.preview.grab().toImage()
+        assert not img.isNull() and img.width() >= 150
+    finally:
+        d.reject()
+
+
 def test_material_dialog(win):
     from lensforge_qt.material_dialog import MaterialDialog
     s = win.doc.system

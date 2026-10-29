@@ -4,13 +4,62 @@ from __future__ import annotations
 
 from PySide6.QtWidgets import (QAbstractItemView, QComboBox, QDialog, QDialogButtonBox, QFormLayout, QGroupBox,
                                QHBoxLayout, QHeaderView, QListWidget, QListWidgetItem, QMessageBox,
-                               QPushButton, QSpinBox, QTableWidget, QTableWidgetItem, QVBoxLayout)
-from PySide6.QtCore import Qt
+                               QPushButton, QSpinBox, QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget)
+from PySide6.QtCore import QPointF, QRectF, QSize, Qt
+from PySide6.QtGui import QColor, QPainter, QPen
+
+from lensforge import pupil_grid
 
 from . import edits as E
 from . import rays as R
 
 USER_COLUMNS = ["Hx", "Hy", "Px", "Py", "Wavelength"]
+
+
+class PupilPatternPreview(QWidget):
+    """Small picture of the pupil sampling: the unit pupil and every ray the spot diagram traces."""
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setMinimumSize(150, 168)
+        self.px, self.py = pupil_grid("hexapolar", 6)
+        self.setToolTip("Where the spot diagram's rays cross the entrance pupil (traced for every field and wavelength)")
+
+    def sizeHint(self):
+        return QSize(170, 190)
+
+    def set_pattern(self, pattern: str, n: int):
+        self.px, self.py = pupil_grid(pattern, n)
+        self.update()
+
+    @property
+    def count(self) -> int:
+        return len(self.px)
+
+    def paintEvent(self, _):
+        p = QPainter(self)
+        p.setRenderHint(QPainter.Antialiasing)
+        pal = self.palette()
+        text_h = p.fontMetrics().height() + 4
+        side = min(self.width(), self.height() - text_h) - 8
+        r = side / 2
+        c = QPointF(self.width() / 2, 4 + r)
+        p.setPen(QPen(pal.mid().color(), 1))
+        p.setBrush(pal.base())
+        p.drawEllipse(c, r, r)
+        p.setPen(QPen(pal.mid().color(), 1, Qt.DotLine))
+        p.drawLine(QPointF(c.x() - r, c.y()), QPointF(c.x() + r, c.y()))
+        p.drawLine(QPointF(c.x(), c.y() - r), QPointF(c.x(), c.y() + r))
+        n = len(self.px)
+        dot = max(0.8, min(3.0, 0.9 * r / max(n, 1) ** 0.5))
+        p.setPen(Qt.NoPen)
+        p.setBrush(QColor("#1f5f99"))
+        for x, y in zip(self.px, self.py):
+            p.drawEllipse(QPointF(c.x() + x * r, c.y() - y * r), dot, dot)
+        p.setPen(pal.text().color())
+        p.drawText(QRectF(0, 4 + side + 2, self.width(), text_h), Qt.AlignHCenter | Qt.AlignTop,
+                   f"{n} rays")
+        p.end()
 
 
 class InputRaysDialog(QDialog):
@@ -46,7 +95,11 @@ class InputRaysDialog(QDialog):
 
         # pupil sampling
         samp = QGroupBox("Pupil sampling (spot diagrams, fans, footprints)")
-        g = QFormLayout(samp)
+        g = QFormLayout()
+        self.preview = PupilPatternPreview()
+        sl = QHBoxLayout(samp)
+        sl.addLayout(g, 1)
+        sl.addWidget(self.preview, 0, Qt.AlignTop)
         self.pattern = QComboBox()
         for p in R.PATTERNS:
             self.pattern.addItem(p.title(), p)
@@ -69,6 +122,9 @@ class InputRaysDialog(QDialog):
         g.addRow("Spot reference", self.reference)
         g.addRow("Fan points", self.fan_points)
         g.addRow("Footprint rays per beam", self.footprint_rays)
+        self.pattern.currentIndexChanged.connect(self._update_preview)
+        self.rings.valueChanged.connect(self._update_preview)
+        self._update_preview()
 
         # user rays
         ub = QGroupBox("User-defined rays (normalised field Hx, Hy and pupil Px, Py; drawn in red on the layout)")
@@ -149,6 +205,13 @@ class InputRaysDialog(QDialog):
     def remove_rays(self):
         for r in sorted({i.row() for i in self.table.selectedIndexes()}, reverse=True):
             self.table.removeRow(r)
+
+    def _update_preview(self, *_):
+        pattern = self.pattern.currentData()
+        self.preview.set_pattern(pattern, self.rings.value())
+        self.rings.setToolTip("Number of rings" if pattern == "hexapolar" else
+                              "Grid size: n x n rays clipped to the pupil" if pattern != "random" else
+                              "n x n random rays")
 
     def restore_defaults(self):
         d = R.DEFAULTS

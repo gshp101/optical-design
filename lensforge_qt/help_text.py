@@ -78,7 +78,7 @@ HELP = {
     "File > Input Rays": (
         "Choose the rays drawn and traced by the ray-based analyses, and define your own rays.",
         "Sets how many rays the layout draws and in which plane, which fields and wavelengths are shown, the "
-        "spot diagram pattern and size, ray fan and footprint sampling, and a table of user-defined rays "
+        "spot diagram pattern and size (with a small diagram of where those rays cross the pupil), ray fan and footprint sampling, and a table of user-defined rays "
         "(field and pupil coordinates) that the layout draws and the User Ray Trace report lists. Saved with "
         "the lens."),
     "File > Load Glass Catalog (AGF)": (
