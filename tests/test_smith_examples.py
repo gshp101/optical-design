@@ -15,6 +15,7 @@ BOOK_TABLE_MISMATCH = {
     "Figure 13.14": "the table gives the last surface as plane; a radius near -340 would reproduce the book's EFL",
     "Figure 15.2": "the book's EFL 151.5 is n' f with n' = 1.515, but the table's image medium is K5 (1.522)",
     "Figure 16.17": "the table as printed gives EFL -120.8 instead of 95.79",
+    "Figure 22.14": "the table as printed gives EFL 73.5 and image distance 113.7 instead of 100 and 154.7",
 }
 # The Fig. 16.21 mirrors are not exactly afocal, so the image is 0.33 short of the ideal lens focus
 BFL_TOL = {"Figure 16.21": 0.5, "Figure 21.7": 0.3, "Figure 21.12": 30.0, "Figure 21.13": 35.0, "Figure 21.14": 30.0, "Figure 22.5": 0.7}
@@ -54,4 +55,4 @@ def test_matches_book(path):
 
 
 def test_models_found():
-    assert len(MODELS) >= 276
+    assert len(MODELS) >= 277
