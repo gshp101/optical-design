@@ -1,0 +1,187 @@
+{
+  "format": "lensforge-1",
+  "name": "Haruo Maeda, USP 4436383, F/19.7 60.2 deg f-theta lens, example 5 (Smith, Modern Lens Design, Fig. 22.3)",
+  "units": "mm",
+  "aperture": {
+    "type": "EPD",
+    "value": 5.08
+  },
+  "fields": {
+    "type": "ANGLE",
+    "values": [
+      {
+        "x": 0.0,
+        "y": 0.0,
+        "weight": 1.0,
+        "vdx": 0.0,
+        "vdy": 0.0,
+        "vcx": 0.0,
+        "vcy": 0.0
+      },
+      {
+        "x": 0.0,
+        "y": 21.07,
+        "weight": 1.0,
+        "vdx": 0.0,
+        "vdy": 0.0,
+        "vcx": 0.0,
+        "vcy": 0.0
+      },
+      {
+        "x": 0.0,
+        "y": 30.1,
+        "weight": 1.0,
+        "vdx": 0.0,
+        "vdy": 0.0,
+        "vcx": 0.0,
+        "vcy": 0.0
+      }
+    ]
+  },
+  "wavelengths": {
+    "values": [
+      {
+        "value": 0.6328,
+        "weight": 1.0
+      }
+    ],
+    "primary": 0
+  },
+  "ray_aiming": "paraxial",
+  "notes": "Warren J. Smith, Modern Lens Design, 2nd ed., Figure 22.3, p. 415. Book: EFL 100, BFL 123.5, NA -0.0254 (F/19.7), GIH 57.99 (HFOV=30.10), PTZ/F -13.37, VL 18.01, infinite conjugate. Wavelengths 0.6328 um as in the book (primary first). Glass: SF14 entered as N-SF14. The book does not mark the stop; it is placed at surface 1, the front surface (the book does not mark the stop; an f-theta lens works with the scan mirror ahead of it). f-theta scan lens. Single wavelength 0.6328 um (HeNe) as in the book. ",
+  "surfaces": [
+    {
+      "type": "STANDARD",
+      "curvature": 0.0,
+      "conic": 0.0,
+      "thickness": "inf",
+      "material": null,
+      "comment": "OBJECT"
+    },
+    {
+      "type": "STANDARD",
+      "curvature": -0.04408393581378945,
+      "conic": 0.0,
+      "thickness": 2.45,
+      "material": "N-SF14",
+      "semi_diameter": 7.6,
+      "stop": true
+    },
+    {
+      "type": "STANDARD",
+      "curvature": -0.04864049807870032,
+      "conic": 0.0,
+      "thickness": 1.59,
+      "material": null,
+      "semi_diameter": 8.5
+    },
+    {
+      "type": "STANDARD",
+      "curvature": -0.051856461315079865,
+      "conic": 0.0,
+      "thickness": 2.4,
+      "material": "N-SF14",
+      "semi_diameter": 9.1
+    },
+    {
+      "type": "STANDARD",
+      "curvature": -0.008516364193798384,
+      "conic": 0.0,
+      "thickness": 1.22,
+      "material": null,
+      "semi_diameter": 11.2
+    },
+    {
+      "type": "STANDARD",
+      "curvature": -0.009625565501973242,
+      "conic": 0.0,
+      "thickness": 5.25,
+      "material": "N-SF14",
+      "semi_diameter": 12.2
+    },
+    {
+      "type": "STANDARD",
+      "curvature": -0.03712641544458883,
+      "conic": 0.0,
+      "thickness": 0.41,
+      "material": null,
+      "semi_diameter": 13.5
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.0015631692318273762,
+      "conic": 0.0,
+      "thickness": 4.69,
+      "material": "N-SF14",
+      "semi_diameter": 15.6
+    },
+    {
+      "type": "STANDARD",
+      "curvature": -0.011456065986940083,
+      "conic": 0.0,
+      "thickness": 123.464,
+      "material": null,
+      "semi_diameter": 16.3
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.0,
+      "conic": 0.0,
+      "thickness": 0.0,
+      "material": null,
+      "comment": "IMAGE"
+    }
+  ],
+  "optimization": {
+    "variables": [
+      {
+        "surface": 1,
+        "param": "curvature"
+      },
+      {
+        "surface": 2,
+        "param": "curvature"
+      },
+      {
+        "surface": 3,
+        "param": "curvature"
+      },
+      {
+        "surface": 4,
+        "param": "curvature"
+      },
+      {
+        "surface": 5,
+        "param": "curvature"
+      },
+      {
+        "surface": 6,
+        "param": "curvature"
+      },
+      {
+        "surface": 7,
+        "param": "curvature"
+      },
+      {
+        "surface": 8,
+        "param": "curvature"
+      },
+      {
+        "surface": 8,
+        "param": "thickness"
+      }
+    ],
+    "merit_function": {
+      "rows": [
+        {
+          "type": "POWR",
+          "target": 0.0,
+          "weight": 0,
+          "bound": "=",
+          "params": {},
+          "comment": ""
+        }
+      ]
+    }
+  }
+}

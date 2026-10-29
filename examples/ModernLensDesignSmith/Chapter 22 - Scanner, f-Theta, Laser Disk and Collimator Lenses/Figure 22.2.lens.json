@@ -1,0 +1,163 @@
+{
+  "format": "lensforge-1",
+  "name": "Haruo Maeda, USP 4401362, F/50 51 deg f-theta lens, example 2 (Smith, Modern Lens Design, Fig. 22.2)",
+  "units": "mm",
+  "aperture": {
+    "type": "EPD",
+    "value": 2.002
+  },
+  "fields": {
+    "type": "ANGLE",
+    "values": [
+      {
+        "x": 0.0,
+        "y": 0.0,
+        "weight": 1.0,
+        "vdx": 0.0,
+        "vdy": 0.0,
+        "vcx": 0.0,
+        "vcy": 0.0
+      },
+      {
+        "x": 0.0,
+        "y": 17.85,
+        "weight": 1.0,
+        "vdx": 0.0,
+        "vdy": 0.0,
+        "vcx": 0.0,
+        "vcy": 0.0
+      },
+      {
+        "x": 0.0,
+        "y": 25.5,
+        "weight": 1.0,
+        "vdx": 0.0,
+        "vdy": 0.0,
+        "vcx": 0.0,
+        "vcy": 0.0
+      }
+    ]
+  },
+  "wavelengths": {
+    "values": [
+      {
+        "value": 0.6328,
+        "weight": 1.0
+      }
+    ],
+    "primary": 0
+  },
+  "ray_aiming": "paraxial",
+  "notes": "Warren J. Smith, Modern Lens Design, 2nd ed., Figure 22.2, p. 414. Book: EFL 100.1, BFL 115, NA -0.01 (F/50.1), GIH 47.73 (HFOV=25.50), PTZ/F -8.712, VL 15.06, infinite conjugate. Wavelengths 0.6328 um as in the book (primary first). The book does not mark the stop; it is placed at surface 1, the front surface (the book does not mark the stop; an f-theta lens works with the scan mirror ahead of it). f-theta scan lens. Single wavelength 0.6328 um (HeNe) as in the book. FD10 is Hoya FD10; its index at 0.6328 um is the book's 1.723.",
+  "surfaces": [
+    {
+      "type": "STANDARD",
+      "curvature": 0.0,
+      "conic": 0.0,
+      "thickness": "inf",
+      "material": null,
+      "comment": "OBJECT"
+    },
+    {
+      "type": "STANDARD",
+      "curvature": -0.058105752469494475,
+      "conic": 0.0,
+      "thickness": 3.33,
+      "material": "FD10",
+      "semi_diameter": 5.4,
+      "stop": true
+    },
+    {
+      "type": "STANDARD",
+      "curvature": -0.11389521640091117,
+      "conic": 0.0,
+      "thickness": 0.72,
+      "material": null,
+      "semi_diameter": 6.1
+    },
+    {
+      "type": "STANDARD",
+      "curvature": -0.1152073732718894,
+      "conic": 0.0,
+      "thickness": 2.28,
+      "material": "FD10",
+      "semi_diameter": 6.1
+    },
+    {
+      "type": "STANDARD",
+      "curvature": -0.04177109440267335,
+      "conic": 0.0,
+      "thickness": 4.04,
+      "material": null,
+      "semi_diameter": 7.7
+    },
+    {
+      "type": "STANDARD",
+      "curvature": -0.0008196452575325399,
+      "conic": 0.0,
+      "thickness": 4.69,
+      "material": "FD10",
+      "semi_diameter": 10.2
+    },
+    {
+      "type": "STANDARD",
+      "curvature": -0.021222410865874366,
+      "conic": 0.0,
+      "thickness": 115.045,
+      "material": null,
+      "semi_diameter": 11.1
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.0,
+      "conic": 0.0,
+      "thickness": 0.0,
+      "material": null,
+      "comment": "IMAGE"
+    }
+  ],
+  "optimization": {
+    "variables": [
+      {
+        "surface": 1,
+        "param": "curvature"
+      },
+      {
+        "surface": 2,
+        "param": "curvature"
+      },
+      {
+        "surface": 3,
+        "param": "curvature"
+      },
+      {
+        "surface": 4,
+        "param": "curvature"
+      },
+      {
+        "surface": 5,
+        "param": "curvature"
+      },
+      {
+        "surface": 6,
+        "param": "curvature"
+      },
+      {
+        "surface": 6,
+        "param": "thickness"
+      }
+    ],
+    "merit_function": {
+      "rows": [
+        {
+          "type": "POWR",
+          "target": 0.0,
+          "weight": 0,
+          "bound": "=",
+          "params": {},
+          "comment": ""
+        }
+      ]
+    }
+  }
+}

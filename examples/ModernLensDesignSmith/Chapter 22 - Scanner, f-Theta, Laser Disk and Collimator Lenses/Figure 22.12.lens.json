@@ -1,0 +1,195 @@
+{
+  "format": "lensforge-1",
+  "name": "Kazuo Minoura, USP 4139267, 0.5 NA video disk lens, example 4 (Smith, Modern Lens Design, Fig. 22.12)",
+  "units": "mm",
+  "aperture": {
+    "type": "EPD",
+    "value": 99.8367
+  },
+  "fields": {
+    "type": "ANGLE",
+    "values": [
+      {
+        "x": 0.0,
+        "y": 0.0,
+        "weight": 1.0,
+        "vdx": 0.0,
+        "vdy": 0.0,
+        "vcx": 0.0,
+        "vcy": 0.0
+      },
+      {
+        "x": 0.0,
+        "y": 0.35,
+        "weight": 1.0,
+        "vdx": 0.0,
+        "vdy": 0.0,
+        "vcx": 0.0,
+        "vcy": 0.0
+      },
+      {
+        "x": 0.0,
+        "y": 0.5,
+        "weight": 1.0,
+        "vdx": 0.0,
+        "vdy": 0.0,
+        "vcx": 0.0,
+        "vcy": 0.0
+      }
+    ]
+  },
+  "wavelengths": {
+    "values": [
+      {
+        "value": 0.5875618,
+        "weight": 1.0
+      },
+      {
+        "value": 0.4861,
+        "weight": 1.0
+      },
+      {
+        "value": 0.6563,
+        "weight": 1.0
+      }
+    ],
+    "primary": 0
+  },
+  "ray_aiming": "paraxial",
+  "notes": "Warren J. Smith, Modern Lens Design, 2nd ed., Figure 22.12, p. 424. Book: EFL 100.5, BFL 31.12, NA -0.4967 (F/1.0), GIH 0.88 (HFOV=0.50), PTZ/F -1.1, VL 132.2, infinite conjugate. Glass: LASF3 entered as model glass 1.800,57.8 (no dispersion data found); SK15 entered as model glass 1.620,63.0 (no dispersion data found). The book does not mark the stop; it is placed at surface 1, the front surface. The book's LASF3 (1.800/57.8) and SK15 (1.620/63.0) do not match the catalog glasses of those names (808/406 and 623/581), so the book's index and V are entered as model glasses.",
+  "surfaces": [
+    {
+      "type": "STANDARD",
+      "curvature": 0.0,
+      "conic": 0.0,
+      "thickness": "inf",
+      "material": null,
+      "comment": "OBJECT"
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.004668098216786481,
+      "conic": 0.0,
+      "thickness": 14.9,
+      "material": "1.800,57.8",
+      "semi_diameter": 50.5,
+      "stop": true
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.0004927101076029604,
+      "conic": 0.0,
+      "thickness": 1.0,
+      "material": null,
+      "semi_diameter": 49.5
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.00649772579597141,
+      "conic": 0.0,
+      "thickness": 11.8,
+      "material": "1.800,57.8",
+      "semi_diameter": 48.0
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.001478959581513597,
+      "conic": 0.0,
+      "thickness": 5.7,
+      "material": null,
+      "semi_diameter": 46.5
+    },
+    {
+      "type": "STANDARD",
+      "curvature": -0.0036679749110516083,
+      "conic": 0.0,
+      "thickness": 7.3,
+      "material": "1.620,63.0",
+      "semi_diameter": 46.5
+    },
+    {
+      "type": "STANDARD",
+      "curvature": -0.0010427898382215845,
+      "conic": 0.0,
+      "thickness": 79.5,
+      "material": null,
+      "semi_diameter": 45.0
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.014885382554331646,
+      "conic": 0.0,
+      "thickness": 12.0,
+      "material": "1.800,57.8",
+      "semi_diameter": 20.5
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.0017499313151958784,
+      "conic": 0.0,
+      "thickness": 31.116,
+      "material": null,
+      "semi_diameter": 18.0
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.0,
+      "conic": 0.0,
+      "thickness": 0.0,
+      "material": null,
+      "comment": "IMAGE"
+    }
+  ],
+  "optimization": {
+    "variables": [
+      {
+        "surface": 1,
+        "param": "curvature"
+      },
+      {
+        "surface": 2,
+        "param": "curvature"
+      },
+      {
+        "surface": 3,
+        "param": "curvature"
+      },
+      {
+        "surface": 4,
+        "param": "curvature"
+      },
+      {
+        "surface": 5,
+        "param": "curvature"
+      },
+      {
+        "surface": 6,
+        "param": "curvature"
+      },
+      {
+        "surface": 7,
+        "param": "curvature"
+      },
+      {
+        "surface": 8,
+        "param": "curvature"
+      },
+      {
+        "surface": 8,
+        "param": "thickness"
+      }
+    ],
+    "merit_function": {
+      "rows": [
+        {
+          "type": "POWR",
+          "target": 0.0,
+          "weight": 0,
+          "bound": "=",
+          "params": {},
+          "comment": ""
+        }
+      ]
+    }
+  }
+}
