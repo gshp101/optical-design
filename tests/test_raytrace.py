@@ -181,6 +181,16 @@ def test_newton_intersection_lies_on_surface(surf):
     np.testing.assert_allclose(gy, fy, atol=1e-7)
 
 
+def test_newton_intersection_ignores_rays_lost_upstream():
+    # a ray vignetted earlier arrives with NaN coordinates; the others must still converge
+    surf = lf.EvenAsphere(radius=40, conic=-0.5, coefficients=[0, 1e-5, -2e-8])
+    P = np.array([[0.0, 0.0, -20.0], [np.nan, np.nan, np.nan], [3.0, -2.0, -20.0]])
+    D = np.array([[0.0, 0.0, 1.0], [np.nan, np.nan, np.nan], [0.05, 0.0, 1.0]])
+    D /= np.linalg.norm(D, axis=1, keepdims=True)
+    t, ok = surf.intersect(P, D)
+    assert ok.tolist() == [True, False, True]
+
+
 def test_cylinder_lens_focuses_one_axis():
     s = lf.OpticalSystem()
     s.set_aperture("EPD", 10)

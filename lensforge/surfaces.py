@@ -335,7 +335,8 @@ class _NewtonSurface(Standard):
         t = np.where(ok, t, _conic_intersect(P, D, 0.0, 0.0)[0])
         ok = np.isfinite(t)
         t = np.where(ok, t, 0.0)
-        scale = 1.0 + np.abs(P).max(initial=1.0)
+        # rays already lost upstream carry NaN positions; keep them out of the tolerance scale
+        scale = 1.0 + np.abs(P[np.isfinite(P)]).max(initial=1.0)
         with np.errstate(invalid="ignore", divide="ignore", over="ignore"):
             for _ in range(self.max_iterations):
                 x = P[:, 0] + t * D[:, 0]
