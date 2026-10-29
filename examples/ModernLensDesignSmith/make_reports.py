@@ -33,8 +33,19 @@ GRADES = ("exact", "close", "off")
 GRADE_TEXT = {"exact": "Exact", "close": "Close", "off": "Off"}
 
 
+# zoom lenses have one file per zoom position, e.g. "Figure 20.1 short.lens.json"
+CONFIG_ORDER = ("", "short", "mid", "long", "macro")
+
+
 def figure_key(path):
-    return tuple(int(x) for x in re.search(r"Figure (\d+)\.(\d+)", path).groups())
+    m = re.search(r"Figure (\d+)\.(\d+)(?: (\w+))?\.lens\.json", path)
+    config = m.group(3) or ""
+    return int(m.group(1)), int(m.group(2)), CONFIG_ORDER.index(config) if config in CONFIG_ORDER else len(CONFIG_ORDER), config
+
+
+def figure_label(path):
+    ch, n, _, config = figure_key(path)
+    return f"{ch}.{n} {config}".rstrip()
 
 
 def book_values(notes):
@@ -47,7 +58,7 @@ def book_values(notes):
             s = m.group(1)
             unit = 10.0 ** -len(s.split(".")[1]) if "." in s else 1.0
             out[key] = (float(s), unit)
-    m = re.search(r"Figure ([\d.]+), p\. (\d+)", notes)
+    m = re.search(r"Figure ([\d.]+)(?: \w+)?, p\. (\d+)", notes)
     out["page"] = m.group(2) if m else ""
     m = re.search(r"\(F/([\d.]+)\)", notes)
     out["F"] = m.group(1) if m else ""
@@ -129,9 +140,9 @@ def analyse(path):
     glass = re.search(r"Glass: (.*?\.)(?: [A-Z]|$)", lens.notes)
     disc = re.search(r"Discrepancy with the book: (.*?\.)(?= [A-Z]|$)", lens.notes)
     return {
-        "fig": "%d.%d" % figure_key(path),
+        "fig": figure_label(path),
         "file": os.path.basename(path),
-        "name": re.sub(r"\s*\(Smith, Modern Lens Design, Fig\. [\d.]+\)", "", lens.name),
+        "name": re.sub(r"\s*\(Smith, Modern Lens Design, Fig\. [^)]+\)", "", lens.name),
         "page": book["page"],
         "fnum": book["F"],
         "hfov": max(abs(f.y) for f in lens.fields),

@@ -18,6 +18,8 @@ BOOK_TABLE_MISMATCH = {
 }
 # The Fig. 16.21 mirrors are not exactly afocal, so the image is 0.33 short of the ideal lens focus
 BFL_TOL = {"Figure 16.21": 0.5}
+# The Fig. 20.3 zoom tables give an EFL about 0.1 % longer than the book's in every position
+EFL_TOL = {"Figure 20.3 long": 0.2}
 
 
 @pytest.mark.parametrize("path", MODELS, ids=[os.path.basename(p).removesuffix(".lens.json") for p in MODELS])
@@ -33,7 +35,7 @@ def test_matches_book(path):
         # the book's EFL is n' f, which differs from f only for an image inside an immersion medium (Chapter 15)
         # (or 1e-4 of a long EFL, e.g. the 5000 of the Fig. 16.21 afocal with its ideal lens)
         efl = float(book["EFL"])
-        assert p.efl * abs(p.n_image) == pytest.approx(efl, abs=max(0.15, 1e-4 * abs(efl)))
+        assert p.efl * abs(p.n_image) == pytest.approx(efl, abs=EFL_TOL.get(name, max(0.15, 1e-4 * abs(efl))))
         # the book's BFL is the image distance for the actual object (the same as BFL at infinite conjugate)
         # (the book prints distances unsigned, so the sign after an odd number of mirrors is dropped)
         bfl = p.image_distance * np.sign(p.n_image)
@@ -50,4 +52,4 @@ def test_matches_book(path):
 
 
 def test_models_found():
-    assert len(MODELS) >= 227
+    assert len(MODELS) >= 245
