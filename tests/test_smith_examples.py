@@ -17,10 +17,10 @@ BOOK_TABLE_MISMATCH = {
     "Figure 16.17": "the table as printed gives EFL -120.8 instead of 95.79",
 }
 # The Fig. 16.21 mirrors are not exactly afocal, so the image is 0.33 short of the ideal lens focus
-BFL_TOL = {"Figure 16.21": 0.5, "Figure 21.7": 0.3, "Figure 21.14": 30.0, "Figure 22.5": 0.7}
+BFL_TOL = {"Figure 16.21": 0.5, "Figure 21.7": 0.3, "Figure 21.12": 30.0, "Figure 21.13": 35.0, "Figure 21.14": 30.0, "Figure 22.5": 0.7}
 # The Fig. 20.3 zoom tables give an EFL about 0.1 % longer than the book's in every position; Fig. 21.7 uses
 # catalog silicon, 0.004 below the book's index; the Fig. 21.14 telescope is so nearly afocal that EFL and BFL
-# behind its ideal lens follow the fourth decimal of the germanium index
+# behind its ideal lens follow the fourth decimal of the germanium index (likewise Figs 21.12 and 21.13)
 EFL_TOL = {"Figure 20.3 long": 0.2, "Figure 21.7": 0.3, "Figure 21.14": 10.0, "Figure 22.5": 0.5}
 
 
@@ -54,4 +54,4 @@ def test_matches_book(path):
 
 
 def test_models_found():
-    assert len(MODELS) >= 268
+    assert len(MODELS) >= 276
