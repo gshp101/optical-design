@@ -1,0 +1,187 @@
+{
+  "format": "lensforge-1",
+  "name": "Thomas P. Vogl, USP 3363962, 3 in. F/0.75 far infrared lens, example 2 (Smith, Modern Lens Design, Fig. 21.5)",
+  "units": "mm",
+  "aperture": {
+    "type": "EPD",
+    "value": 132.8
+  },
+  "fields": {
+    "type": "ANGLE",
+    "values": [
+      {
+        "x": 0.0,
+        "y": 0.0,
+        "weight": 1.0,
+        "vdx": 0.0,
+        "vdy": 0.0,
+        "vcx": 0.0,
+        "vcy": 0.0
+      },
+      {
+        "x": 0.0,
+        "y": 4.2,
+        "weight": 1.0,
+        "vdx": 0.0,
+        "vdy": 0.0,
+        "vcx": 0.0,
+        "vcy": 0.0
+      },
+      {
+        "x": 0.0,
+        "y": 6.0,
+        "weight": 1.0,
+        "vdx": 0.0,
+        "vdy": 0.0,
+        "vcx": 0.0,
+        "vcy": 0.0
+      }
+    ]
+  },
+  "wavelengths": {
+    "values": [
+      {
+        "value": 10.6,
+        "weight": 1.0
+      },
+      {
+        "value": 8.0,
+        "weight": 1.0
+      },
+      {
+        "value": 13.0,
+        "weight": 1.0
+      }
+    ],
+    "primary": 0
+  },
+  "ray_aiming": "paraxial",
+  "notes": "Warren J. Smith, Modern Lens Design, 2nd ed., Figure 21.5, p. 399. Book: EFL 100, BFL -0.004675, NA -0.664 (F/0.75), GIH 10.51 (HFOV=6.00), PTZ/F -5.183, VL 183.01, infinite conjugate. Wavelengths 10.6, 8, 13 um as in the book (primary first). Glass: CSI entered as 1.739 (constant index: no cesium iodide dispersion data in the catalogs, so its color is not modelled); GERMA entered as GERMANIUM (Zemax INFRARED catalog); ZNSIR entered as ZNS_BROAD (zinc sulfide, Zemax INFRARED catalog). The book does not mark the stop; it is placed at surface 1, the front surface, whose semi-aperture matches the axial beam (the book does not mark the stop). Infrared materials come from the Zemax INFRARED catalog; the book lists their indices at the primary wavelength from older data, so small differences in EFL are expected. The last element is a plane zinc sulfide window just ahead of the image.",
+  "surfaces": [
+    {
+      "type": "STANDARD",
+      "curvature": 0.0,
+      "conic": 0.0,
+      "thickness": "inf",
+      "material": null,
+      "comment": "OBJECT"
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.005978644282622472,
+      "conic": 0.0,
+      "thickness": 25.488,
+      "material": "GERMANIUM",
+      "semi_diameter": 73.2,
+      "stop": true
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.004289139469948145,
+      "conic": 0.0,
+      "thickness": 73.172,
+      "material": null,
+      "semi_diameter": 66.3
+    },
+    {
+      "type": "STANDARD",
+      "curvature": -0.007696866605604858,
+      "conic": 0.0,
+      "thickness": 12.523,
+      "material": "1.739",
+      "semi_diameter": 35.0
+    },
+    {
+      "type": "STANDARD",
+      "curvature": -4.373938882427124e-05,
+      "conic": 0.0,
+      "thickness": 28.626,
+      "material": null,
+      "semi_diameter": 34.3
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.012490163995853265,
+      "conic": 0.0,
+      "thickness": 23.582,
+      "material": "GERMANIUM",
+      "semi_diameter": 31.5
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.0072944780800933695,
+      "conic": 0.0,
+      "thickness": 15.448,
+      "material": null,
+      "semi_diameter": 25.1
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.0,
+      "conic": 0.0,
+      "thickness": 4.167,
+      "material": "ZNS_BROAD",
+      "semi_diameter": 13.1
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.0,
+      "conic": 0.0,
+      "thickness": 0.005,
+      "material": null,
+      "semi_diameter": 13.1
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.0,
+      "conic": 0.0,
+      "thickness": 0.0,
+      "material": null,
+      "comment": "IMAGE"
+    }
+  ],
+  "optimization": {
+    "variables": [
+      {
+        "surface": 1,
+        "param": "curvature"
+      },
+      {
+        "surface": 2,
+        "param": "curvature"
+      },
+      {
+        "surface": 3,
+        "param": "curvature"
+      },
+      {
+        "surface": 4,
+        "param": "curvature"
+      },
+      {
+        "surface": 5,
+        "param": "curvature"
+      },
+      {
+        "surface": 6,
+        "param": "curvature"
+      },
+      {
+        "surface": 8,
+        "param": "thickness"
+      }
+    ],
+    "merit_function": {
+      "rows": [
+        {
+          "type": "POWR",
+          "target": 0.0,
+          "weight": 0,
+          "bound": "=",
+          "params": {},
+          "comment": ""
+        }
+      ]
+    }
+  }
+}

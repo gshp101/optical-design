@@ -66,10 +66,10 @@ def book_values(notes):
 
 
 def petzval_ratio(lens, efl):
-    """Petzval radius over EFL, -1/(EFL * sum c (n' - n)/(n n')), with d-line indices.
+    """Petzval radius over EFL, -1/(EFL * sum c (n' - n)/(n n')), with indices at the primary wavelength.
 
     Indices change sign after each reflection, so a mirror contributes 2c/n."""
-    _, _, n = lens.media(0.5875618)
+    _, _, n = lens.media(lens.wavelengths[lens.primary_wavelength].value)
     total = 0.0
     for k in range(1, len(lens.surfaces) - 1):
         s = lens.surfaces[k]
@@ -101,13 +101,15 @@ def axial_ok(lens):
     return True
 
 
-def grade(book, unit, model):
+def grade(book, unit, model, scale=0.0):
     """exact: within the book's printed precision (one unit of the last digit, 0.05 %, or 0.001);
-    close: within 0.5 % (or 0.01); off: anything larger."""
+    close: within 0.5 % (or 0.01) of the book value, or of ``scale`` when that is larger; off: anything larger.
+
+    BFL passes the EFL as ``scale``, so a back focus of a few tenths behind a window is judged on the lens's scale."""
     diff = abs(model - book)
     if diff <= max(unit * 1.0001, 0.0005 * abs(book), 0.001):
         return "exact"
-    if diff <= max(0.005 * abs(book), 0.01):
+    if diff <= max(0.005 * max(abs(book), abs(scale)), 0.01):
         return "close"
     return "off"
 
@@ -132,9 +134,13 @@ def analyse(path):
     for key, _, _ in QUANTITIES:
         if key in book:
             b, unit = book[key]
-            rows[key] = (b, model[key], model[key] - b, grade(b, unit, model[key]))
-    # a model's notes can flag a book GIH that is not a paraxial value (e.g. Fig. 9.17); it is then not graded
+            rows[key] = (b, model[key], model[key] - b,
+                         grade(b, unit, model[key], book["EFL"][0] if key == "BFL" and "EFL" in book else 0.0))
+    # a model's notes can flag a book GIH that is not a paraxial value (e.g. Fig. 9.17), or a book VL that leaves
+    # out an air space (e.g. Fig. 21.14); these are then not graded
     ungraded = {"GIH"} if re.search(r"book's GIH [\d.]+ is not the paraxial", lens.notes) else set()
+    if re.search(r"book's VL [\d.]+ leaves out", lens.notes):
+        ungraded.add("VL")
     first = [rows[k][3] for k in FIRST_ORDER if k in rows and k not in ungraded]
     overall = max(first, key=GRADES.index) if first else "off"
     glass = re.search(r"Glass: (.*?\.)(?: [A-Z]|$)", lens.notes)
@@ -249,8 +255,10 @@ def render(chapter, results):
     out.append("<li><b>Match</b> is the worst grade among the first-order quantities EFL, BFL, GIH and VL. "
                "<span class='badge exact'>Exact</span> means within the precision the book prints (one unit of the "
                "last digit, or 0.05 % where the book's rounded field angle limits GIH), "
-               "<span class='badge close'>Close</span> within 0.5 %, <span class='badge off'>Off</span> anything larger.</li>")
-    out.append("<li>Model values are paraxial at the primary wavelength (d line). NA is 1/(2 × working F/#), "
+               "<span class='badge close'>Close</span> within 0.5 % (for BFL, 0.5 % of the EFL when that is larger), "
+               "<span class='badge off'>Off</span> anything larger.</li>")
+    out.append("<li>Model values are paraxial at the primary wavelength (the d line unless the model notes give "
+               "other wavelengths). NA is 1/(2 × working F/#), "
                "GIH is the paraxial image height at the largest field, VL is the sum of all thicknesses except "
                "the last, and PTZ/F is −1/(EFL Σ c(n′−n)/(n n′)). Where the image lies inside an immersion "
                "medium of index n′ (Chapter 15), the book's EFL is n′ times the focal length, and the model's EFL "
@@ -276,8 +284,13 @@ def render(chapter, results):
         out.append("<li><b>Discrepancies with the book</b> (the model is entered as printed):<ul>" + "".join(
             f"<li>Fig {r['fig']}: {html.escape(r['discrepancy'][0].upper() + r['discrepancy'][1:])}</li>"
             for r in disc) + "</ul></li>")
-    if ungraded:
-        out.append("<li>The book's GIH is not the paraxial image height on Fig " + ", ".join(r["fig"] for r in ungraded)
+    gih = [r for r in ungraded if "GIH" in r["ungraded"]]
+    if gih:
+        out.append("<li>The book's GIH is not the paraxial image height on Fig " + ", ".join(r["fig"] for r in gih)
+                   + ", so it is shown but not graded into Match (see the notes in the model file).</li>")
+    vl = [r for r in ungraded if "VL" in r["ungraded"]]
+    if vl:
+        out.append("<li>The book's VL leaves out an air space on Fig " + ", ".join(r["fig"] for r in vl)
                    + ", so it is shown but not graded into Match (see the notes in the model file).</li>")
     if ptz:
         out.append("<li>PTZ/F differs by more than 0.5 % on Fig " + ", ".join(r["fig"] for r in ptz) + ".</li>")

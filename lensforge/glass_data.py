@@ -312,6 +312,16 @@ _MISC = {
     "MGF2":     (0.48755108, 0.39875031, 2.3120353, 0.04338408, 0.09461442, 23.793604, 1.37774, 106.22),
 }
 
+# Infrared crystals and chalcogenide glass from the Zemax INFRARED catalog distributed with KrakenOS
+# name: (AGF formula, coefficients, lambda_min, lambda_max)
+_INFRARED = {
+    "GERMANIUM": (9, (9.280654, 6.73018925, 0.44183692, 0.213136565, 3870.35255), 2.0, 15.0),
+    "SILICON": (2, (10.6684293, 0.0909121907, 0.003043475, 1.28766017, 1.54133408, 1218816.0), 1.36, 11.0),
+    "ZNSE": (2, (4.2980149, 0.036888196, 0.62776557, 0.143476258, 2.8955633, 2208.49196), 0.55, 18.0),
+    "ZNS_BROAD": (3, (2.25967042, 0.0308908108, 0.00104615832, -0.000567944951, -1.7888889e-07, -1.48598858e-09), 0.42, 18.2),
+    "AMTIR1": (3, (2.51253618, 0.0686942636, 0.0211563734, -0.000155048679, -4.35296121e-08, 1.99858193e-10), 1.0, 14.0),
+}
+
 # Plastics (single-term Sellmeier fits, C in um^2; approximate, grade dependent)
 _PLASTIC = {
     "PMMA": (1.1819, 0.011313, None, None),
@@ -350,4 +360,7 @@ def builtin_catalogs():
     for n, v in _PLASTIC.items():
         misc.add(Glass(n, 2, (v[0], v[1], 0, 0, 0, 0), catalog="MISC",
                        nd_catalog=v[2], vd_catalog=v[3], wavelength_range=(0.4, 1.1)))
-    return [schott, *others, misc]
+    infrared = GlassCatalog("INFRARED", [
+        Glass(n, f, c, catalog="INFRARED", wavelength_range=(lo, hi)) for n, (f, c, lo, hi) in _INFRARED.items()
+    ])
+    return [schott, *others, misc, infrared]

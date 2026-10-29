@@ -1,0 +1,219 @@
+{
+  "format": "lensforge-1",
+  "name": "Philip J. Rogers, USP 4030805, F/0.55 IR lens, example 3 (Smith, Modern Lens Design, Fig. 21.11)",
+  "units": "mm",
+  "aperture": {
+    "type": "EPD",
+    "value": 181.0638
+  },
+  "fields": {
+    "type": "ANGLE",
+    "values": [
+      {
+        "x": 0.0,
+        "y": 0.0,
+        "weight": 1.0,
+        "vdx": 0.0,
+        "vdy": 0.0,
+        "vcx": 0.0,
+        "vcy": 0.0
+      },
+      {
+        "x": 0.0,
+        "y": 7.0,
+        "weight": 1.0,
+        "vdx": 0.0,
+        "vdy": 0.0,
+        "vcx": 0.0,
+        "vcy": 0.0
+      },
+      {
+        "x": 0.0,
+        "y": 10.0,
+        "weight": 1.0,
+        "vdx": 0.0,
+        "vdy": 0.0,
+        "vcx": 0.0,
+        "vcy": 0.0
+      }
+    ]
+  },
+  "wavelengths": {
+    "values": [
+      {
+        "value": 10.6,
+        "weight": 1.0
+      },
+      {
+        "value": 8.0,
+        "weight": 1.0
+      },
+      {
+        "value": 13.0,
+        "weight": 1.0
+      }
+    ],
+    "primary": 0
+  },
+  "ray_aiming": "paraxial",
+  "notes": "Warren J. Smith, Modern Lens Design, 2nd ed., Figure 21.11, p. 405. Book: EFL 99.98, BFL 1.593, NA -0.9055 (F/0.55), GIH 17.63 (HFOV=10.00), PTZ/F -4.706, VL 174.23, infinite conjugate. Wavelengths 10.6, 8, 13 um as in the book (primary first). Glass: GERMA entered as GERMANIUM (Zemax INFRARED catalog). The book does not mark the stop; it is placed at surface 3, the front surface, whose semi-aperture matches the axial beam (the book does not mark the stop). Infrared materials come from the Zemax INFRARED catalog; the book lists their indices at the primary wavelength from older data, so small differences in EFL are expected. The last element is a plane germanium window.",
+  "surfaces": [
+    {
+      "type": "STANDARD",
+      "curvature": 0.0,
+      "conic": 0.0,
+      "thickness": "inf",
+      "material": null,
+      "comment": "OBJECT"
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.00733309867417576,
+      "conic": 0.0,
+      "thickness": 13.715,
+      "material": "GERMANIUM",
+      "semi_diameter": 91.0
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.005511524597934281,
+      "conic": 0.0,
+      "thickness": 45.72,
+      "material": null,
+      "semi_diameter": 91.0
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.0,
+      "conic": 0.0,
+      "thickness": 37.387,
+      "material": null,
+      "semi_diameter": 70.4,
+      "stop": true
+    },
+    {
+      "type": "STANDARD",
+      "curvature": -0.0049510587839209416,
+      "conic": 0.0,
+      "thickness": 7.481,
+      "material": "GERMANIUM",
+      "semi_diameter": 47.9
+    },
+    {
+      "type": "STANDARD",
+      "curvature": -0.002731814990561579,
+      "conic": 0.0,
+      "thickness": 26.423,
+      "material": null,
+      "semi_diameter": 48.7
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.015754482150171726,
+      "conic": 0.0,
+      "thickness": 22.56,
+      "material": "GERMANIUM",
+      "semi_diameter": 44.2
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.017227122381477396,
+      "conic": 0.0,
+      "thickness": 6.84,
+      "material": null,
+      "semi_diameter": 33.5
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.016078204386134158,
+      "conic": 0.0,
+      "thickness": 5.837,
+      "material": "GERMANIUM",
+      "semi_diameter": 30.5
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.01139744013494569,
+      "conic": 0.0,
+      "thickness": 6.798,
+      "material": null,
+      "semi_diameter": 28.9
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.0,
+      "conic": 0.0,
+      "thickness": 1.473,
+      "material": "GERMANIUM",
+      "semi_diameter": 23.0
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.0,
+      "conic": 0.0,
+      "thickness": 1.593,
+      "material": null,
+      "semi_diameter": 23.0
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.0,
+      "conic": 0.0,
+      "thickness": 0.0,
+      "material": null,
+      "comment": "IMAGE"
+    }
+  ],
+  "optimization": {
+    "variables": [
+      {
+        "surface": 1,
+        "param": "curvature"
+      },
+      {
+        "surface": 2,
+        "param": "curvature"
+      },
+      {
+        "surface": 4,
+        "param": "curvature"
+      },
+      {
+        "surface": 5,
+        "param": "curvature"
+      },
+      {
+        "surface": 6,
+        "param": "curvature"
+      },
+      {
+        "surface": 7,
+        "param": "curvature"
+      },
+      {
+        "surface": 8,
+        "param": "curvature"
+      },
+      {
+        "surface": 9,
+        "param": "curvature"
+      },
+      {
+        "surface": 11,
+        "param": "thickness"
+      }
+    ],
+    "merit_function": {
+      "rows": [
+        {
+          "type": "POWR",
+          "target": 0.0,
+          "weight": 0,
+          "bound": "=",
+          "params": {},
+          "comment": ""
+        }
+      ]
+    }
+  }
+}

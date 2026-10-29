@@ -213,7 +213,8 @@ class Glass(Material):
 
     def index(self, wavelength_um):
         w = np.asarray(wavelength_um, dtype=float)
-        n = self._fn(w, self.coefficients)
+        with np.errstate(invalid="ignore"):  # NaN far outside the data range (e.g. germanium in the visible)
+            n = self._fn(w, self.coefficients)
         return float(n) if n.ndim == 0 else n
 
     def __repr__(self):
