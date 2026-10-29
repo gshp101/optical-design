@@ -1,0 +1,139 @@
+{
+  "format": "lensforge-1",
+  "name": "F/2.5 airspaced doublet laser focus lens (Smith, Modern Lens Design, Fig. 22.9)",
+  "units": "mm",
+  "aperture": {
+    "type": "EPD",
+    "value": 39.94
+  },
+  "fields": {
+    "type": "ANGLE",
+    "values": [
+      {
+        "x": 0.0,
+        "y": 0.0,
+        "weight": 1.0,
+        "vdx": 0.0,
+        "vdy": 0.0,
+        "vcx": 0.0,
+        "vcy": 0.0
+      },
+      {
+        "x": 0.0,
+        "y": 0.707,
+        "weight": 1.0,
+        "vdx": 0.0,
+        "vdy": 0.0,
+        "vcx": 0.0,
+        "vcy": 0.0
+      },
+      {
+        "x": 0.0,
+        "y": 1.01,
+        "weight": 1.0,
+        "vdx": 0.0,
+        "vdy": 0.0,
+        "vcx": 0.0,
+        "vcy": 0.0
+      }
+    ]
+  },
+  "wavelengths": {
+    "values": [
+      {
+        "value": 0.6328,
+        "weight": 1.0
+      }
+    ],
+    "primary": 0
+  },
+  "ray_aiming": "paraxial",
+  "notes": "Warren J. Smith, Modern Lens Design, 2nd ed., Figure 22.9, p. 421. Book: EFL 100, BFL 79.73, NA -0.1997 (F/2.5), GIH 1.76 (HFOV=1.01), PTZ/F -2.178, VL 19.82, infinite conjugate. Wavelengths 0.6328 um as in the book (primary first). The book does not mark the stop; it is placed at surface 1, the front surface. Single wavelength 0.6328 um (HeNe) as in the book; SF6 has the book's index 1.799 there. HFOV is read from the field plots.",
+  "surfaces": [
+    {
+      "type": "STANDARD",
+      "curvature": 0.0,
+      "conic": 0.0,
+      "thickness": "inf",
+      "material": null,
+      "comment": "OBJECT"
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.017726724810324043,
+      "conic": 0.0,
+      "thickness": 10.0,
+      "material": "SF6",
+      "semi_diameter": 20.0,
+      "stop": true
+    },
+    {
+      "type": "STANDARD",
+      "curvature": -0.01040820999604488,
+      "conic": 0.0,
+      "thickness": 3.823,
+      "material": null,
+      "semi_diameter": 20.0
+    },
+    {
+      "type": "STANDARD",
+      "curvature": -0.014427932477276006,
+      "conic": 0.0,
+      "thickness": 6.0,
+      "material": "SF6",
+      "semi_diameter": 20.0
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.0033974777125462055,
+      "conic": 0.0,
+      "thickness": 79.729,
+      "material": null,
+      "semi_diameter": 20.0
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.0,
+      "conic": 0.0,
+      "thickness": 0.0,
+      "material": null,
+      "comment": "IMAGE"
+    }
+  ],
+  "optimization": {
+    "variables": [
+      {
+        "surface": 1,
+        "param": "curvature"
+      },
+      {
+        "surface": 2,
+        "param": "curvature"
+      },
+      {
+        "surface": 3,
+        "param": "curvature"
+      },
+      {
+        "surface": 4,
+        "param": "curvature"
+      },
+      {
+        "surface": 4,
+        "param": "thickness"
+      }
+    ],
+    "merit_function": {
+      "rows": [
+        {
+          "type": "POWR",
+          "target": 0.0,
+          "weight": 0,
+          "bound": "=",
+          "params": {},
+          "comment": ""
+        }
+      ]
+    }
+  }
+}
