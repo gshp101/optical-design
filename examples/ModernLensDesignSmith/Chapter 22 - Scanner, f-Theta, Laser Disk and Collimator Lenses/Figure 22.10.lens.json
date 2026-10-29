@@ -1,0 +1,163 @@
+{
+  "format": "lensforge-1",
+  "name": "Kazuo Minoura, USP 4139267, 0.5 NA video disk lens, example 1 (Smith, Modern Lens Design, Fig. 22.10)",
+  "units": "mm",
+  "aperture": {
+    "type": "EPD",
+    "value": 100.389
+  },
+  "fields": {
+    "type": "ANGLE",
+    "values": [
+      {
+        "x": 0.0,
+        "y": 0.0,
+        "weight": 1.0,
+        "vdx": 0.0,
+        "vdy": 0.0,
+        "vcx": 0.0,
+        "vcy": 0.0
+      },
+      {
+        "x": 0.0,
+        "y": 0.35,
+        "weight": 1.0,
+        "vdx": 0.0,
+        "vdy": 0.0,
+        "vcx": 0.0,
+        "vcy": 0.0
+      },
+      {
+        "x": 0.0,
+        "y": 0.5,
+        "weight": 1.0,
+        "vdx": 0.0,
+        "vdy": 0.0,
+        "vcx": 0.0,
+        "vcy": 0.0
+      }
+    ]
+  },
+  "wavelengths": {
+    "values": [
+      {
+        "value": 0.6328,
+        "weight": 1.0
+      }
+    ],
+    "primary": 0
+  },
+  "ray_aiming": "paraxial",
+  "notes": "Warren J. Smith, Modern Lens Design, 2nd ed., Figure 22.10, p. 422. Book: EFL 99.83, BFL 40.83, NA -0.5028 (F/1.0), GIH 0.87 (HFOV=0.50), PTZ/F -1.458, VL 155.66, infinite conjugate. Wavelengths 0.6328 um as in the book (primary first). Glass: BK7 entered as N-BK7; LASF3 entered as LAH53 (Ohara, same nd and V as the book). The book does not mark the stop; it is placed at surface 1, the front surface. Single wavelength 0.6328 um (HeNe) as in the book; LASF3 and BK7 have the book's indices (1.802, 1.515) there. HFOV is read from the field plots.",
+  "surfaces": [
+    {
+      "type": "STANDARD",
+      "curvature": 0.0,
+      "conic": 0.0,
+      "thickness": "inf",
+      "material": null,
+      "comment": "OBJECT"
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.0051724494651687256,
+      "conic": 0.0,
+      "thickness": 35.493,
+      "material": "LAH53",
+      "semi_diameter": 50.0,
+      "stop": true
+    },
+    {
+      "type": "STANDARD",
+      "curvature": -0.0009433196929305736,
+      "conic": 0.0,
+      "thickness": 11.372,
+      "material": null,
+      "semi_diameter": 47.0
+    },
+    {
+      "type": "STANDARD",
+      "curvature": -0.008294212298657996,
+      "conic": 0.0,
+      "thickness": 11.264,
+      "material": "N-BK7",
+      "semi_diameter": 46.0
+    },
+    {
+      "type": "STANDARD",
+      "curvature": -0.0053783392763982335,
+      "conic": 0.0,
+      "thickness": 50.803,
+      "material": null,
+      "semi_diameter": 46.0
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.01247116044147908,
+      "conic": 0.0,
+      "thickness": 46.728,
+      "material": "LAH53",
+      "semi_diameter": 36.0
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.0008062799533002651,
+      "conic": 0.0,
+      "thickness": 40.828,
+      "material": null,
+      "semi_diameter": 24.0
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.0,
+      "conic": 0.0,
+      "thickness": 0.0,
+      "material": null,
+      "comment": "IMAGE"
+    }
+  ],
+  "optimization": {
+    "variables": [
+      {
+        "surface": 1,
+        "param": "curvature"
+      },
+      {
+        "surface": 2,
+        "param": "curvature"
+      },
+      {
+        "surface": 3,
+        "param": "curvature"
+      },
+      {
+        "surface": 4,
+        "param": "curvature"
+      },
+      {
+        "surface": 5,
+        "param": "curvature"
+      },
+      {
+        "surface": 6,
+        "param": "curvature"
+      },
+      {
+        "surface": 6,
+        "param": "thickness"
+      }
+    ],
+    "merit_function": {
+      "rows": [
+        {
+          "type": "POWR",
+          "target": 0.0,
+          "weight": 0,
+          "bound": "=",
+          "params": {},
+          "comment": ""
+        }
+      ]
+    }
+  }
+}
