@@ -187,6 +187,7 @@ class MeritModel(QAbstractTableModel):
                 row.type = t
                 from lensforge.optimize.operands import DEFAULT_BOUND
                 row.bound = DEFAULT_BOUND[t]
+                merit_function(s).auto_weight()
             elif c == C_PARAMS:
                 row.params = E.parse_params(text)
             elif c == C_BOUND:

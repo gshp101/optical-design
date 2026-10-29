@@ -271,6 +271,10 @@ inequality that is only enforced when violated. The size of the number does not 
 sign. Pink row.</td><td>Focal length, F-number, magnification, total track: requirements that are not
 negotiable.</td></tr>
 </table>
+<p><b>A single row always counts.</b> When the merit function has only one row (other than BLNK),
+a weight of 0 would make the merit function always 0, so nothing could change. That row is given
+weight 1 automatically: when you choose its operand type, when the lens file is opened, and when
+optimisation starts.</p>
 <h3>Only ratios matter</h3>
 <p>Because the merit function divides by the sum of the weights, multiplying every weight by 10
 changes nothing: neither the value nor the optimum. What matters is how the weights compare. A

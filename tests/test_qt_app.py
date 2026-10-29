@@ -409,6 +409,16 @@ def test_optimization_dialog(win):
     d.close()
 
 
+def test_lone_merit_row_type_change_sets_weight_one(win):
+    from lensforge_qt.mfe import MeritModel
+    win.doc.reset(lf.samples.singlet())
+    m = MeritModel(win.doc)
+    win.doc.modify("mf", lambda s: setattr(s, "merit_function", opt.MeritFunction()))
+    win.doc.modify("row", lambda s: s.merit_function.add("BLNK", weight=0))
+    m.setData(m.index(0, 0), "EFFL")
+    assert win.doc.system.merit_function.rows[0].weight == 1.0
+
+
 def test_stop_keeps_best_design():
     from lensforge_qt.opt_dialogs import run_optimization
     doc = LensDocument()

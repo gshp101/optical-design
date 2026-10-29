@@ -133,6 +133,7 @@ def optimize(system, merit: MeritFunction, variables: Optional[VariableSet] = No
     vs = VariableSet(variables if variables is not None else _system_variables(system))
     if not vs:
         raise ValueError("No variables: use lensforge.optimize.set_variable(system, surface, param)")
+    merit.auto_weight()
     prob = _Problem(system, merit, vs)
     x = np.clip(vs.values(system), prob.lo, prob.hi)
     r, c = prob.evaluate(x)
