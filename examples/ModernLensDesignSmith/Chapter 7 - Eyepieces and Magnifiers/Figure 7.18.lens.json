@@ -1,0 +1,191 @@
+{
+  "format": "lensforge-1",
+  "name": "Erfle eyepiece from MIL-HDBK-141 (Smith, Modern Lens Design, Fig. 7.18)",
+  "units": "mm",
+  "aperture": {
+    "type": "EPD",
+    "value": 20.0361
+  },
+  "fields": {
+    "type": "ANGLE",
+    "values": [
+      {
+        "x": 0.0,
+        "y": 0.0,
+        "weight": 1.0,
+        "vdx": 0.0,
+        "vdy": 0.0,
+        "vcx": 0.0,
+        "vcy": 0.0
+      },
+      {
+        "x": 0.0,
+        "y": 21.0,
+        "weight": 1.0,
+        "vdx": 0.0,
+        "vdy": 0.0,
+        "vcx": 0.0,
+        "vcy": 0.0
+      },
+      {
+        "x": 0.0,
+        "y": 30.0,
+        "weight": 1.0,
+        "vdx": 0.0,
+        "vdy": 0.0,
+        "vcx": 0.0,
+        "vcy": 0.0
+      }
+    ]
+  },
+  "wavelengths": {
+    "values": [
+      {
+        "value": 0.5875618,
+        "weight": 1.0
+      },
+      {
+        "value": 0.4861,
+        "weight": 1.0
+      },
+      {
+        "value": 0.6563,
+        "weight": 1.0
+      }
+    ],
+    "primary": 0
+  },
+  "ray_aiming": "paraxial",
+  "notes": "Warren J. Smith, Modern Lens Design, 2nd ed., Figure 7.18, p. 109. Book: EFL 101.5, BFL 28.19, NA -0.0987 (F/5.1), GIH 58.61 (HFOV=30.00), PTZ/F -1.859, VL 183.2, infinite conjugate. Glass: BK7 entered as N-BK7; SK4 entered as N-SK4. As in the book, the eyepiece is traced from the eye side: the stop (surface 1) is the exit pupil.",
+  "surfaces": [
+    {
+      "type": "STANDARD",
+      "curvature": 0.0,
+      "conic": 0.0,
+      "thickness": "inf",
+      "material": null,
+      "comment": "OBJECT"
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.0,
+      "conic": 0.0,
+      "thickness": 4.876,
+      "material": "F2",
+      "semi_diameter": 55.2,
+      "stop": true
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.007279980780850738,
+      "conic": 0.0,
+      "thickness": 49.16,
+      "material": "N-BK7",
+      "semi_diameter": 61.6
+    },
+    {
+      "type": "STANDARD",
+      "curvature": -0.008725013741896643,
+      "conic": 0.0,
+      "thickness": 4.06,
+      "material": null,
+      "semi_diameter": 66.8
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.0028124964843793945,
+      "conic": 0.0,
+      "thickness": 35.36,
+      "material": "SSK1",
+      "semi_diameter": 75.6
+    },
+    {
+      "type": "STANDARD",
+      "curvature": -0.003592495994366966,
+      "conic": 0.0,
+      "thickness": 4.06,
+      "material": null,
+      "semi_diameter": 76.8
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.006342521532860604,
+      "conic": 0.0,
+      "thickness": 75.52,
+      "material": "N-SK4",
+      "semi_diameter": 74.4
+    },
+    {
+      "type": "STANDARD",
+      "curvature": -0.007279980780850738,
+      "conic": 0.0,
+      "thickness": 10.16,
+      "material": "SF12",
+      "semi_diameter": 64.8
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.005360205831903945,
+      "conic": 0.0,
+      "thickness": 28.19,
+      "material": null,
+      "semi_diameter": 57.2
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.0,
+      "conic": 0.0,
+      "thickness": 0.0,
+      "material": null,
+      "comment": "IMAGE"
+    }
+  ],
+  "optimization": {
+    "variables": [
+      {
+        "surface": 2,
+        "param": "curvature"
+      },
+      {
+        "surface": 3,
+        "param": "curvature"
+      },
+      {
+        "surface": 4,
+        "param": "curvature"
+      },
+      {
+        "surface": 5,
+        "param": "curvature"
+      },
+      {
+        "surface": 6,
+        "param": "curvature"
+      },
+      {
+        "surface": 7,
+        "param": "curvature"
+      },
+      {
+        "surface": 8,
+        "param": "curvature"
+      },
+      {
+        "surface": 8,
+        "param": "thickness"
+      }
+    ],
+    "merit_function": {
+      "rows": [
+        {
+          "type": "POWR",
+          "target": 0.0,
+          "weight": 0,
+          "bound": "=",
+          "params": {},
+          "comment": ""
+        }
+      ]
+    }
+  }
+}

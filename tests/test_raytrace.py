@@ -181,6 +181,16 @@ def test_newton_intersection_lies_on_surface(surf):
     np.testing.assert_allclose(gy, fy, atol=1e-7)
 
 
+def test_newton_intersection_ignores_rays_lost_upstream():
+    # a ray vignetted earlier arrives with NaN coordinates; the others must still converge
+    surf = lf.EvenAsphere(radius=40, conic=-0.5, coefficients=[0, 1e-5, -2e-8])
+    P = np.array([[0.0, 0.0, -20.0], [np.nan, np.nan, np.nan], [3.0, -2.0, -20.0]])
+    D = np.array([[0.0, 0.0, 1.0], [np.nan, np.nan, np.nan], [0.05, 0.0, 1.0]])
+    D /= np.linalg.norm(D, axis=1, keepdims=True)
+    t, ok = surf.intersect(P, D)
+    assert ok.tolist() == [True, False, True]
+
+
 def test_cylinder_lens_focuses_one_axis():
     s = lf.OpticalSystem()
     s.set_aperture("EPD", 10)
@@ -235,6 +245,24 @@ def test_real_ray_aiming_hits_stop_centre():
     stop_r = s.paraxial().stop_radius
     assert abs(rp.positions[st, 0, 1]) > 1e-3
     np.testing.assert_allclose(rr.positions[st, :, :2], [[0, 0], [0, stop_r], [stop_r, 0]], atol=1e-8)
+
+
+def test_real_ray_aiming_fisheye_full_field():
+    # Fig. 9.16 (180 deg fisheye): a chief ray aimed at the paraxial pupil misses the front
+    # meniscus at 87.5 deg, so real aiming has to walk the field out from the axis
+    import os
+    from lensforge.raytrace import RayGenerator
+    path = os.path.join(os.path.dirname(__file__), "..", "examples", "ModernLensDesignSmith",
+                        "Chapter 9 - Reverse Telephoto Lenses", "Figure 9.16.lens.json")
+    s = lf.load(path)
+    g = RayGenerator(s, aiming="real")
+    spec = g.object_spec(0, 1)
+    zero = np.zeros(1)
+    sx, sy = g._stop_coords(spec, *g._solve_aim(spec, zero, zero, zero, zero))
+    assert not np.isfinite(sy).all()
+    r = s.trace(0, 1, zero, zero)
+    assert r.valid.all()
+    np.testing.assert_allclose(r.positions[s.stop_index, 0, :2], [0, 0], atol=1e-8)
 
 
 def test_real_image_height_field():
@@ -318,3 +346,29 @@ def test_second_ideal_lens_uses_its_conjugate():
     samples.focus_paraxial(s)
     for k in (0, 1):
         assert np.nanmax(np.abs(lf.opd_fan(s, k)["wy"])) < 1e-6
+
+
+def test_coordinate_break_z_tilt_inverse_pair_is_identity():
+    """+90 then -90 deg about z, immediately after each other, changes nothing."""
+    s = samples.achromat()
+    base_rays = lf.layout(s)
+    base_surfs = lf.surface_profiles(s)
+    s.insert(2, lf.CoordinateBreak(tilt_z=90))
+    s.insert(3, lf.CoordinateBreak(tilt_z=-90))
+    for a, b in zip(lf.surface_profiles(s), base_surfs):
+        np.testing.assert_allclose(a["points"], b["points"], atol=1e-12)
+    for a, b in zip(lf.layout(s)["rays"], base_rays["rays"]):
+        np.testing.assert_allclose(np.delete(a["path"], [2, 3], axis=0), b["path"], atol=1e-12)
+
+
+@pytest.mark.parametrize("tilt_z", [90, -90, 37, 180])
+def test_layout_profile_unchanged_by_z_rotation(tilt_z):
+    """A rotationally symmetric lens rotated about z looks the same in the 2-D layout."""
+    s = samples.achromat()
+    base = lf.surface_profiles(s)
+    s.insert(1, lf.CoordinateBreak(tilt_z=tilt_z))
+    prof = lf.surface_profiles(s)
+    for a, b in zip(prof, base):
+        # same cross-section, possibly traversed in the opposite direction
+        pa = a["points"] if np.allclose(a["points"][0], b["points"][0], atol=1e-9) else a["points"][::-1]
+        np.testing.assert_allclose(pa, b["points"], atol=1e-9)

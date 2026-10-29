@@ -26,7 +26,12 @@ HELP = {
     "File > Open": (
         "Open a lens file (lensforge JSON or Zemax .zmx).",
         "Opens a lensforge .json lens, or imports a Zemax .zmx prescription (surfaces, glasses, fields, "
-        "wavelengths, aperture). Imported .zmx files are saved as new JSON files."),
+        "wavelengths, aperture). Imported .zmx files are saved as new JSON files. If the file uses a glass that "
+        "no loaded catalog has, it still opens, but a warning names the glass and its surfaces, the Material cell "
+        "turns red, and every analysis window is cleared and says why it cannot trace, so nothing from the "
+        "previous lens stays on screen. Pick a replacement glass (Ctrl+G) or load a catalog that has it "
+        "(File > Load Glass Catalog), and the analyses update. If the file cannot be read at all, the lens "
+        "already open stays as it was."),
     "File > Save": (
         "Save the lens to its file.",
         "Writes the lens, variables, solves, merit function and the Input Rays settings to its JSON file. "
@@ -34,6 +39,14 @@ HELP = {
     "File > Save As": (
         "Save the lens under a new file name.",
         "Writes the lens to a new JSON file, which then becomes the current file."),
+    "File > Inspect Lens File": (
+        "Show the system report of a lens file in its own window, without opening the file.",
+        "Choose a lens file (.json or .zmx). Its System Report (prescription, first-order data, cardinal "
+        "points, Seidel coefficients and image quality per field) opens in a separate window; the current "
+        "lens is not changed. The window is not modal, so you can keep editing and open several reports "
+        "side by side to compare designs. <b>Copy</b> and <b>Save</b> take the report text; "
+        "<b>Open in Editor</b> makes the file the current lens (you are asked to save changes first). "
+        "Scripting: <code>lf.system_report(lf.load('file.json'))</code>."),
     "File > Insert Lens": (
         "Insert surfaces from a lens file into the current design, optionally scaled or reversed.",
         "Choose a lens file (.json or .zmx), the range of its surfaces to copy and the surface of the current "
@@ -43,8 +56,13 @@ HELP = {
         "and sag terms change sign, each surface takes the thickness and medium that preceded it, and "
         "coordinate breaks are inverted. The preview shows the surfaces exactly as they will be inserted and "
         "the group's focal length. Lenses in other units are converted to the current units. The current "
-        "lens keeps its stop unless you tick the stop option. One undo step removes the whole insertion. "
-        "From Python: <code>lf.insert_lens(lens, 'file.json', at=3, scale=0.5, reverse=True)</code>."),
+        "lens keeps its stop unless you tick the stop option. <b>Copy semi-diameters</b> gives each inserted "
+        "surface the semi-diameter it has in the lens file, as a fixed value (marked U) and scaled with the "
+        "lens; semi-diameters that are automatic in the file are computed from the file's own aperture, "
+        "fields and wavelengths. Unticked, the inserted surfaces get automatic semi-diameters sized by the "
+        "current lens's rays. Clear apertures set in Surface Properties are copied either way. One undo step "
+        "removes the whole insertion. From Python: <code>lf.insert_lens(lens, 'file.json', at=3, scale=0.5, "
+        "reverse=True, copy_semi_diameters=True)</code>."),
     "File > System Explorer": (
         "Set the aperture, fields, wavelengths and general system options.",
         "Opens the System Explorer: aperture type and value, field type and field points, wavelengths and "
@@ -65,8 +83,15 @@ HELP = {
         "the lens."),
     "File > Load Glass Catalog (AGF)": (
         "Load a Zemax AGF glass catalog so its glasses can be used.",
-        "Adds the glasses of an .agf catalog file to the glass library for this session. They then appear in "
-        "the material picker and can be typed into the Material column."),
+        "Adds the glasses of an .agf catalog file to the glass library. They then appear in the material "
+        "picker and can be typed into the Material column. The catalog is remembered and loaded again every "
+        "time lensforge starts (also when loaded from the material picker), until you use File > Forget "
+        "Loaded Glass Catalogs. The built-in SCHOTT catalog already holds every current SCHOTT glass "
+        "(preferred and inquiry) plus common obsolete types."),
+    "File > Forget Loaded Glass Catalogs": (
+        "Stop loading your AGF catalogs at start-up.",
+        "Clears the list of AGF catalogs that lensforge loads at every start. Catalogs already loaded stay "
+        "available until the program closes. Built-in glasses are not affected."),
     "File > Export Prescription": (
         "Save the prescription report as a text file.",
         "Writes the Prescription Data report (surface data, materials, paraxial data) to a .txt file."),
@@ -93,9 +118,20 @@ HELP = {
         "Insert a new surface after the selected row.",
         "Adds a flat surface in air after the selected surface, renumbering later references."),
     "Edit > Delete Surface": (
-        "Delete the selected surface.",
+        "Delete the selected surface, or all selected surfaces.",
         "Removes the selected surface (not the object or image). Variables and solves on it are removed; "
-        "merit operands that referred to it move to the previous surface."),
+        "merit operands that referred to it move to the previous surface. If several rows are selected "
+        "(shift-click or shift+arrow keys in the Lens Data Editor), all of those surfaces are deleted after "
+        "you confirm, as with Delete Surfaces."),
+    "Edit > Delete Surfaces": (
+        "Delete a contiguous range of surfaces, after confirming.",
+        "Opens a dialog to pick the first and last surface to delete (it starts from the rows selected in "
+        "the Lens Data Editor) and previews what goes. The object and image surfaces cannot be deleted. "
+        "Before anything is removed you are asked to confirm, with a list of the surfaces and of the "
+        "variables and solves that are dropped. Merit operands that referred to a deleted surface move to "
+        "the surface before the range, and later surface numbers are renumbered. If the stop is deleted, "
+        "the surface that takes its place becomes the stop. The whole deletion is one undo step. From a "
+        "script: lf.delete_surfaces(lens, first, last)."),
     "Edit > Toggle Variable": (
         "Make the selected cell a variable for optimisation, or fixed again.",
         "Marks the radius, thickness, conic or parameter in the current cell as an optimisation variable "
@@ -148,8 +184,14 @@ HELP = {
     "Tools > Merit Function Editor": (
         "Show the merit function: the targets optimisation works towards.",
         "Opens the Merit Function Editor, a table of operands (focal length, spot size, wavefront, "
-        "boundaries ...) with targets and weights, their current values and contributions. The wizard "
-        "builds a default image-quality merit function."),
+        "boundaries ...) with targets and weights, their current values and contributions. The merit "
+        "function is the weighted RMS of the rows' errors: sqrt(&Sigma; W (Value &minus; Target)<sup>2</sup> / "
+        "&Sigma; W). A positive weight makes a row part of it, weight 0 only shows the row, a negative weight "
+        "makes it a hard constraint. The wizard builds a default image-quality merit function. The "
+        "<b>Merit Function Editor</b> pages of this help (the editor's Help button, or F1 in the editor) "
+        "explain every column, how weights work and how to balance them, the field and pupil coordinates "
+        "Hx, Hy, Px, Py used by ray operands, every operand with its parameters, and a worked example that "
+        "minimises the RMS spot size (File &gt; Sample Lenses &gt; Spot Size Merit Example)."),
     "Tools > Variables and Solves > Make All Curvatures Variable": (
         "Make every surface curvature an optimisation variable.",
         "Adds a variable for the curvature of every refracting or reflecting surface."),
@@ -285,6 +327,8 @@ SAMPLE_HELP = {
     "Cooke Triplet (optimised)": "Load the Cooke triplet optimised by the example script.",
     "Scripted Singlet": "Load the singlet built and optimised by the scripting example.",
     "Diffraction Grating Demo": "Load a transmission grating followed by a lens, showing the dispersed orders.",
+    "Spot Size Merit Example": "Load the Merit Function Editor help's example: a Cooke triplet with variables and "
+                               "a merit function that minimises the RMS spot size (run Tools > Optimization).",
 }
 
 SAMPLE_PREFIX = "File > Sample Lenses > "
@@ -309,7 +353,8 @@ def lookup(item_id: str) -> Optional[Tuple[str, str]]:
     k = analysis_key(item_id)
     if k is not None and k in ANALYSIS_HELP:
         summary, details = ANALYSIS_HELP[k]
-        return summary, details + " Opens in a dockable window that updates when the lens changes."
+        return summary, details + (" Opens in a dockable window that updates when the lens changes. If this "
+                                   "analysis is already open, its window is brought to the front instead.")
     return None
 
 
@@ -323,8 +368,10 @@ materials into the cells; right-click a cell for variables, solves and surface t
 <li><b>File</b>: open, save, insert lenses from files, system settings (aperture, fields, wavelengths),
 input rays, sample lenses.</li>
 <li><b>Edit</b>: undo/redo and surface editing.</li>
-<li><b>Analysis</b>: plots and reports, each in a window that updates as you edit.</li>
-<li><b>Tools</b>: optimisation, tolerancing, merit function and the Python shell.</li>
+<li><b>Analysis</b>: plots and reports, each in a window that updates as you edit. Choosing an
+analysis that is already open brings its window to the front.</li>
+<li><b>Tools</b>: optimisation, tolerancing, merit function and the Python shell. The <b>Merit Function
+Editor</b> pages below the Overview explain merit functions in detail, with a worked example.</li>
 <li><b>View</b>: the toolbar (View &gt; Customize Toolbar puts any command on it).</li>
 </ul>
 <p>Pick a command on the left to read about it, or type in the filter box. Hovering a toolbar button

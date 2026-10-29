@@ -1,6 +1,7 @@
 """Scaling, reversing and inserting lens prescriptions (lensforge.compose)."""
 
 import math
+import os
 
 import numpy as np
 import pytest
@@ -134,3 +135,80 @@ def test_insert_lens_from_file_into_middle(tmp_path):
         lf.insert_lens(target, str(p), first=2, last=9)
     with pytest.raises(IndexError):
         lf.insert_lens(target, str(p), at=0)
+
+
+def test_insert_lens_copy_semi_diameters():
+    a = lf.samples.achromat()
+    a.surfaces[2].semi_diameter = 7.5  # one fixed, the others automatic
+    auto = a.copy().update_semi_diameters()
+    want = [auto[1], 7.5, auto[3]]
+
+    b = lf.OpticalSystem("b")
+    rng = lf.insert_lens(b, a)
+    assert all(b.surfaces[i].semi_diameter is None for i in rng)  # default: all automatic
+
+    b = lf.OpticalSystem("b")
+    rng = lf.insert_lens(b, a, scale=2.0, copy_semi_diameters=True)
+    assert [b.surfaces[i].semi_diameter for i in rng] == pytest.approx([2 * v for v in want])
+
+    b = lf.OpticalSystem("b")  # reversed: each surface keeps its own semi-diameter
+    rng = lf.insert_lens(b, a, reverse=True, copy_semi_diameters=True)
+    assert [b.surfaces[i].semi_diameter for i in rng] == pytest.approx(want[::-1])
+    assert a.surfaces[1].semi_diameter is None  # the source is not changed
+
+
+def test_copy_semi_diameters_skips_coordinate_breaks():
+    group = lens_surfaces(_tilted_system(), copy_semi_diameters=True)
+    assert all((s.semi_diameter is None) == s.is_coordinate_break for s in group)
+
+
+# ---------------------------------------------------------------------------
+# Deleting a range of surfaces
+# ---------------------------------------------------------------------------
+
+def _triplet_with_refs():
+    from lensforge import optimize as opt
+    s = lf.load(os.path.join(os.path.dirname(__file__), "..", "examples", "output", "cooke_triplet.lens.json"))
+    opt.variables(s).clear()
+    opt.solves(s).clear()
+    for i in (1, 3, 5):
+        opt.set_variable(s, i, "curvature")
+    opt.set_solve(s, opt.MarginalRayHeight(6))
+    opt.set_solve(s, opt.Pickup(5, "curvature", from_surface=4))
+    s.merit_function = opt.MeritFunction()
+    s.merit_function.add("REAY", 0.0, 1.0, surf=3, hy=1, py=1)
+    s.merit_function.add("REAY", 0.0, 1.0, surf=6, hy=1, py=1)
+    s.merit_function.add("REAY", 0.0, 1.0, surf=1, hy=1, py=1)
+    return s
+
+
+def test_delete_surfaces_renumbers_references():
+    s = _triplet_with_refs()
+    radii = [x.radius for x in s.surfaces]
+    assert s.num_surfaces == 8 and s.stop_index == 3
+    assert lf.delete_surfaces(s, 2, 4) == 3
+    assert s.num_surfaces == 5
+    assert [x.radius for x in s.surfaces] == radii[:2] + radii[5:]
+    # variables on 3 dropped, 5 -> 2; 1 unchanged
+    assert sorted(v.surface for v in s.variables) == [1, 2]
+    # the pickup from surface 4 is dropped, the solve on 6 moves to 3
+    assert [(type(x).__name__, x.surface) for x in s.solves] == [("MarginalRayHeight", 3)]
+    # operands on deleted surfaces move to the surface before the range
+    assert [r.params["surf"] for r in s.merit_function.rows] == [1, 3, 1]
+    # the stop (3) was deleted: the surface now in position 2 takes it
+    assert s.stop_index == 2
+
+
+def test_delete_single_surface_and_default_last():
+    s = _triplet_with_refs()
+    assert lf.delete_surfaces(s, 6) == 1
+    assert s.num_surfaces == 7 and not s.solves[1:]
+    assert s.stop_index == 3
+
+
+@pytest.mark.parametrize("first,last", [(0, 2), (3, 7), (5, 3), (0, 0), (7, 7)])
+def test_delete_surfaces_rejects_object_image_and_reversed(first, last):
+    s = _triplet_with_refs()
+    with pytest.raises(ValueError):
+        lf.delete_surfaces(s, first, last)
+    assert s.num_surfaces == 8 and len(s.variables) == 3

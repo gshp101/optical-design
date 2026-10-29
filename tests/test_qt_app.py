@@ -127,6 +127,108 @@ def test_insert_delete_renumbers_variables_and_solves(win):
     assert not doc.system.variables and not doc.system.solves
 
 
+def _select_rows(w, first, last, col=3):
+    from PySide6.QtCore import QItemSelection, QItemSelectionModel
+    m = w.lde.model
+    w.lde.select(first, col)
+    w.lde.view.selectionModel().select(QItemSelection(m.index(first, col), m.index(last, col)),
+                                       QItemSelectionModel.ClearAndSelect)
+
+
+def test_delete_range_from_selection_confirms(win, monkeypatch):
+    from lensforge_qt.lde import LensDataEditor
+    win.doc.reset(lf.load(TRIPLET))
+    win.doc.modify("setup", lambda s: (opt.variables(s).clear(), opt.solves(s).clear(),
+                                       opt.set_variable(s, 3, "curvature"), opt.set_variable(s, 5, "curvature")))
+    radii = [x.radius for x in win.doc.system.surfaces]
+    asked = []
+
+    def refuse(self, first, last, lines):
+        asked.append((first, last, lines))
+        return False
+    monkeypatch.setattr(LensDataEditor, "confirm_delete", refuse)
+    _select_rows(win, 2, 4)
+    assert win.lde.selected_rows() == (2, 4)
+    assert win.lde.delete_surface() is False      # cancelled: nothing deleted
+    assert win.doc.system.num_surfaces == 8
+    first, last, lines = asked[0]
+    assert (first, last) == (2, 4)
+    assert lines[0].startswith("Surface 2:") and lines[2].startswith("Surface 4:")
+    assert any("1 variable" in t for t in lines) and any("stop" in t for t in lines)
+
+    monkeypatch.setattr(LensDataEditor, "confirm_delete", lambda *a: True)
+    _select_rows(win, 2, 4)
+    assert win.lde.delete_surface()
+    s = win.doc.system
+    assert [x.radius for x in s.surfaces] == radii[:2] + radii[5:]
+    assert [v.surface for v in s.variables] == [2]
+    assert win.doc.undo_stack.undoText() == "Delete surfaces 2-4"
+    win.doc.undo_stack.undo()                     # one undo step restores everything
+    assert [x.radius for x in win.doc.system.surfaces] == radii
+    assert sorted(v.surface for v in win.doc.system.variables) == [3, 5]
+
+
+def test_delete_range_selection_clamped_to_object_and_image(win, monkeypatch):
+    from lensforge_qt.lde import LensDataEditor
+    monkeypatch.setattr(LensDataEditor, "confirm_delete", lambda *a: True)
+    win.doc.reset(lf.load(TRIPLET))
+    _select_rows(win, 0, 4)                       # from the object row: only 1..4 go
+    assert win.lde.delete_surface()
+    assert win.doc.system.num_surfaces == 4
+    _select_rows(win, 2, 3)                       # onto the image row: only surface 2 goes
+    assert win.lde.delete_surface()
+    assert win.doc.system.num_surfaces == 3
+
+
+def test_delete_surfaces_dialog(win, qtbot, monkeypatch):
+    from lensforge_qt import lde
+    win.doc.reset(lf.load(TRIPLET))
+    seen = {}
+
+    def fake_exec(self):
+        seen["range"] = self.surface_range()
+        ok = self.bb.button(QDialogButtonBox.Ok)
+        self.last.setValue(1)                     # reversed range: preview says so, Delete disabled
+        seen["reversed_ok"] = ok.isEnabled()
+        self.first.setValue(4)
+        self.last.setValue(6)
+        seen["preview"] = self.preview.toPlainText()
+        seen["ok"] = ok.isEnabled()
+        return lde.QDialog.Accepted
+    monkeypatch.setattr(lde.DeleteSurfacesDialog, "exec", fake_exec)
+    confirmed = []
+    monkeypatch.setattr(lde.LensDataEditor, "confirm_delete", lambda self, f, l, lines: confirmed.append((f, l)) or True)
+    _select_rows(win, 2, 3)
+    assert win.lde.delete_surfaces_dialog()
+    assert seen["range"] == (2, 3)
+    assert not seen["reversed_ok"] and seen["ok"]
+    assert "Surface 4:" in seen["preview"] and "Surface 6:" in seen["preview"]
+    assert confirmed == [(4, 6)]
+    assert win.doc.system.num_surfaces == 5
+    # the spin boxes never offer the object or image surface
+    d = lde.DeleteSurfacesDialog(win.doc.system, 0, 99)
+    assert (d.first.minimum(), d.last.maximum()) == (1, win.doc.system.image_index - 1)
+    assert d.surface_range() == (1, win.doc.system.image_index - 1)
+    d.deleteLater()
+
+
+def test_confirm_delete_prompt_defaults_to_cancel(win, monkeypatch):
+    from lensforge_qt import lde
+    shown = {}
+
+    def fake_exec(box):
+        shown["text"], shown["info"] = box.text(), box.informativeText()
+        shown["default"] = box.defaultButton() is box.button(lde.QMessageBox.Cancel)
+        return lde.QMessageBox.Cancel
+    monkeypatch.setattr(lde.QMessageBox, "exec", fake_exec)
+    win.doc.reset(lf.load(TRIPLET))
+    assert win.lde.delete_range(2, 4) is False
+    assert shown["text"] == "Delete surfaces 2 to 4 (3 surfaces)?"
+    assert "Surface 3:" in shown["info"] and "Undo" in shown["info"]
+    assert shown["default"]
+    assert win.doc.system.num_surfaces == 8
+
+
 def test_variable_and_solve_markers(win):
     m = win.lde.model
     win.lde.toggle_variable(1, "radius")
@@ -242,6 +344,21 @@ def test_every_analysis_window(win, key):
     w.close()
 
 
+def test_open_analysis_reuses_existing_window(win):
+    win.close_analyses()
+    fan = win.open_analysis("ray_fan")
+    spot = win.open_analysis("spot")
+    assert win.open_analysis("ray_fan") is fan
+    assert len(win.analysis_windows) == 2
+    # the menu command does the same, and raises the existing window
+    win.toolbar_lookup[f"Analysis > {fan.spec.group} > {fan.spec.title}"].trigger()
+    assert len(win.analysis_windows) == 2
+    # scripts can still ask for a second copy
+    other = win.open_analysis("ray_fan", new=True)
+    assert other is not fan and len(win.analysis_windows) == 3
+    spot.close()
+
+
 def test_analysis_auto_update_and_settings(win):
     w = win.open_analysis("spot")
     n = w.updates
@@ -290,6 +407,16 @@ def test_optimization_dialog(win):
     win.doc.undo_stack.undo()
     assert win.doc.system.merit_function.value(win.doc.system) == pytest.approx(m0)
     d.close()
+
+
+def test_lone_merit_row_type_change_sets_weight_one(win):
+    from lensforge_qt.mfe import MeritModel
+    win.doc.reset(lf.samples.singlet())
+    m = MeritModel(win.doc)
+    win.doc.modify("mf", lambda s: setattr(s, "merit_function", opt.MeritFunction()))
+    win.doc.modify("row", lambda s: s.merit_function.add("BLNK", weight=0))
+    m.setData(m.index(0, 0), "EFFL")
+    assert win.doc.system.merit_function.rows[0].weight == 1.0
 
 
 def test_stop_keeps_best_design():
@@ -568,9 +695,9 @@ def test_customize_toolbar_applies_and_persists(win, qtbot, tmp_path, monkeypatc
 
     # the toolbar button runs the same command as the menu item
     btn = win.toolbar.widgetForAction(win.toolbar_lookup["Analysis > Layout > 2D Layout"])
-    n = len(win.analysis_windows)
+    win.close_analyses()
     btn.click()
-    assert len(win.analysis_windows) == n + 1
+    assert [w.spec.key for w in win.analysis_windows] == ["layout"]
 
     # a new session (same settings file) gets the same toolbar, shown
     w2 = MainWindow(settings=QSettings(str(tmp_path / "settings.ini"), QSettings.IniFormat))
@@ -707,6 +834,72 @@ def test_help_browser(win):
         dlg.close()
 
 
+
+# ---------------------------------------------------------------------- merit function editor help
+def test_every_operand_is_in_the_merit_function_help():
+    from lensforge_qt import mfe_help
+    filed = [n for names in mfe_help.OPERAND_GROUPS.values() for n in names]
+    assert len(filed) == len(set(filed)), "an operand is filed in two groups"
+    missing = sorted(set(opt.OPERANDS) - set(filed))
+    assert missing == [], f"add these operands to OPERAND_GROUPS in lensforge_qt/mfe_help.py: {missing}"
+    assert set(filed) <= set(opt.OPERANDS)
+    page = mfe_help.topic_text(mfe_help.ROOT + "/operands")
+    assert all(n in page for n in opt.OPERANDS)
+    assert mfe_help.operand_signature("REAY") == "surf=None, hx=0.0, hy=0.0, px=0.0, py=0.0, wave=None"
+    assert mfe_help.operand_signature("SUMM") == "a, b"
+
+
+def test_merit_function_help_pages(win):
+    from lensforge_qt import mfe_help
+    from PySide6.QtCore import QUrl
+    win.show_mfe()
+    win.mfe.act_help.trigger()  # the editor's Help button
+    dlg = win.dialogs["help"]
+    try:
+        assert dlg.tree.currentItem().data(0, Qt.UserRole) == mfe_help.ROOT
+        assert "Merit Function Editor" in dlg.page.toPlainText()
+        dlg.page.anchorClicked.emit(QUrl("help:mfe/weights"))  # links between pages
+        assert dlg.tree.currentItem().data(0, Qt.UserRole) == mfe_help.ROOT + "/weights"
+        text = dlg.page.toPlainText()
+        assert "Hard constraint" in text and "Only ratios matter" in text
+        for key, title in mfe_help.TOPICS:
+            assert dlg.show_command(key) and title.split(" (")[0] in dlg.page.toPlainText()
+        dlg.filter.setText("lagrange")  # search finds text inside topic pages
+        assert dlg.tree.currentItem().data(0, Qt.UserRole).startswith(mfe_help.TOPIC_PREFIX)
+        dlg.filter.setText("")
+        win.mfe.view.setFocus()
+        assert win.help_contents(False) is dlg  # F1 / Help Contents from the editor
+    finally:
+        dlg.close()
+    m = win.mfe.model
+    from lensforge_qt.mfe import C_WEIGHT
+    assert "hard constraint" in m.headerData(C_WEIGHT, Qt.Horizontal, Qt.ToolTipRole)
+
+
+def test_spot_size_merit_example():
+    """The help's worked example: the shipped file holds the merit function the help describes."""
+    s = lf.load(os.path.join(os.path.dirname(__file__), "..", "examples", "spot_size_merit.lens.json"))
+    mf = s.merit_function
+    types = [r.type for r in mf.rows]
+    assert types.count("RAYS") == len(s.fields) == 3
+    effl = mf.rows[types.index("EFFL")]
+    assert effl.target == 100 and effl.weight < 0
+    assert {"MNCG", "MNEG", "MNCA"} <= set(types)
+    assert len(opt.variables(s)) == 9
+    ev = mf.evaluate(s)
+    assert ev.error is None and 0.5 < ev.value < 1.5  # the unoptimised start
+    from lensforge_qt.main_window import _sample_list
+    assert "Spot Size Merit Example" in dict(_sample_list())
+
+
+def test_misspelt_operand_parameter_is_reported():
+    s = lf.samples.singlet()
+    mf = opt.MeritFunction()
+    mf.add("EFFL", 100, 1, focal=3)
+    ev = mf.evaluate(s)
+    assert ev.value == float("inf") and "focal" in ev.error
+
+
 # ---------------------------------------------------------------------- insert lens
 def test_insert_lens_dialog_scaled_and_reversed(win, tmp_path):
     from lensforge_qt.insert_lens_dialog import InsertLensDialog
@@ -738,6 +931,28 @@ def test_insert_lens_dialog_scaled_and_reversed(win, tmp_path):
     assert win.doc.system.num_surfaces == n0
 
 
+def test_insert_lens_dialog_copies_semi_diameters(win, tmp_path):
+    from lensforge_qt.insert_lens_dialog import InsertLensDialog
+    src = lf.samples.achromat()
+    src.surfaces[1].semi_diameter = 9.0
+    p = tmp_path / "doublet.lens.json"
+    lf.save(src, str(p))
+    win.doc.reset(lf.samples.singlet())
+    dlg = InsertLensDialog(win.doc, at=1, parent=win)
+    try:
+        dlg.load(str(p))
+        assert not dlg.copy_sd.isChecked() and not dlg.options()["copy_semi_diameters"]
+        dlg.copy_sd.setChecked(True)
+        dlg.scale.setValue(2.0)
+        assert "18" in dlg.preview.toPlainText()  # preview shows the copied, scaled value
+        dlg.accept()
+    finally:
+        dlg.close()
+    s = win.doc.system
+    assert s.surfaces[1].semi_diameter == pytest.approx(18.0)
+    assert all(s.surfaces[i].semi_diameter is not None for i in (1, 2, 3))  # automatic ones copied as fixed
+
+
 def test_insert_lens_menu_and_bad_file(win, tmp_path, monkeypatch):
     from lensforge_qt import insert_lens_dialog as M
     bad = tmp_path / "bad.json"
@@ -756,3 +971,135 @@ def test_app_icon(win):
     assert not win.windowIcon().isNull()
     img = icons.render(icons.APP_ICON, 32)
     assert img.pixelColor(16, 12).alpha() == 255      # the glowing lens is drawn, not transparent
+
+
+def test_inspect_lens_file_window(win, tmp_path, monkeypatch):
+    from lensforge_qt import main_window as M
+    src = lf.samples.achromat()
+    src.name = "Inspected doublet"
+    p = tmp_path / "doublet.lens.json"
+    lf.save(src, str(p))
+    win.doc.reset(lf.samples.singlet())
+    before = win.doc.system.to_dict()
+    assert "Inspect Lens File..." in _menu(win, "File")
+    monkeypatch.setattr(M.QFileDialog, "getOpenFileName", lambda *a, **k: (str(p), ""))
+    w = win.inspect_lens_dialog()
+    try:
+        assert w.isVisible() and not w.isModal() and w.windowModality() == Qt.NonModal
+        assert w in win.inspect_windows
+        report = w.text.toPlainText()
+        assert report.startswith("SYSTEM REPORT: Inspected doublet") and "Seidel coefficients" in report
+        assert w.save_btn.isEnabled() and "doublet.lens.json" in w.windowTitle()
+        after = win.doc.system.to_dict()
+        assert after == before and win.doc.undo_stack.count() == 0  # current lens untouched
+        out = tmp_path / "report.txt"
+        monkeypatch.setattr("lensforge_qt.inspect_window.QFileDialog.getSaveFileName",
+                            lambda *a, **k: (str(out), ""))
+        w.save_text()
+        assert out.read_text(encoding="utf-8") == report
+        w.open_btn.click()  # Open in Editor loads the file as the current lens
+        assert win.doc.system.name == "Inspected doublet"
+    finally:
+        w.close()
+
+
+def test_inspect_lens_file_bad_file_and_cancel(win, tmp_path, monkeypatch):
+    from lensforge_qt import main_window as M
+    bad = tmp_path / "bad.json"
+    bad.write_text("not a lens")
+    w = win.inspect_lens(str(bad))
+    try:
+        assert "Could not read" in w.text.toPlainText()
+        assert not w.open_btn.isEnabled() and not w.save_btn.isEnabled()
+    finally:
+        w.close()
+    monkeypatch.setattr(M.QFileDialog, "getOpenFileName", lambda *a, **k: ("", ""))
+    assert win.inspect_lens_dialog() is None
+
+
+def test_fixed_font_is_a_real_family(qtbot):
+    # Requesting a missing family ("Monospace" on macOS/Windows) makes Qt rebuild its alias table and warn.
+    from PySide6.QtGui import QFont, QFontDatabase, QFontInfo
+    from lensforge_qt.fonts import fixed_font
+    info = QFontInfo(fixed_font())
+    assert info.family() in QFontDatabase.families()
+    assert info.fixedPitch()
+    base = QFont()
+    base.setPointSizeF(13.0)
+    assert fixed_font(base).pointSizeF() == 13.0
+
+
+def test_no_hard_coded_font_families():
+    import re
+    pkg = os.path.join(HERE, "..", "lensforge_qt")
+    bad = re.compile(r'QFont\(\s*["\']|setFamily\(|setFamilies\(|font-family\s*:', re.I)
+    hits = [f"{name}:{i}" for name in sorted(os.listdir(pkg)) if name.endswith(".py")
+            for i, line in enumerate(open(os.path.join(pkg, name), encoding="utf-8"), 1) if bad.search(line)]
+    assert not hits, f"use lensforge_qt.fonts.fixed_font() instead of a named family: {hits}"
+
+
+def test_loaded_agf_catalog_is_remembered(win, tmp_path, monkeypatch):
+    from lensforge_qt import main_window
+    from lensforge_qt.main_window import MainWindow
+    agf = tmp_path / "mycat.agf"
+    agf.write_text("CC test\nNM MYGLASS 2 0 1.5168 64.17 0 1\n"
+                   "CD 1.03961212 0.00600069867 0.231792344 0.0200179144 1.01046945 103.560653\n")
+    monkeypatch.setattr(main_window.QFileDialog, "getOpenFileName", lambda *a, **k: (str(agf), ""))
+    lib = lf.shared_library()
+    try:
+        win.a_agf.trigger()
+        assert lib.find("MYGLASS") is not None
+        del lib.catalogs["MYCAT"]
+        # a new session (same settings file) loads the catalog again
+        w2 = MainWindow(settings=QSettings(str(tmp_path / "settings.ini"), QSettings.IniFormat))
+        w2.close()
+        assert lib.find("MYGLASS") is not None
+        win.a_forget_agf.trigger()
+        del lib.catalogs["MYCAT"]
+        w3 = MainWindow(settings=QSettings(str(tmp_path / "settings.ini"), QSettings.IniFormat))
+        w3.close()
+        assert lib.find("MYGLASS") is None
+    finally:
+        lib.catalogs.pop("MYCAT", None)
+
+
+def test_missing_glass_clears_stale_analyses(win, tmp_path, monkeypatch):
+    """Opening a lens whose glass no catalog has must not leave the old lens's results on screen."""
+    from lensforge_qt import main_window as mw
+    warned = []
+    monkeypatch.setattr(mw.QMessageBox, "warning", lambda *a: warned.append(a[2]))
+    report = win.open_analysis("prescription")
+    layout = win.open_analysis("layout")
+    assert report.text.toPlainText() and layout.figure.axes and "EFL" in win.status_lens.text()
+    auto_off = win.open_analysis("spot")
+    auto_off.auto.setChecked(False)  # a new file is recomputed even with Auto off
+
+    s = lf.samples.achromat()
+    s.surfaces[1].material = "NOSUCHGLASS"
+    p = tmp_path / "missing.lens.json"
+    lf.save(s, str(p))
+    assert win.open_file(str(p))
+
+    assert warned and "NOSUCHGLASS (surface 1)" in warned[0]
+    assert "NOSUCHGLASS" in win.status_lens.text() and "EFL" not in win.status_lens.text()
+    for w in (report, layout, auto_off):
+        assert w.result is None and "NOSUCHGLASS" in w.error and "(error)" in w.windowTitle()
+    assert report.text.toPlainText() == "" and not layout.figure.axes and not auto_off.figure.axes
+    idx = lde_index(win, 1, "material")
+    assert win.lde.model.data(idx, Qt.BackgroundRole) is not None
+    assert "not in any loaded glass catalog" in win.lde.model.data(idx, Qt.ToolTipRole)
+
+    # fixing the glass brings the analyses back
+    win.doc.modify("fix", lambda x: E.set_cell(x, 1, "material", "N-BK7"))
+    assert report.error is None and "EFL" in win.status_lens.text() and layout.figure.axes
+
+
+def test_failed_open_keeps_current_lens(win, tmp_path, monkeypatch):
+    from lensforge_qt import main_window as mw
+    shown = []
+    monkeypatch.setattr(mw.QMessageBox, "critical", lambda *a: shown.append(a[2]))
+    p = tmp_path / "broken.lens.json"
+    p.write_text("{not json")
+    name = win.doc.display_name
+    assert not win.open_file(str(p))
+    assert f"still {name}" in shown[0]

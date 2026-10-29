@@ -1,0 +1,203 @@
+{
+  "format": "lensforge-1",
+  "name": "F/1.9 17 deg HFOV split front triplet, US 2,170,428 (Smith, Modern Lens Design, Fig. 14.8)",
+  "units": "mm",
+  "aperture": {
+    "type": "EPD",
+    "value": 52.5295
+  },
+  "fields": {
+    "type": "ANGLE",
+    "values": [
+      {
+        "x": 0.0,
+        "y": 0.0,
+        "weight": 1.0,
+        "vdx": 0.0,
+        "vdy": 0.0,
+        "vcx": 0.0,
+        "vcy": 0.0
+      },
+      {
+        "x": 0.0,
+        "y": 12.054,
+        "weight": 1.0,
+        "vdx": 0.0,
+        "vdy": 0.0,
+        "vcx": 0.0,
+        "vcy": 0.0
+      },
+      {
+        "x": 0.0,
+        "y": 17.22,
+        "weight": 1.0,
+        "vdx": 0.0,
+        "vdy": 0.0,
+        "vcx": 0.0,
+        "vcy": 0.0
+      }
+    ]
+  },
+  "wavelengths": {
+    "values": [
+      {
+        "value": 0.5875618,
+        "weight": 1.0
+      },
+      {
+        "value": 0.4861,
+        "weight": 1.0
+      },
+      {
+        "value": 0.6563,
+        "weight": 1.0
+      }
+    ],
+    "primary": 0
+  },
+  "ray_aiming": "paraxial",
+  "notes": "Warren J. Smith, Modern Lens Design, 2nd ed., Figure 14.8 (page number not visible in the photos). Book: EFL 99.79, BFL 63.22, NA -0.2632 (F/1.9), GIH 30.93 (HFOV=17.22), PTZ/F -2.639, VL 60.7, infinite conjugate. Stop at surface 5 (the book's plane air surface).",
+  "surfaces": [
+    {
+      "type": "STANDARD",
+      "curvature": 0.0,
+      "conic": 0.0,
+      "thickness": "inf",
+      "material": null,
+      "comment": "OBJECT"
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.011709601873536299,
+      "conic": 0.0,
+      "thickness": 7.7,
+      "material": "SK6",
+      "semi_diameter": 27.0
+    },
+    {
+      "type": "STANDARD",
+      "curvature": -0.002,
+      "conic": 0.0,
+      "thickness": 0.5,
+      "material": null,
+      "semi_diameter": 27.0
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.02247191011235955,
+      "conic": 0.0,
+      "thickness": 19.0,
+      "material": "SK6",
+      "semi_diameter": 24.5
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.014285714285714285,
+      "conic": 0.0,
+      "thickness": 3.0,
+      "material": null,
+      "semi_diameter": 18.6
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.0,
+      "conic": 0.0,
+      "thickness": 1.5,
+      "material": null,
+      "semi_diameter": 18.3,
+      "stop": true
+    },
+    {
+      "type": "STANDARD",
+      "curvature": -0.007407407407407408,
+      "conic": 0.0,
+      "thickness": 2.0,
+      "material": "SF1",
+      "semi_diameter": 18.3
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.02915451895043732,
+      "conic": 0.0,
+      "thickness": 19.0,
+      "material": null,
+      "semi_diameter": 16.9
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.00684931506849315,
+      "conic": 0.0,
+      "thickness": 8.0,
+      "material": "SK6",
+      "semi_diameter": 20.0
+    },
+    {
+      "type": "STANDARD",
+      "curvature": -0.021367521367521368,
+      "conic": 0.0,
+      "thickness": 63.222,
+      "material": null,
+      "semi_diameter": 20.0
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.0,
+      "conic": 0.0,
+      "thickness": 0.0,
+      "material": null,
+      "comment": "IMAGE"
+    }
+  ],
+  "optimization": {
+    "variables": [
+      {
+        "surface": 1,
+        "param": "curvature"
+      },
+      {
+        "surface": 2,
+        "param": "curvature"
+      },
+      {
+        "surface": 3,
+        "param": "curvature"
+      },
+      {
+        "surface": 4,
+        "param": "curvature"
+      },
+      {
+        "surface": 6,
+        "param": "curvature"
+      },
+      {
+        "surface": 7,
+        "param": "curvature"
+      },
+      {
+        "surface": 8,
+        "param": "curvature"
+      },
+      {
+        "surface": 9,
+        "param": "curvature"
+      },
+      {
+        "surface": 9,
+        "param": "thickness"
+      }
+    ],
+    "merit_function": {
+      "rows": [
+        {
+          "type": "POWR",
+          "target": 0.0,
+          "weight": 0,
+          "bound": "=",
+          "params": {},
+          "comment": ""
+        }
+      ]
+    }
+  }
+}

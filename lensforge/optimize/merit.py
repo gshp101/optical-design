@@ -10,7 +10,10 @@ a weight and a bound:
 
 Weights: ``> 0`` adds the row to the merit function; ``0`` evaluates it for
 display only; ``< 0`` makes the row a hard constraint that the damped least
-squares optimiser satisfies exactly via Lagrange multipliers.
+squares optimiser satisfies exactly via Lagrange multipliers.  A merit
+function with a single (non-BLNK) row always uses weight 1 for it
+(:meth:`MeritFunction.auto_weight`), since weight 0 would leave nothing to
+optimise.
 
 The merit value is the usual weighted RMS
 
@@ -122,6 +125,15 @@ class MeritFunction:
         self.rows.insert(index, row)
         return row
 
+    def auto_weight(self) -> bool:
+        """Give a lone row weight 1: a merit function with a single row of weight 0
+        would always be 0, so optimisation could not change anything.  Returns
+        True if the weight was changed."""
+        if len(self.rows) == 1 and self.rows[0].type != "BLNK" and self.rows[0].weight == 0:
+            self.rows[0].weight = 1.0
+            return True
+        return False
+
     def remove(self, index: int):
         del self.rows[index]
 
@@ -165,7 +177,7 @@ class MeritFunction:
                 if not np.all(np.isfinite(b.values)):
                     raise OperandError("non-finite value")
             except (OperandError, ValueError, ZeroDivisionError, FloatingPointError, RuntimeError,
-                    IndexError, NotImplementedError) as e:
+                    IndexError, NotImplementedError, TypeError) as e:  # TypeError: misspelt parameter
                 err = f"row {len(blocks)} ({r.type}): {e}"
                 blocks.append(None)
                 scalars.append(math.nan)
@@ -240,8 +252,10 @@ class MeritFunction:
 
     @classmethod
     def from_dict(cls, d):
-        return cls([Operand(r["type"], r.get("target", 0.0), r.get("weight", 1.0), r.get("bound"),
-                            dict(r.get("params", {})), r.get("comment", "")) for r in d["rows"]])
+        mf = cls([Operand(r["type"], r.get("target", 0.0), r.get("weight", 1.0), r.get("bound"),
+                          dict(r.get("params", {})), r.get("comment", "")) for r in d["rows"]])
+        mf.auto_weight()
+        return mf
 
     def __repr__(self):
         return f"MeritFunction({len(self.rows)} rows)"

@@ -7,7 +7,7 @@ import os
 
 from PySide6.QtCore import QSettings, Qt
 from PySide6.QtGui import QAction, QKeySequence
-from PySide6.QtWidgets import (QDockWidget, QFileDialog, QLabel, QMainWindow, QMenu, QMessageBox,
+from PySide6.QtWidgets import (QApplication, QDockWidget, QFileDialog, QLabel, QMainWindow, QMenu, QMessageBox,
                                QUndoView, QWhatsThis)
 
 import lensforge as lf
@@ -15,7 +15,7 @@ from lensforge import optimize as opt
 
 from . import edits as E
 from .analyses import GROUPS, REGISTRY
-from .analysis_window import AnalysisWindow
+from .analysis_window import MISSING_HINT, AnalysisWindow
 from .document import LensDocument, new_system
 from .lde import LensDataEditor
 from .mfe import MeritFunctionEditor
@@ -56,7 +56,8 @@ def _sample_list():
            ("Parabolic Mirror", lf.samples.parabolic_mirror), ("Classical Cassegrain", lf.samples.cassegrain)]
     for name, rel in (("Cooke Triplet (optimised)", "output/cooke_triplet.lens.json"),
                       ("Scripted Singlet", "best_singlet.lens.json"),
-                      ("Diffraction Grating Demo", "grating_demo.lens.json")):
+                      ("Diffraction Grating Demo", "grating_demo.lens.json"),
+                      ("Spot Size Merit Example", "spot_size_merit.lens.json")):
         p = os.path.join(EXAMPLES, rel)
         if os.path.exists(p):
             out.append((name, lambda p=p: lf.load(p)))
@@ -67,9 +68,11 @@ class MainWindow(QMainWindow):
     def __init__(self, path=None, settings: QSettings = None):
         super().__init__()
         self.settings = settings or QSettings("lensforge", "lensforge-qt")
+        self._restore_agf_catalogs()
         self.doc = LensDocument()
         self.analysis_windows = []
         self.dialogs = {}
+        self.inspect_windows = []  # open File > Inspect Lens File windows
         self.setWindowIcon(icons.app_icon())
         self.setDockNestingEnabled(True)
         self.setDockOptions(QMainWindow.AnimatedDocks | QMainWindow.AllowTabbedDocks | QMainWindow.AllowNestedDocks)
@@ -78,6 +81,7 @@ class MainWindow(QMainWindow):
         self.lde = LensDataEditor(self.doc)
         self.setCentralWidget(self.lde)
         self.mfe = MeritFunctionEditor(self.doc)
+        self.mfe.helpRequested.connect(self.help_contents)
         self.mfe_dock = self._dock("Merit Function Editor", self.mfe, Qt.BottomDockWidgetArea, "mfe")
         self.console = ScriptConsole(self.doc)
         self.console_dock = self._dock("Python Shell", self.console, Qt.BottomDockWidgetArea, "script")
@@ -132,7 +136,10 @@ class MainWindow(QMainWindow):
         self.a_save_as = A("Save &As...", self.save_as, QKeySequence.SaveAs)
         self.a_insert_lens = A("&Insert Lens...", self.insert_lens, "Ctrl+I",
                                "Insert surfaces from a lens file, scaled and optionally reversed")
+        self.a_inspect = A("Ins&pect Lens File...", self.inspect_lens_dialog, "Ctrl+Shift+O",
+                           "Show the system report of a lens file without opening it")
         self.a_agf = A("Load Glass Catalog (AGF)...", self.load_agf)
+        self.a_forget_agf = A("Forget Loaded Glass Catalogs", self.forget_agf_catalogs)
         self.a_export = A("Export Prescription...", self.export_prescription)
         self.a_quit = A("E&xit", self.close, QKeySequence.Quit)
         self.a_undo = self.doc.undo_stack.createUndoAction(self, "&Undo")
@@ -184,6 +191,7 @@ class MainWindow(QMainWindow):
             m.addAction(a)
         m.addSeparator()
         m.addAction(self.a_insert_lens)
+        m.addAction(self.a_inspect)
         for a in (self.a_sys, self.a_fields, self.a_waves, self.a_rays):
             m.addAction(a)
         m.addSeparator()
@@ -191,6 +199,7 @@ class MainWindow(QMainWindow):
         for name, fn in _sample_list():
             sm.addAction(name).triggered.connect(lambda _=False, n=name, f=fn: self.load_sample(n, f))
         m.addAction(self.a_agf)
+        m.addAction(self.a_forget_agf)
         m.addAction(self.a_export)
         m.addSeparator()
         m.addAction(self.a_quit)
@@ -200,7 +209,8 @@ class MainWindow(QMainWindow):
         m.addAction(self.a_redo)
         m.addAction(self.a_undo_view)
         m.addSeparator()
-        for a in (self.lde.act_insert, self.lde.act_insert_after, self.lde.act_delete, self.lde.act_variable,
+        for a in (self.lde.act_insert, self.lde.act_insert_after, self.lde.act_delete, self.lde.act_delete_range,
+                  self.lde.act_variable,
                   self.lde.act_material, self.lde.act_props):
             m.addAction(a)
         m.addSeparator()
@@ -348,13 +358,21 @@ class MainWindow(QMainWindow):
 
     def _update_status(self):
         s = self.doc.system
-        try:
-            p = s.paraxial()
-            txt = (f"EFL {p.efl:.6g}   WFNO {p.working_fnum:.4g}   ENPD {p.epd:.5g}   "
-                   f"TOTR {sum(x.thickness for x in s.surfaces[1:-1]):.6g}   {s.units}")
-        except Exception:  # noqa: BLE001 - incomplete lens
-            txt = "first-order data unavailable"
+        missing = s.missing_materials()
+        style = ""
+        if missing:
+            txt = f"Cannot trace: missing glass {', '.join(missing)}"
+            style = "color: #a00; font-weight: bold;"
+        else:
+            try:
+                p = s.paraxial()
+                txt = (f"EFL {p.efl:.6g}   WFNO {p.working_fnum:.4g}   ENPD {p.epd:.5g}   "
+                       f"TOTR {sum(x.thickness for x in s.surfaces[1:-1]):.6g}   {s.units}")
+            except Exception as e:  # noqa: BLE001 - incomplete lens
+                txt = f"first-order data unavailable ({type(e).__name__}: {e})"
+                style = "color: #a00;"
         self.status_lens.setText(txt)
+        self.status_lens.setStyleSheet(style)
         self._update_title()
 
     def _show_merit(self, ev):
@@ -395,11 +413,18 @@ class MainWindow(QMainWindow):
         try:
             self.doc.open(path)
         except Exception as e:  # noqa: BLE001
-            QMessageBox.critical(self, "Open", f"Could not open {path}:\n{type(e).__name__}: {e}")
+            QMessageBox.critical(self, "Open", f"Could not open {path}:\n{type(e).__name__}: {e}\n\n"
+                                 f"The lens on screen is still {self.doc.display_name}.")
             return False
         self._add_recent(path)
         if self.doc.system.notes.startswith("ZMX import ignored"):
             self.statusBar().showMessage(self.doc.system.notes, 10000)
+        missing = self.doc.system.missing_materials_message()
+        if missing:
+            self.statusBar().showMessage(f"Cannot trace: {missing}", 15000)
+            QMessageBox.warning(self, "Missing glass",
+                                f"{os.path.basename(path)} was opened, but it cannot be ray traced.\n\n"
+                                f"{missing}\n\n{MISSING_HINT}")
         return True
 
     def save(self) -> bool:
@@ -453,7 +478,32 @@ class MainWindow(QMainWindow):
             except Exception as e:  # noqa: BLE001
                 QMessageBox.critical(self, "Glass catalog", f"Could not load {path}:\n{e}")
                 return
+            self.remember_agf(path)
+            self.doc.refresh()  # the new glasses may be the ones the lens was missing
             self.statusBar().showMessage(f"Loaded glass catalog {os.path.basename(path)}", 5000)
+
+    # AGF catalogs the user loaded are reloaded at every start until forgotten.
+    def _agf_paths(self):
+        v = self.settings.value("agf_catalogs", []) or []
+        return [v] if isinstance(v, str) else list(v)
+
+    def remember_agf(self, path):
+        path = os.path.abspath(path)
+        self.settings.setValue("agf_catalogs", [p for p in self._agf_paths() if p != path] + [path])
+
+    def _restore_agf_catalogs(self):
+        for path in self._agf_paths():
+            if os.path.exists(path):
+                try:
+                    lf.shared_library().load_agf(path)
+                except Exception:  # noqa: BLE001 - a bad file must not stop the app starting
+                    pass
+
+    def forget_agf_catalogs(self):
+        n = len(self._agf_paths())
+        self.settings.setValue("agf_catalogs", [])
+        self.statusBar().showMessage(f"Forgot {n} glass catalog(s); they stay loaded until the program closes",
+                                     5000)
 
     def export_prescription(self):
         path, _ = QFileDialog.getSaveFileName(self, "Export prescription", f"{self.doc.display_name}.txt",
@@ -473,6 +523,22 @@ class MainWindow(QMainWindow):
         dlg = InsertLensDialog(self.doc, at=max(1, row), start_dir=start, parent=self)
         dlg.exec()
         return dlg
+
+    def inspect_lens_dialog(self):
+        start = os.path.dirname(self.doc.path) if self.doc.path else self.settings.value("last_dir", EXAMPLES)
+        path, _ = QFileDialog.getOpenFileName(self, "Inspect lens file", start, FILE_FILTER)
+        if path:
+            return self.inspect_lens(path)
+
+    def inspect_lens(self, path):
+        """Show the system report of ``path`` in a non-modal window; the current lens is untouched."""
+        from .inspect_window import InspectLensWindow
+        w = InspectLensWindow(path, self)
+        w.open_requested.connect(lambda p: self.maybe_save() and self.open_file(p))
+        self.inspect_windows.append(w)
+        w.destroyed.connect(lambda _=None, w=w: self.inspect_windows.remove(w) if w in self.inspect_windows else None)
+        w.show()
+        return w
 
     def input_rays(self):
         from .rays_dialog import InputRaysDialog
@@ -495,7 +561,17 @@ class MainWindow(QMainWindow):
         self.doc.modify("Automatic semi-diameters", fn)
 
     # ------------------------------------------------------------------ analyses
-    def open_analysis(self, key, settings=None) -> AnalysisWindow:
+    def open_analysis(self, key, settings=None, new=False) -> AnalysisWindow:
+        """Show the analysis *key*. An existing window of that type is brought to the front
+        instead of opening another, unless *new* is set or *settings* are given."""
+        if not new and settings is None:
+            for w in reversed(self.analysis_windows):
+                if w.spec.key == key:
+                    w.show()
+                    w.raise_()
+                    if w.isFloating():
+                        w.activateWindow()
+                    return w
         w = AnalysisWindow(key, self.doc, settings, self, on_rays=self.input_rays)
         w.closed.connect(self._analysis_closed)
         others = [x for x in self.analysis_windows if not x.isFloating()]
@@ -557,6 +633,11 @@ class MainWindow(QMainWindow):
 
     def help_contents(self, item_id=None):
         from .help_browser import HelpBrowser
+        from .mfe_help import ROOT
+        if not isinstance(item_id, str) or not item_id:
+            # F1 from inside the Merit Function Editor opens its own help
+            focus = QApplication.focusWidget()
+            item_id = ROOT if focus is not None and self.mfe.isAncestorOf(focus) else None
         dlg = self.dialogs.get("help")
         if dlg is None:
             dlg = self.dialogs["help"] = HelpBrowser(self.toolbar_items, self)
@@ -592,6 +673,6 @@ class MainWindow(QMainWindow):
         if not self.maybe_save():
             ev.ignore()
             return
-        for d in self.dialogs.values():
+        for d in list(self.dialogs.values()) + self.inspect_windows:
             d.close()
         ev.accept()

@@ -1,0 +1,267 @@
+{
+  "format": "lensforge-1",
+  "name": "Catadioptric objective F/1.2, EFL=99.9, USP 4,547,045 (Smith, Modern Lens Design, Fig. 16.15)",
+  "units": "mm",
+  "aperture": {
+    "type": "EPD",
+    "value": 83.2034
+  },
+  "fields": {
+    "type": "ANGLE",
+    "values": [
+      {
+        "x": 0.0,
+        "y": 0.0,
+        "weight": 1.0,
+        "vdx": 0.0,
+        "vdy": 0.0,
+        "vcx": 0.0,
+        "vcy": 0.0
+      },
+      {
+        "x": 0.0,
+        "y": 3.605,
+        "weight": 1.0,
+        "vdx": 0.0,
+        "vdy": 0.0,
+        "vcx": 0.0,
+        "vcy": 0.0
+      },
+      {
+        "x": 0.0,
+        "y": 5.15,
+        "weight": 1.0,
+        "vdx": 0.0,
+        "vdy": 0.0,
+        "vcx": 0.0,
+        "vcy": 0.0
+      }
+    ]
+  },
+  "wavelengths": {
+    "values": [
+      {
+        "value": 0.5875618,
+        "weight": 1.0
+      },
+      {
+        "value": 0.4861,
+        "weight": 1.0
+      },
+      {
+        "value": 0.6563,
+        "weight": 1.0
+      }
+    ],
+    "primary": 0
+  },
+  "ray_aiming": "paraxial",
+  "notes": "Warren J. Smith, Modern Lens Design, 2nd ed., Figure 16.15 (page number not visible in the photos). Book: EFL 99.86, BFL 6.783, NA -0.4166 (F/1.2), GIH 9.0 (HFOV=5.15), PTZ/F 33.85, VL 52.5, infinite conjugate. Glass: BK7 entered as N-BK7. The book does not mark the stop; it is placed at surface 1, the front corrector. The table gives thicknesses without sign; spaces after an odd number of reflections are entered negative, which reproduces the book's VL. The table lists a Mangin mirror as entry surface, reflecting back surface and exit surface (the same physical surface twice); the reflecting surface is the one the light returns from. Central obscuration and baffles are not modelled.",
+  "surfaces": [
+    {
+      "type": "STANDARD",
+      "curvature": 0.0,
+      "conic": 0.0,
+      "thickness": "inf",
+      "material": null,
+      "comment": "OBJECT"
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.0029344014554631218,
+      "conic": 0.0,
+      "thickness": 6.5,
+      "material": "N-BK7",
+      "semi_diameter": 42.0,
+      "stop": true
+    },
+    {
+      "type": "STANDARD",
+      "curvature": -0.0026649966021293323,
+      "conic": 0.0,
+      "thickness": 36.0,
+      "material": null,
+      "semi_diameter": 42.0
+    },
+    {
+      "type": "STANDARD",
+      "curvature": -0.008290774026663129,
+      "conic": 0.0,
+      "thickness": 8.0,
+      "material": "N-BK7",
+      "semi_diameter": 42.0
+    },
+    {
+      "type": "STANDARD",
+      "curvature": -0.004633490872022982,
+      "conic": 0.0,
+      "thickness": -8.0,
+      "material": "MIRROR",
+      "semi_diameter": 42.0
+    },
+    {
+      "type": "STANDARD",
+      "curvature": -0.008290774026663129,
+      "conic": 0.0,
+      "thickness": -36.0,
+      "material": null,
+      "semi_diameter": 42.0
+    },
+    {
+      "type": "STANDARD",
+      "curvature": -0.0026649966021293323,
+      "conic": 0.0,
+      "thickness": -6.5,
+      "material": "N-BK7",
+      "semi_diameter": 26.0
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.0029344014554631218,
+      "conic": 0.0,
+      "thickness": -4.0,
+      "material": "N-BK7",
+      "semi_diameter": 26.0
+    },
+    {
+      "type": "STANDARD",
+      "curvature": -0.0007596002072189366,
+      "conic": 0.0,
+      "thickness": 4.0,
+      "material": "MIRROR",
+      "semi_diameter": 26.0
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.0029344014554631218,
+      "conic": 0.0,
+      "thickness": 6.5,
+      "material": "N-BK7",
+      "semi_diameter": 26.0
+    },
+    {
+      "type": "STANDARD",
+      "curvature": -0.0026649966021293323,
+      "conic": 0.0,
+      "thickness": 33.0,
+      "material": null,
+      "semi_diameter": 26.0
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.024129527302560145,
+      "conic": 0.0,
+      "thickness": 3.0,
+      "material": "N-BK7",
+      "semi_diameter": 16.0
+    },
+    {
+      "type": "STANDARD",
+      "curvature": -0.008290774026663129,
+      "conic": 0.0,
+      "thickness": 8.0,
+      "material": "N-BK7",
+      "semi_diameter": 16.0
+    },
+    {
+      "type": "STANDARD",
+      "curvature": -0.004633490872022982,
+      "conic": 0.0,
+      "thickness": 2.0,
+      "material": "SF10",
+      "semi_diameter": 14.0
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.0026332975204870547,
+      "conic": 0.0,
+      "thickness": 6.783,
+      "material": null,
+      "semi_diameter": 14.0
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.0,
+      "conic": 0.0,
+      "thickness": 0.0,
+      "material": null,
+      "comment": "IMAGE"
+    }
+  ],
+  "optimization": {
+    "variables": [
+      {
+        "surface": 1,
+        "param": "curvature"
+      },
+      {
+        "surface": 2,
+        "param": "curvature"
+      },
+      {
+        "surface": 3,
+        "param": "curvature"
+      },
+      {
+        "surface": 4,
+        "param": "curvature"
+      },
+      {
+        "surface": 5,
+        "param": "curvature"
+      },
+      {
+        "surface": 6,
+        "param": "curvature"
+      },
+      {
+        "surface": 7,
+        "param": "curvature"
+      },
+      {
+        "surface": 8,
+        "param": "curvature"
+      },
+      {
+        "surface": 9,
+        "param": "curvature"
+      },
+      {
+        "surface": 10,
+        "param": "curvature"
+      },
+      {
+        "surface": 11,
+        "param": "curvature"
+      },
+      {
+        "surface": 12,
+        "param": "curvature"
+      },
+      {
+        "surface": 13,
+        "param": "curvature"
+      },
+      {
+        "surface": 14,
+        "param": "curvature"
+      },
+      {
+        "surface": 14,
+        "param": "thickness"
+      }
+    ],
+    "merit_function": {
+      "rows": [
+        {
+          "type": "POWR",
+          "target": 0.0,
+          "weight": 0,
+          "bound": "=",
+          "params": {},
+          "comment": ""
+        }
+      ]
+    }
+  }
+}

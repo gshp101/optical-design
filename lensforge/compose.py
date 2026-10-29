@@ -1,11 +1,16 @@
-"""Combine lenses: scale a prescription, reverse surface order, insert one lens into another.
+"""Combine lenses: scale a prescription, reverse surface order, insert one lens into another,
+delete a range of surfaces.
 
 >>> import lensforge as lf
 >>> sys = lf.samples.singlet()
->>> lf.insert_lens(sys, lf.load("doublet.lens.json"), at=3, scale=0.5, reverse=True)
+>>> lf.insert_lens(sys, lf.load("doublet.lens.json"), at=3, scale=0.5, reverse=True,
+...               copy_semi_diameters=True)
 range(3, 6)
 
-All three work on surface lists from any lensforge system, so the same calls serve
+>>> lf.delete_surfaces(sys, 3, 5)        # surfaces 3, 4 and 5; variables etc. renumbered
+3
+
+These work on surface lists from any lensforge system, so the same calls serve
 "Insert Lens" in the desktop app and scripts.
 """
 
@@ -154,14 +159,39 @@ def reverse_surfaces(system, surfaces: Sequence[S.Surface], medium_before=None,
     return out
 
 
+def source_semi_diameters(source) -> List[Optional[float]]:
+    """Semi-diameter of every surface of ``source`` as its own lens data shows it: the
+    fixed value where one is set, otherwise the automatic value from tracing the
+    source's own aperture, fields and wavelengths (None where that trace fails)."""
+    sds = [s.semi_diameter for s in source.surfaces]
+    if any(v is None for v in sds):
+        try:
+            auto = source.copy().update_semi_diameters()
+        except Exception:
+            return sds
+        for i, s in enumerate(source.surfaces):
+            if sds[i] is None and not s.is_coordinate_break and math.isfinite(float(auto[i])):
+                sds[i] = float(auto[i])
+    return sds
+
+
 def lens_surfaces(source, first: int = 1, last: Optional[int] = None, scale: float = 1.0,
-                  reverse: bool = False, keep_stop: bool = False) -> List[S.Surface]:
+                  reverse: bool = False, keep_stop: bool = False,
+                  copy_semi_diameters: bool = False) -> List[S.Surface]:
     """Copies of surfaces ``first``..``last`` of ``source`` (default: everything between
-    the object and image), scaled and optionally reversed, ready to insert."""
+    the object and image), scaled and optionally reversed, ready to insert.
+
+    With ``copy_semi_diameters`` each surface keeps the semi-diameter it has in the
+    source lens (automatic ones are computed in the source and become fixed values),
+    scaled with the lens; otherwise every inserted semi-diameter is automatic.
+    """
     last = source.image_index - 1 if last is None else last
     if not 1 <= first <= last <= source.image_index - 1:
         raise ValueError(f"surface range {first}..{last} is outside 1..{source.image_index - 1}")
     group = [s.copy() for s in source.surfaces[first:last + 1]]
+    sds = source_semi_diameters(source)[first:last + 1] if copy_semi_diameters else [None] * len(group)
+    for s, sd in zip(group, sds):
+        s.semi_diameter = None if s.is_coordinate_break else sd
     if reverse:
         before = _medium_after(source, source.surfaces[:first])[-1]
         group = reverse_surfaces(source, group, before)
@@ -175,14 +205,17 @@ def lens_surfaces(source, first: int = 1, last: Optional[int] = None, scale: flo
 
 def insert_lens(target, source, at: Optional[int] = None, first: int = 1, last: Optional[int] = None,
                 scale: float = 1.0, reverse: bool = False, keep_stop: bool = False,
-                convert_units: bool = True) -> range:
+                convert_units: bool = True, copy_semi_diameters: bool = False) -> range:
     """Insert surfaces ``first``..``last`` of ``source`` (a system, or a path to a lens
     file) into ``target`` before surface ``at`` (default: just before the image).
 
     ``scale`` multiplies every length, ``reverse`` flips the group end for end, and
     ``keep_stop`` moves the target's stop to the inserted lens's stop surface (otherwise
     the target keeps its stop). With ``convert_units`` a lens in other units (inches,
-    say) is converted to the target's units on top of ``scale``. Glasses are copied by name, so they must be in the
+    say) is converted to the target's units on top of ``scale``. With
+    ``copy_semi_diameters`` the inserted surfaces keep the source lens's semi-diameters
+    (fixed and automatic ones, as fixed values, scaled); otherwise they are automatic
+    in the target. Glasses are copied by name, so they must be in the
     target's catalogs. Returns the range of new surface indices. Variables, solves
     and merit operands of the target are not renumbered here (the desktop app does
     that); call this before setting them up.
@@ -196,10 +229,86 @@ def insert_lens(target, source, at: Optional[int] = None, first: int = 1, last: 
     at = target.image_index if at is None else int(at)
     if not 1 <= at <= target.image_index:
         raise IndexError(f"surfaces can only be inserted before surfaces 1..{target.image_index}")
-    group = lens_surfaces(source, first, last, scale, reverse, keep_stop)
+    group = lens_surfaces(source, first, last, scale, reverse, keep_stop, copy_semi_diameters)
     if keep_stop and any(s.stop for s in group):
         for s in target.surfaces:
             s.stop = False
     for i, s in enumerate(group):
         target.insert(at + i, s)
     return range(at, at + len(group))
+
+
+# ---------------------------------------------------------------------------
+# Surface references (variables, solves, merit operands) and deleting surfaces
+# ---------------------------------------------------------------------------
+
+_SOLVE_REFS = ("surface", "from_surface", "center_surface")
+_OPERAND_REFS = ("surf", "surf2")
+
+
+def renumber_surface_refs(system, fn, operand_fn=None):
+    """Apply ``fn(old_index) -> new index or None (deleted)`` to every surface reference.
+
+    Variables and solves pointing at a deleted surface are removed; merit
+    operands keep their row and are mapped with ``operand_fn`` (default ``fn``)."""
+    from . import optimize as opt
+    operand_fn = operand_fn or fn
+    vs = opt.variables(system)
+    keep = []
+    for v in vs:
+        n = fn(v.surface)
+        if n is not None:
+            v.surface = n
+            keep.append(v)
+    vs[:] = keep
+    sl = opt.solves(system)
+    keep = []
+    for x in sl:
+        refs = {name: fn(getattr(x, name)) for name in _SOLVE_REFS if isinstance(getattr(x, name, None), int)}
+        if all(n is not None for n in refs.values()):
+            for name, n in refs.items():
+                setattr(x, name, n)
+            keep.append(x)
+    sl[:] = keep
+    mf = getattr(system, "merit_function", None)
+    if mf is not None:
+        for row in mf.rows:
+            for name in _OPERAND_REFS:
+                v = row.params.get(name)
+                if isinstance(v, int) and not isinstance(v, bool):
+                    row.params[name] = operand_fn(v)
+
+
+def check_surface_range(system, first: int, last: Optional[int] = None):
+    """Validate a range of deletable surfaces; returns ``(first, last)`` as ints."""
+    first = int(first)
+    last = first if last is None else int(last)
+    if first > last:
+        raise ValueError(f"the first surface ({first}) is after the last ({last})")
+    if first <= 0 or last >= system.image_index:
+        raise ValueError("the object and image surfaces cannot be deleted "
+                         f"(choose surfaces 1..{system.image_index - 1})")
+    return first, last
+
+
+def delete_surfaces(system, first: int, last: Optional[int] = None) -> int:
+    """Delete surfaces ``first``..``last`` (inclusive; ``last`` defaults to ``first``).
+
+    The object and image surfaces cannot be deleted. Variables and solves that refer
+    to a deleted surface are dropped, later surface numbers in variables, solves and
+    merit operands move down, and merit operands that referred to a deleted surface
+    move to the surface before the range. If the stop was deleted, the surface that
+    takes the first deleted surface's place becomes the stop. Returns the number of
+    surfaces deleted.
+    """
+    first, last = check_surface_range(system, first, last)
+    n = last - first + 1
+    had_stop = any(system.surfaces[i].stop for i in range(first, last + 1))
+    for i in range(last, first - 1, -1):
+        system.remove(i)
+    renumber_surface_refs(system,
+                          lambda i: i if i < first else (None if i <= last else i - n),
+                          lambda i: i if i < first else (first - 1 if i <= last else i - n))
+    if had_stop:
+        system.stop_index = max(1, min(first, system.image_index - 1))
+    return n

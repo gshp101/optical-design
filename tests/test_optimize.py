@@ -456,3 +456,20 @@ def test_variables_solves_and_merit_round_trip_json():
     assert [(v.surface, v.param, v.min) for v in r.variables] == [(1, "curvature", 0.0), (2, "glass.vd", 20.0)]
     assert [type(x).__name__ for x in r.solves] == ["MarginalRayHeight", "Pickup"]
     assert r.merit_function.value(r) == pytest.approx(s.merit_function.value(s), rel=1e-12)
+
+
+def test_single_merit_row_gets_weight_one():
+    s = mono_lens()
+    opt.set_variable(s, 1, "curvature")
+    mf = opt.MeritFunction()
+    mf.add("EFFL", 90.0, 0.0)  # the only row, weight 0: would leave nothing to optimise
+    res = opt.optimize(s, mf)
+    assert mf.rows[0].weight == 1.0
+    assert s.paraxial().efl == pytest.approx(90.0, rel=1e-6) and res.merit < 1e-6
+    loaded = opt.MeritFunction.from_dict({"rows": [{"type": "EFFL", "target": 90.0, "weight": 0}]})
+    assert loaded.rows[0].weight == 1.0
+    two = opt.MeritFunction.from_dict({"rows": [{"type": "EFFL", "target": 90.0, "weight": 0},
+                                                {"type": "TOTR", "weight": 0}]})
+    assert [r.weight for r in two.rows] == [0.0, 0.0]  # several rows: weights are left alone
+    blank = opt.MeritFunction.from_dict({"rows": [{"type": "BLNK", "weight": 0}]})
+    assert blank.rows[0].weight == 0.0

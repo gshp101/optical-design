@@ -67,6 +67,9 @@ ICONS = {
     "File > Insert Lens": (lens(8, 7, 2.4) + '<path d="M2 12h20" stroke="' + GREY + '" stroke-dasharray="2 2"/>'
                            + f'<path d="M17 4v9m-3.5-3.5L17 13l3.5-3.5" stroke="{GREEN}" stroke-width="2.2"/>'
                            + f'<path d="M14 19h6" stroke="{GREEN}" stroke-width="2.2"/>'),
+    "File > Inspect Lens File": (PAGE + '<path d="M8 7h5M8 10h3"/>'
+                                 + f'<circle cx="13.5" cy="15" r="3.6" fill="{GLASS}"/>'
+                                 + f'<path d="M16.2 17.7l4.3 4.3" stroke="{ORANGE}" stroke-width="2.6"/>'),
     "File > System Explorer": ('<path d="M4 6h16M4 12h16M4 18h16"/>'
                                f'<circle cx="8" cy="6" r="2.2" fill="{ORANGE}"/><circle cx="15" cy="12" r="2.2" '
                                f'fill="{GREEN}"/><circle cx="10" cy="18" r="2.2" fill="{RED}"/>'),
@@ -83,6 +86,9 @@ ICONS = {
     "File > Load Glass Catalog (AGF)": ('<path d="M5 4h12a2 2 0 0 1 2 2v14H7a2 2 0 0 1-2-2z" fill="#fff"/>'
                                         '<path d="M5 18a2 2 0 0 1 2-2h12"/>'
                                         f'<path d="M9 13l3-6 3 6z" fill="{GLASS}"/>'),
+    "File > Forget Loaded Glass Catalogs": ('<path d="M5 4h12a2 2 0 0 1 2 2v14H7a2 2 0 0 1-2-2z" fill="#fff"/>'
+                                            '<path d="M5 18a2 2 0 0 1 2-2h12"/>'
+                                            f'<path d="M9 8l6 6M15 8l-6 6" stroke="{RED}" stroke-width="2"/>'),
     "File > Export Prescription": (PAGE + '<path d="M8 10h6M8 13h6M8 16h3"/>'
                                    f'<path d="M14 18h8m-3-3 3 3-3 3" stroke="{GREEN}" stroke-width="2"/>'),
     "File > Exit": ('<path d="M13 3H5v18h8"/><path d="M5 3l6 2v16l-6 0" fill="' + GLASS + '"/>'
@@ -96,6 +102,9 @@ ICONS = {
     "Edit > Insert Surface": TABLE + plus(16, 6.6, r=2.8),
     "Edit > Insert Surface After": TABLE + plus(16, 17.3, r=2.8),
     "Edit > Delete Surface": TABLE + cross(16, 11.8),
+    "Edit > Delete Surfaces": (TABLE + f'<rect x="3.6" y="9.6" width="16.8" height="10" fill="#f6c6c2" stroke="none"/>'
+                               + '<path d="M3 14.5h18M9 9v11"/>' + cross(16.5, 14.5, r=2.6)
+                               + f'<path d="M1.5 9.5v10" stroke="{RED}" stroke-width="1.6"/>'),
     "Edit > Toggle Variable": ('<rect x="3" y="5" width="18" height="14" rx="2" fill="#fff"/>'
                                + letter(12, 16.5, "V", ORANGE, 11)),
     "Edit > Choose Material": (f'<path d="M3 20L10 4l7 16z" fill="{GLASS}"/>'
@@ -279,6 +288,9 @@ SAMPLE_ICONS = {
     "Diffraction Grating Demo": ('<path d="M7 3v18" stroke-width="2.4" stroke-dasharray="1 1"/>'
                                  f'<path d="M1 12h6" stroke="#999"/><path d="M7 12l15-8" stroke="{RED}"/>'
                                  f'<path d="M7 12h15" stroke="{GREY}"/><path d="M7 12l15 8" stroke="#3b6fd8"/>'),
+    "Spot Size Merit Example": (lens(7, 8, 2.2) + '<path d="M2 5h5l11 7M2 19h5l11-7" stroke-width="1.1"/>'
+                                f'<circle cx="19" cy="12" r="2.6" stroke="{RED}" stroke-width="1.4"/>'
+                                f'<circle cx="19" cy="12" r="0.8" fill="{RED}" stroke="none"/>'),
 }
 
 

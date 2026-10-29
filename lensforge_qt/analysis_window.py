@@ -7,14 +7,19 @@ import itertools
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg, NavigationToolbar2QT
 from matplotlib.figure import Figure
 from PySide6.QtCore import Qt, QTimer, Signal
-from PySide6.QtGui import QFont, QGuiApplication
+from PySide6.QtGui import QGuiApplication
 from PySide6.QtWidgets import (QCheckBox, QComboBox, QDockWidget, QDoubleSpinBox, QFileDialog, QHBoxLayout, QLabel,
                                QPlainTextEdit, QPushButton, QSpinBox, QStackedWidget, QVBoxLayout, QWidget)
 
 from . import workers
 from .analyses import REGISTRY
+from .fonts import fixed_font
 
 _ids = itertools.count(1)
+
+#: how to fix a lens whose glass is missing (shown in analysis windows and the open warning)
+MISSING_HINT = ("Choose a replacement in the Material column of the Lens Data Editor (Ctrl+G), "
+                "or load a catalog that has it with File > Load Glass Catalog (AGF).")
 
 
 class SettingsBar(QWidget):
@@ -173,8 +178,7 @@ class AnalysisWindow(QDockWidget):
             self.text = QPlainTextEdit()
             self.text.setReadOnly(True)
             self.text.setLineWrapMode(QPlainTextEdit.NoWrap)
-            f = QFont("Monospace")
-            f.setStyleHint(QFont.TypeWriter)
+            f = fixed_font()
             self.text.setFont(f)
             tw = QWidget()
             tl = QVBoxLayout(tw)
@@ -203,6 +207,7 @@ class AnalysisWindow(QDockWidget):
         self._timer.setInterval(150)
         self._timer.timeout.connect(self.compute)
         doc.changed.connect(self._lens_changed)
+        doc.opened.connect(self.request_update)
         self.request_update()
 
     # -- scheduling ---------------------------------------------------------------
@@ -219,6 +224,13 @@ class AnalysisWindow(QDockWidget):
     def compute(self):
         if self._busy:
             self._pending = True
+            return
+        missing = self.doc.system.missing_materials_message()
+        if missing:  # cannot trace: say why instead of computing (and failing) or showing old results
+            self._request += 1
+            self.error = f"Cannot trace this lens. {missing} {MISSING_HINT}"
+            self._show_error(self.error)
+            self.updates += 1
             return
         self._busy = True
         self._request += 1
@@ -260,6 +272,13 @@ class AnalysisWindow(QDockWidget):
         self._finish()
 
     def _show_error(self, msg):
+        # never leave the previous lens's plot or report on screen under an error
+        self.result = None
+        if self.text is not None:
+            self.text.setPlainText("")
+        else:
+            self.figure.clear()
+            self.canvas.draw_idle()
         self.status.setText(msg)
         self.status.show()
         self.setWindowTitle(f"{self.spec.title}  (error)")
@@ -285,6 +304,7 @@ class AnalysisWindow(QDockWidget):
     def closeEvent(self, ev):
         try:
             self.doc.changed.disconnect(self._lens_changed)
+            self.doc.opened.disconnect(self.request_update)
             self.doc.changed.disconnect(self.settings.sync_choices)
         except (RuntimeError, TypeError):
             pass

@@ -52,6 +52,8 @@ class LensDocument(QObject):
     titleChanged = Signal()
     #: emitted with a message when an edit is rejected
     error = Signal(str)
+    #: emitted after a different lens replaced the old one (open, new, sample)
+    opened = Signal()
 
     def __init__(self, system=None, parent=None):
         super().__init__(parent)
@@ -103,6 +105,10 @@ class LensDocument(QObject):
         self.revision += 1
         self.changed.emit()
 
+    def refresh(self):
+        """Tell every view to recompute, e.g. after a glass catalog was loaded."""
+        self._bump()
+
     # -- files ------------------------------------------------------------------
     def open(self, path: str):
         system = lf.load(path)
@@ -119,6 +125,7 @@ class LensDocument(QObject):
         self.undo_stack.clear()
         self.undo_stack.setClean()
         self._bump()
+        self.opened.emit()
         self.titleChanged.emit()
 
     def save(self, path: Optional[str] = None):
@@ -142,6 +149,7 @@ class LensDocument(QObject):
         self.undo_stack.clear()
         self.undo_stack.setClean()
         self._bump()
+        self.opened.emit()
         self.titleChanged.emit()
 
     @property

@@ -1,0 +1,203 @@
+{
+  "format": "lensforge-1",
+  "name": "Heliar, USP 2764062, Lange (Smith, Modern Lens Design, Fig. 12.18)",
+  "units": "mm",
+  "aperture": {
+    "type": "EPD",
+    "value": 33.2795
+  },
+  "fields": {
+    "type": "ANGLE",
+    "values": [
+      {
+        "x": 0.0,
+        "y": 0.0,
+        "weight": 1.0,
+        "vdx": 0.0,
+        "vdy": 0.0,
+        "vcx": 0.0,
+        "vcy": 0.0
+      },
+      {
+        "x": 0.0,
+        "y": 16.289,
+        "weight": 1.0,
+        "vdx": 0.0,
+        "vdy": 0.0,
+        "vcx": 0.0,
+        "vcy": 0.0
+      },
+      {
+        "x": 0.0,
+        "y": 23.27,
+        "weight": 1.0,
+        "vdx": 0.0,
+        "vdy": 0.0,
+        "vcx": 0.0,
+        "vcy": 0.0
+      }
+    ]
+  },
+  "wavelengths": {
+    "values": [
+      {
+        "value": 0.5875618,
+        "weight": 1.0
+      },
+      {
+        "value": 0.4861,
+        "weight": 1.0
+      },
+      {
+        "value": 0.6563,
+        "weight": 1.0
+      }
+    ],
+    "primary": 0
+  },
+  "ray_aiming": "paraxial",
+  "notes": "Warren J. Smith, Modern Lens Design, 2nd ed., Figure 12.18, p. 215. Book: EFL 100.3, BFL 80.25, NA -0.1659 (F/3.0), GIH 43.12 (HFOV=23.27), PTZ/F -3.915, VL 37.65, infinite conjugate. Glass: BSF51 entered as BASF51; LAFN3 entered as N-LAF3 (same nd and V as the book). Stop at surface 6 (the book's plane air surface).",
+  "surfaces": [
+    {
+      "type": "STANDARD",
+      "curvature": 0.0,
+      "conic": 0.0,
+      "thickness": "inf",
+      "material": null,
+      "comment": "OBJECT"
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.026136957658128596,
+      "conic": 0.0,
+      "thickness": 1.89,
+      "material": "BASF51",
+      "semi_diameter": 18.5
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.03909304143862393,
+      "conic": 0.0,
+      "thickness": 8.97,
+      "material": "N-LAF3",
+      "semi_diameter": 18.5
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.0022309974789728486,
+      "conic": 0.0,
+      "thickness": 5.81,
+      "material": null,
+      "semi_diameter": 18.5
+    },
+    {
+      "type": "STANDARD",
+      "curvature": -0.01218769043266301,
+      "conic": 0.0,
+      "thickness": 1.71,
+      "material": "F7",
+      "semi_diameter": 15.3
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.030175015087507542,
+      "conic": 0.0,
+      "thickness": 5.77,
+      "material": null,
+      "semi_diameter": 15.3
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.0,
+      "conic": 0.0,
+      "thickness": 2.0,
+      "material": null,
+      "semi_diameter": 13.4,
+      "stop": true
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.00022301516503122213,
+      "conic": 0.0,
+      "thickness": 1.77,
+      "material": "LF5",
+      "semi_diameter": 15.3
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.02575991756826378,
+      "conic": 0.0,
+      "thickness": 9.73,
+      "material": "N-LAF3",
+      "semi_diameter": 15.3
+    },
+    {
+      "type": "STANDARD",
+      "curvature": -0.017975912277548085,
+      "conic": 0.0,
+      "thickness": 80.254,
+      "material": null,
+      "semi_diameter": 15.3
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.0,
+      "conic": 0.0,
+      "thickness": 0.0,
+      "material": null,
+      "comment": "IMAGE"
+    }
+  ],
+  "optimization": {
+    "variables": [
+      {
+        "surface": 1,
+        "param": "curvature"
+      },
+      {
+        "surface": 2,
+        "param": "curvature"
+      },
+      {
+        "surface": 3,
+        "param": "curvature"
+      },
+      {
+        "surface": 4,
+        "param": "curvature"
+      },
+      {
+        "surface": 5,
+        "param": "curvature"
+      },
+      {
+        "surface": 7,
+        "param": "curvature"
+      },
+      {
+        "surface": 8,
+        "param": "curvature"
+      },
+      {
+        "surface": 9,
+        "param": "curvature"
+      },
+      {
+        "surface": 9,
+        "param": "thickness"
+      }
+    ],
+    "merit_function": {
+      "rows": [
+        {
+          "type": "POWR",
+          "target": 0.0,
+          "weight": 0,
+          "bound": "=",
+          "params": {},
+          "comment": ""
+        }
+      ]
+    }
+  }
+}
