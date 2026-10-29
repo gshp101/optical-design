@@ -15,7 +15,7 @@ from lensforge import optimize as opt
 
 from . import edits as E
 from .analyses import GROUPS, REGISTRY
-from .analysis_window import AnalysisWindow
+from .analysis_window import MISSING_HINT, AnalysisWindow
 from .document import LensDocument, new_system
 from .lde import LensDataEditor
 from .mfe import MeritFunctionEditor
@@ -358,13 +358,21 @@ class MainWindow(QMainWindow):
 
     def _update_status(self):
         s = self.doc.system
-        try:
-            p = s.paraxial()
-            txt = (f"EFL {p.efl:.6g}   WFNO {p.working_fnum:.4g}   ENPD {p.epd:.5g}   "
-                   f"TOTR {sum(x.thickness for x in s.surfaces[1:-1]):.6g}   {s.units}")
-        except Exception:  # noqa: BLE001 - incomplete lens
-            txt = "first-order data unavailable"
+        missing = s.missing_materials()
+        style = ""
+        if missing:
+            txt = f"Cannot trace: missing glass {', '.join(missing)}"
+            style = "color: #a00; font-weight: bold;"
+        else:
+            try:
+                p = s.paraxial()
+                txt = (f"EFL {p.efl:.6g}   WFNO {p.working_fnum:.4g}   ENPD {p.epd:.5g}   "
+                       f"TOTR {sum(x.thickness for x in s.surfaces[1:-1]):.6g}   {s.units}")
+            except Exception as e:  # noqa: BLE001 - incomplete lens
+                txt = f"first-order data unavailable ({type(e).__name__}: {e})"
+                style = "color: #a00;"
         self.status_lens.setText(txt)
+        self.status_lens.setStyleSheet(style)
         self._update_title()
 
     def _show_merit(self, ev):
@@ -405,11 +413,18 @@ class MainWindow(QMainWindow):
         try:
             self.doc.open(path)
         except Exception as e:  # noqa: BLE001
-            QMessageBox.critical(self, "Open", f"Could not open {path}:\n{type(e).__name__}: {e}")
+            QMessageBox.critical(self, "Open", f"Could not open {path}:\n{type(e).__name__}: {e}\n\n"
+                                 f"The lens on screen is still {self.doc.display_name}.")
             return False
         self._add_recent(path)
         if self.doc.system.notes.startswith("ZMX import ignored"):
             self.statusBar().showMessage(self.doc.system.notes, 10000)
+        missing = self.doc.system.missing_materials_message()
+        if missing:
+            self.statusBar().showMessage(f"Cannot trace: {missing}", 15000)
+            QMessageBox.warning(self, "Missing glass",
+                                f"{os.path.basename(path)} was opened, but it cannot be ray traced.\n\n"
+                                f"{missing}\n\n{MISSING_HINT}")
         return True
 
     def save(self) -> bool:
@@ -464,6 +479,7 @@ class MainWindow(QMainWindow):
                 QMessageBox.critical(self, "Glass catalog", f"Could not load {path}:\n{e}")
                 return
             self.remember_agf(path)
+            self.doc.refresh()  # the new glasses may be the ones the lens was missing
             self.statusBar().showMessage(f"Loaded glass catalog {os.path.basename(path)}", 5000)
 
     # AGF catalogs the user loaded are reloaded at every start until forgotten.

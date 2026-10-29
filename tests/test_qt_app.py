@@ -1051,3 +1051,45 @@ def test_loaded_agf_catalog_is_remembered(win, tmp_path, monkeypatch):
         assert lib.find("MYGLASS") is None
     finally:
         lib.catalogs.pop("MYCAT", None)
+
+
+def test_missing_glass_clears_stale_analyses(win, tmp_path, monkeypatch):
+    """Opening a lens whose glass no catalog has must not leave the old lens's results on screen."""
+    from lensforge_qt import main_window as mw
+    warned = []
+    monkeypatch.setattr(mw.QMessageBox, "warning", lambda *a: warned.append(a[2]))
+    report = win.open_analysis("prescription")
+    layout = win.open_analysis("layout")
+    assert report.text.toPlainText() and layout.figure.axes and "EFL" in win.status_lens.text()
+    auto_off = win.open_analysis("spot")
+    auto_off.auto.setChecked(False)  # a new file is recomputed even with Auto off
+
+    s = lf.samples.achromat()
+    s.surfaces[1].material = "NOSUCHGLASS"
+    p = tmp_path / "missing.lens.json"
+    lf.save(s, str(p))
+    assert win.open_file(str(p))
+
+    assert warned and "NOSUCHGLASS (surface 1)" in warned[0]
+    assert "NOSUCHGLASS" in win.status_lens.text() and "EFL" not in win.status_lens.text()
+    for w in (report, layout, auto_off):
+        assert w.result is None and "NOSUCHGLASS" in w.error and "(error)" in w.windowTitle()
+    assert report.text.toPlainText() == "" and not layout.figure.axes and not auto_off.figure.axes
+    idx = lde_index(win, 1, "material")
+    assert win.lde.model.data(idx, Qt.BackgroundRole) is not None
+    assert "not in any loaded glass catalog" in win.lde.model.data(idx, Qt.ToolTipRole)
+
+    # fixing the glass brings the analyses back
+    win.doc.modify("fix", lambda x: E.set_cell(x, 1, "material", "N-BK7"))
+    assert report.error is None and "EFL" in win.status_lens.text() and layout.figure.axes
+
+
+def test_failed_open_keeps_current_lens(win, tmp_path, monkeypatch):
+    from lensforge_qt import main_window as mw
+    shown = []
+    monkeypatch.setattr(mw.QMessageBox, "critical", lambda *a: shown.append(a[2]))
+    p = tmp_path / "broken.lens.json"
+    p.write_text("{not json")
+    name = win.doc.display_name
+    assert not win.open_file(str(p))
+    assert f"still {name}" in shown[0]
