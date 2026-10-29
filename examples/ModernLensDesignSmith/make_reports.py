@@ -1,7 +1,8 @@
 """Write report.html in each chapter folder: how closely each model matches the book.
 
 The book values are read from each model's notes, so the report always reflects
-the files as committed.  Run from the repository root:
+the files as committed.  Also writes LensListing.html, a sortable table of every
+model with its lensforge first-order values.  Run from the repository root:
 
     python examples/ModernLensDesignSmith/make_reports.py
 """
@@ -298,6 +299,144 @@ def render(chapter, results):
     return "".join(out)
 
 
+def element_count(lens):
+    """Number of elements: glass passes grouped by their axial extent, so a Mangin mirror or an element the light
+    crosses twice counts once, plus mirrors that are not a coated face of one of those elements. The medium the
+    image lies in (immersion oil) is not an element."""
+    z, spans, mirrors, last = 0.0, set(), set(), None
+    surfs = lens.surfaces
+    for i, s in enumerate(surfs[1:-1], start=1):
+        m = s.material
+        name = str(m).upper() if m is not None else "AIR"
+        if name == "MIRROR":
+            mirrors.add(round(z, 3))
+        z2 = z + s.thickness
+        if name not in ("AIR", "MIRROR") and i + 1 < len(surfs) - 1:
+            span = (round(min(z, z2), 3), round(max(z, z2), 3))
+            # a dummy surface inside one element splits it into two passes of the same glass
+            if last and last[1] == m and last[0][1] == span[0]:
+                spans.discard(last[0])
+                span = (last[0][0], span[1])
+            spans.add(span)
+            last = (span, m)
+        else:
+            last = None
+        z = z2
+    # (the tables round thicknesses, so a coated face can sit a few thousandths off the element's face)
+    faces = [e for span in spans for e in span]
+    return len(spans) + sum(all(abs(m - f) > 0.05 for f in faces) for m in mirrors)
+
+
+def listing_row(path):
+    lens = lf.load(path)
+    p = lens.paraxial()
+    chapter = os.path.basename(os.path.dirname(path))
+    return {
+        "fig": figure_label(path),
+        "key": ".".join(str(k) for k in figure_key(path)[:3]),
+        "file": f"{chapter}/{os.path.basename(path)}",
+        "name": re.sub(r"\s*\(Smith, Modern Lens Design, Fig\. [^)]+\)", "", lens.name),
+        "chapter": chapter.split(" - ", 1)[1],
+        "chnum": figure_key(path)[0],
+        "EFL": p.efl,
+        "BFL": p.bfl,
+        "FFL": p.ffl,
+        "F": p.working_fnum,
+        "NA": 1.0 / (2.0 * p.working_fnum),
+        "HFOV": lens.max_field,
+        "elements": element_count(lens),
+    }
+
+
+LISTING_COLS = [("fig", "Figure", None), ("name", "Short description", None), ("chapter", "Chapter", None),
+                ("EFL", "EFL", 2), ("BFL", "BFL", 2), ("FFL", "FFL", 2), ("F", "F/#", 2), ("NA", "NA", 4),
+                ("HFOV", "HFOV", 2), ("elements", "Elements", 0)]
+
+LISTING_CSS = """
+main{max-width:1440px}
+td.l{white-space:normal;min-width:120px}
+.top{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin:0 0 14px}
+input[type=search]{font:inherit;padding:6px 10px;border:1px solid var(--line);border-radius:8px;background:var(--card);
+color:var(--fg);min-width:260px}
+th button{all:unset;cursor:pointer;display:inline-flex;gap:4px;align-items:center}
+th button:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:3px}
+th[aria-sort=ascending] button::after{content:"\\25B2";font-size:9px}
+th[aria-sort=descending] button::after{content:"\\25BC";font-size:9px}
+td a{color:var(--accent);text-decoration:none} td a:hover{text-decoration:underline}
+td.name{min-width:260px;max-width:420px}
+"""
+
+LISTING_JS = """
+const tbody = document.querySelector('tbody');
+const heads = [...document.querySelectorAll('th')];
+// Array.prototype.sort is stable, and each sort starts from the current order, so rows that tie on the new
+// column keep the order of the previous sort (sort by F/#, then by description: F/# order within each description)
+heads.forEach((th, col) => th.querySelector('button').addEventListener('click', () => {
+  const dir = th.getAttribute('aria-sort') === 'ascending' ? -1 : 1;
+  heads.forEach(h => h.removeAttribute('aria-sort'));
+  th.setAttribute('aria-sort', dir > 0 ? 'ascending' : 'descending');
+  const num = th.dataset.type === 'num';
+  const val = tr => tr.children[col].dataset.v ?? tr.children[col].textContent;
+  const rows = [...tbody.rows];
+  rows.sort((a, b) => {
+    const x = val(a), y = val(b);
+    if (num) {
+      const p = x === '' ? NaN : Number(x), q = y === '' ? NaN : Number(y);
+      if (isNaN(p) || isNaN(q)) return isNaN(p) - isNaN(q);  // blanks last either way
+      return dir * (p - q);
+    }
+    return dir * x.localeCompare(y, undefined, {numeric: true, sensitivity: 'base'});
+  });
+  tbody.append(...rows);
+}));
+const box = document.querySelector('input[type=search]'), count = document.getElementById('count');
+box.addEventListener('input', () => {
+  const t = box.value.trim().toLowerCase();
+  let n = 0;
+  for (const tr of tbody.rows) { const hit = !t || tr.textContent.toLowerCase().includes(t); tr.hidden = !hit; n += hit; }
+  count.textContent = n;
+});
+"""
+
+
+def render_listing(rows):
+    def cell(r, key, digits):
+        v = r[key]
+        if key == "fig":
+            # sort figures numerically by chapter, figure and zoom position
+            return f'<td class="l" data-v="{r["key"]}"><a href="{html.escape(r["file"])}">{html.escape(v)}</a></td>'
+        if key == "chapter":
+            return f'<td class="l" data-v="{r["chnum"]:03d}">{html.escape(v)}</td>'
+        if digits is None:
+            return f'<td class="l name">{html.escape(v)}</td>'
+        if not math.isfinite(v):
+            return f'<td data-v="{"1e300" if v > 0 else "-1e300"}">{"&minus;" if v < 0 else ""}&infin;</td>'
+        # sort on the value as shown, so values that look equal count as ties and keep the previous sort's order
+        return f'<td data-v="{v:.{digits}f}">{v:.{digits}f}</td>'.replace(">-", ">&minus;")
+
+    out = ['<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">',
+           '<meta name="viewport" content="width=device-width,initial-scale=1">',
+           '<title>Lens Listing</title><style>', CSS, LISTING_CSS, '</style></head><body><main>',
+           '<h1>Lens Listing</h1>',
+           '<p class="sub">Every prescription from Warren J. Smith, <i>Modern Lens Design</i>, 2nd ed., in this folder. '
+           'EFL, BFL, FFL, F/# and NA are computed by lensforge (paraxial, primary wavelength): BFL and FFL are the '
+           'back and front focal distances for an object at infinity, F/# is the paraxial working F/#, NA the '
+           'paraxial image-space NA, 1/(2 F/#). Elements counts lenses and mirrors (a Mangin mirror once). HFOV is the largest field angle in degrees. Click a column heading to sort; '
+           'sorting again by another column keeps the previous order among equal values.</p>',
+           f'<div class="top"><input type="search" placeholder="Filter rows" aria-label="Filter rows">'
+           f'<span class="notes"><b id="count">{len(rows)}</b> of {len(rows)} lenses</span></div>',
+           '<div class="wrap"><table><thead><tr>']
+    for key, label, digits in LISTING_COLS:
+        kind = "num" if digits is not None and key not in ("fig",) else "text"
+        out.append(f'<th class="{"l" if digits is None else ""}" data-type="{kind}"><button type="button">'
+                   f'{label}</button></th>')
+    out.append('</tr></thead><tbody>')
+    for r in rows:
+        out.append('<tr>' + ''.join(cell(r, k, d) for k, _, d in LISTING_COLS) + '</tr>')
+    out.append('</tbody></table></div></main><script>' + LISTING_JS + '</script></body></html>\n')
+    return "".join(out)
+
+
 def main():
     for chapter_dir in sorted(glob.glob(os.path.join(HERE, "Chapter *"))):
         files = sorted(glob.glob(os.path.join(chapter_dir, "Figure *.lens.json")), key=figure_key)
@@ -308,6 +447,11 @@ def main():
         with open(path, "w") as fh:
             fh.write(render(os.path.basename(chapter_dir), results))
         print(f"{path}: " + ", ".join(f"{sum(r['overall'] == g for r in results)} {g}" for g in GRADES))
+    files = sorted(glob.glob(os.path.join(HERE, "Chapter *", "Figure *.lens.json")), key=figure_key)
+    path = os.path.join(HERE, "LensListing.html")
+    with open(path, "w") as fh:
+        fh.write(render_listing([listing_row(f) for f in files]))
+    print(f"{path}: {len(files)} lenses")
 
 
 if __name__ == "__main__":

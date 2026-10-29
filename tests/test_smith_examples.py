@@ -1,5 +1,6 @@
 """The Smith "Modern Lens Design" examples must reproduce the book's paraxial data."""
 import glob
+import html
 import os
 import re
 
@@ -56,3 +57,12 @@ def test_matches_book(path):
 
 def test_models_found():
     assert len(MODELS) >= 277
+
+
+def test_lens_listing_lists_every_model():
+    # LensListing.html is written by make_reports.py; rerun it after adding or changing a model
+    with open(os.path.join(HERE, "..", "examples", "ModernLensDesignSmith", "LensListing.html")) as fh:
+        page = fh.read()
+    listed = re.findall(r'<a href="([^"]+\.lens\.json)">', page)
+    assert sorted(html.unescape(p) for p in listed) == sorted(
+        os.path.relpath(m, os.path.dirname(os.path.dirname(m))) for m in MODELS)
