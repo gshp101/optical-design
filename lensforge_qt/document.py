@@ -21,12 +21,16 @@ from lensforge import optimize as opt
 
 
 def finalize(system):
-    """Re-apply solves after an edit, as a lens data editor does."""
+    """Re-apply solves after an edit, as a lens data editor does, and keep the current
+    configuration's column of the multi-configuration table in step with the lens."""
     if getattr(system, "solves", None):
         try:
             opt.apply_solves(system)
         except Exception:  # a solve that cannot be met leaves the old value
             pass
+    mc = getattr(system, "multiconfig", None)
+    if mc is not None:
+        mc.capture(system)
 
 
 class _SnapshotCommand(QUndoCommand):

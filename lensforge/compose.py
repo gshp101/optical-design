@@ -256,6 +256,9 @@ def renumber_surface_refs(system, fn, operand_fn=None):
     vs = opt.variables(system)
     keep = []
     for v in vs:
+        if isinstance(v, opt.MCVariable):
+            keep.append(v)
+            continue
         n = fn(v.surface)
         if n is not None:
             v.surface = n
@@ -270,6 +273,9 @@ def renumber_surface_refs(system, fn, operand_fn=None):
                 setattr(x, name, n)
             keep.append(x)
     sl[:] = keep
+    mc = getattr(system, "multiconfig", None)
+    if mc is not None:
+        _renumber_mc(system, mc, fn)
     mf = getattr(system, "merit_function", None)
     if mf is not None:
         for row in mf.rows:
@@ -277,6 +283,34 @@ def renumber_surface_refs(system, fn, operand_fn=None):
                 v = row.params.get(name)
                 if isinstance(v, int) and not isinstance(v, bool):
                     row.params[name] = operand_fn(v)
+
+
+def _renumber_mc(system, mc, fn):
+    """Renumber the multi-configuration table's surfaces; rows on deleted surfaces go, with their variables."""
+    before = list(mc.rows)
+    mc.renumber_surfaces(fn)
+    kept = {id(r) for r in mc.rows}
+    remove_mc_rows(system, [i for i, r in enumerate(before) if id(r) not in kept], already_removed=True)
+
+
+def remove_mc_rows(system, indices, already_removed=False):
+    """Delete rows of the multi-configuration table, dropping their cell variables and
+    renumbering the cell variables of later rows."""
+    from . import optimize as opt
+    gone = sorted(set(indices))
+    mc = system.multiconfig
+    if not already_removed:
+        for i in reversed(gone):
+            mc.remove_row(i)
+    vs = opt.variables(system)
+    keep = []
+    for v in vs:
+        if isinstance(v, opt.MCVariable):
+            if v.row in gone:
+                continue
+            v.row -= sum(1 for g in gone if g < v.row)
+        keep.append(v)
+    vs[:] = keep
 
 
 def check_surface_range(system, first: int, last: Optional[int] = None):

@@ -642,6 +642,12 @@ def _blnk(ctx, **kw):
     return 0.0
 
 
+@operand("CONF", "Switch to configuration cfg (counting from 1) for the rows that follow (multi-configuration)")
+def _conf(ctx, cfg=1):
+    # the switch itself is made by MeritFunction._compute; the row's value is the configuration number
+    return float(cfg)
+
+
 @operand("CONS", "Constant value")
 def _cons(ctx, value=0.0):
     return float(value)

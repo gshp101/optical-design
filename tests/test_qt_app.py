@@ -1120,3 +1120,116 @@ def test_failed_open_keeps_current_lens(win, tmp_path, monkeypatch):
     name = win.doc.display_name
     assert not win.open_file(str(p))
     assert f"still {name}" in shown[0]
+
+
+# ---------------------------------------------------------------------------
+# Multi-configuration
+# ---------------------------------------------------------------------------
+ZOOM_MC = os.path.join(HERE, "..", "examples", "ModernLensDesignSmith", "Chapter 20 - Zoom Lenses",
+                       "Figure 20.1 zoom.lens.json")
+
+
+def test_multiconfig_editor_and_switching(win):
+    assert win.open_file(ZOOM_MC)
+    s = win.doc.system
+    mc = s.multiconfig
+    assert mc.n_configs == 3 and mc.current == 1
+    m = win.mce.model
+    assert m.rowCount() == len(mc.rows) and m.columnCount() == 3 + 3
+    assert "Config 1" in win.status_config.text() and "short" in win.status_config.text()
+    assert "* Config 1" in m.headerData(3, Qt.Horizontal)
+    efl_short = s.paraxial().efl
+    win.show_mce()
+    # switching (menu command, header double-click) updates the lens, status bar and editor
+    win.step_config(+1)
+    assert win.doc.system.current_config == 2
+    assert win.doc.system.surfaces[8].thickness == pytest.approx(31.64)
+    assert "mid" in win.status_config.text()
+    win.mce._header_double_clicked(3 + 2)
+    assert win.doc.system.current_config == 3
+    assert win.doc.system.paraxial().efl > efl_short
+    win.step_config(+1)  # wraps round
+    assert win.doc.system.current_config == 1
+    win.doc.undo_stack.undo()
+    assert win.doc.system.current_config == 3
+
+
+def test_multiconfig_cells_and_lens_edits(win):
+    assert win.open_file(ZOOM_MC)
+    m = win.mce.model
+    row = next(i for i, r in enumerate(win.doc.system.multiconfig.rows) if r.label == "THIC 8")
+    # a cell of another configuration does not change the lens
+    assert m.setData(m.index(row, 3 + 1), "33", Qt.EditRole)
+    assert win.doc.system.multiconfig.value(row, 2) == 33.0
+    assert win.doc.system.surfaces[8].thickness == pytest.approx(59.24)
+    # a cell of the current configuration does
+    assert m.setData(m.index(row, 3 + 0), "58", Qt.EditRole)
+    assert win.doc.system.surfaces[8].thickness == 58.0
+    # editing the lens itself writes the current configuration's cell
+    assert win.lde.model.setData(lde_index(win, 8, "thickness"), "57", Qt.EditRole)
+    assert win.doc.system.multiconfig.value(row, 1) == 57.0
+    assert m.data(m.index(row, 3)) == "57"
+    # bad input is refused; a bad reference turns the row red
+    assert not m.setData(m.index(row, 3), "abc", Qt.EditRole)
+    assert m.setData(m.index(row, 1), "99", Qt.EditRole)
+    assert m.error(row) and m.data(m.index(row, 0), Qt.BackgroundRole) is not None
+    win.doc.undo_stack.undo()
+    assert m.error(row) is None
+
+
+def test_multiconfig_editor_rows_configs_and_variables(win):
+    from PySide6.QtCore import QItemSelectionModel
+    mce = win.mce
+    assert win.doc.system.multiconfig is None
+    mce.insert_row()
+    mc = win.doc.system.multiconfig
+    assert mc.n_configs == 1 and mc.rows[0].label == "THIC 1"
+    mce.view.setCurrentIndex(mce.model.index(0, 3))
+    mce.add_config()
+    mc = win.doc.system.multiconfig
+    assert mc.n_configs == 2 and mc.rows[0].values[0] == mc.rows[0].values[1]
+    mce.set_config_name(2, "near")
+    assert win.doc.system.multiconfig.names == ["", "near"]
+    m = mce.model
+    assert m.setData(m.index(0, 0), "apER", Qt.EditRole)
+    assert win.doc.system.multiconfig.rows[0].label == "APER"
+    assert m.setData(m.index(0, 4), "12", Qt.EditRole)
+    mce.view.setCurrentIndex(m.index(0, 4))
+    mce.view.selectionModel().select(m.index(0, 4), QItemSelectionModel.ClearAndSelect)
+    mce.toggle_variable()
+    assert opt.is_mc_variable(win.doc.system, 0, 2)
+    assert "V" in m.data(m.index(0, 4))
+    mce.delete_config(1)
+    s = win.doc.system
+    assert s.multiconfig.n_configs == 1 and s.aperture_value == 12.0
+    assert opt.is_mc_variable(s, 0, 1)  # the variable followed its configuration
+    mce.view.selectRow(0)
+    mce.delete_rows()
+    assert not win.doc.system.multiconfig.rows and not opt.variables(win.doc.system)
+
+
+def test_analysis_window_config_choice(win):
+    assert win.open_file(ZOOM_MC)
+    w = win.open_analysis("spot")
+    assert w.config.isVisible() or not w.isVisible()
+    assert w.config.count() == 4 and "[Config 1 (short)]" in w.windowTitle()
+    w.set_config(3)
+    assert "[Config 3 (long)]" in w.windowTitle() and w.error is None
+    assert w.state()["settings"]["config"] == 3
+    win.step_config(+1)  # the window stays on configuration 3
+    assert "[Config 3 (long)]" in w.windowTitle()
+    w.set_config(0)
+    assert "[Config 2 (mid)]" in w.windowTitle()
+    lay = win.open_analysis("mc_layout")
+    assert lay.error is None and len(lay.result) == 3
+    assert len(lay.figure.axes) == 3
+
+
+def test_merit_wizard_covers_every_configuration(win, monkeypatch):
+    from lensforge_qt import mfe as mfe_mod
+    assert win.open_file(ZOOM_MC)
+    monkeypatch.setattr(mfe_mod.MeritWizard, "exec", lambda dlg: mfe_mod.QDialog.Accepted)
+    win.mfe.wizard()
+    rows = win.doc.system.merit_function.rows
+    assert [r.params["cfg"] for r in rows if r.type == "CONF"] == [1, 2, 3]
+    assert sum(r.type == "CONF" for r in rows) == 3  # the old CONF rows were replaced, not kept

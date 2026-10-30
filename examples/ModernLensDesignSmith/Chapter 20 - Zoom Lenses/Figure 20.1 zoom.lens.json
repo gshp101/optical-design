@@ -1,0 +1,591 @@
+{
+  "format": "lensforge-1",
+  "name": "Takayuki Itoh, USP 4196968, wide-angle zoom (Smith, Modern Lens Design, Fig. 20.1 zoom)",
+  "units": "mm",
+  "aperture": {
+    "type": "EPD",
+    "value": 28.6
+  },
+  "fields": {
+    "type": "ANGLE",
+    "values": [
+      {
+        "x": 0.0,
+        "y": 0.0,
+        "weight": 1.0,
+        "vdx": 0.0,
+        "vdy": 0.0,
+        "vcx": 0.0,
+        "vcy": 0.0
+      },
+      {
+        "x": 0.0,
+        "y": 29.4,
+        "weight": 1.0,
+        "vdx": 0.0,
+        "vdy": 0.0,
+        "vcx": 0.0,
+        "vcy": 0.0
+      },
+      {
+        "x": 0.0,
+        "y": 42.0,
+        "weight": 1.0,
+        "vdx": 0.0,
+        "vdy": 0.0,
+        "vcx": 0.0,
+        "vcy": 0.0
+      }
+    ]
+  },
+  "wavelengths": {
+    "values": [
+      {
+        "value": 0.5875618,
+        "weight": 1.0
+      },
+      {
+        "value": 0.4861,
+        "weight": 1.0
+      },
+      {
+        "value": 0.6563,
+        "weight": 1.0
+      }
+    ],
+    "primary": 0
+  },
+  "ray_aiming": "paraxial",
+  "notes": "Warren J. Smith, Modern Lens Design, 2nd ed., Figure 20.1 (zoom), p. 374. Multi-configuration model: configuration 1 = short, 2 = mid, 3 = long. Book values by configuration: [short] Figure 20.1 short, p. 374. Book: EFL 100, BFL 149.7, NA -0.143 (F/3.5), GIH 90.04 (HFOV=42.00), PTZ/F -9.976, VL 249.88, infinite conjugate. [mid] Figure 20.1 mid, p. 375. Book: EFL 120, BFL 167.2, NA -0.1427 (F/3.5), GIH 89.13 (HFOV=36.60), PTZ/F -8.276, VL 222.28, infinite conjugate. [long] Figure 20.1 long, p. 376. Book: EFL 145.9, BFL 189.8, NA -0.1433 (F/3.5), GIH 88.68 (HFOV=31.30), PTZ/F -6.853, VL 197.85, infinite conjugate. [end] Glass: BK7 entered as BSL7 (Ohara BSL7, 516/641; this table lists BK7 as 1.516/64.1, not Schott BK7's 517/642); LAK06 entered as LAL56 (Hikari LAK06 = Ohara LAL56, 678/507); LASF3 entered as LAH53 (Ohara, same nd and V as the book); SF03 entered as SF57 (Hikari SF03 = Schott SF57, 847/238; the book gives 847/239); SK5 entered as N-SK5. Stop at surface 9 (the book's plane air surface). Zoom lens: the configurations are the zoom positions the book lists (short, mid, long); the per-position files Figure 20.1 short/mid/long.lens.json hold the same data one position per file. The multi-configuration table sets APER, YFIE 1, YFIE 2, THIC 8, SDIA 9, THIC 19. Aspheric surface 7 uses the book's kappa (conic constant) and ad, ae, af, ag (4th to 10th order) coefficients. The book calls the middle position \"nominal\".",
+  "surfaces": [
+    {
+      "type": "STANDARD",
+      "curvature": 0.0,
+      "conic": 0.0,
+      "thickness": "inf",
+      "material": null,
+      "comment": "OBJECT"
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.0033767812521104884,
+      "conic": 0.0,
+      "thickness": 14.22,
+      "material": "N-SK5",
+      "semi_diameter": 82.0
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.0010939243441923556,
+      "conic": 0.0,
+      "thickness": 0.41,
+      "material": null,
+      "semi_diameter": 82.0
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.005325380764724678,
+      "conic": 0.0,
+      "thickness": 4.88,
+      "material": "LAH53",
+      "semi_diameter": 75.0
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.015569048731122527,
+      "conic": 0.0,
+      "thickness": 30.88,
+      "material": null,
+      "semi_diameter": 52.0
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.0013929516645772393,
+      "conic": 0.0,
+      "thickness": 5.28,
+      "material": "LAL56",
+      "semi_diameter": 50.5
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.008317391665973551,
+      "conic": 0.0,
+      "thickness": 18.81,
+      "material": null,
+      "semi_diameter": 50.5
+    },
+    {
+      "type": "EVENASPH",
+      "curvature": 0.008798944126704795,
+      "conic": 0.0,
+      "coefficients": [
+        0.0,
+        2.521e-08,
+        1.05e-11,
+        2.006e-15,
+        -3.388e-19
+      ],
+      "thickness": 12.19,
+      "material": "SFL6",
+      "semi_diameter": 42.0
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.004475073838718339,
+      "conic": 0.0,
+      "thickness": 59.24,
+      "material": null,
+      "semi_diameter": 42.0
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.0,
+      "conic": 0.0,
+      "thickness": 4.88,
+      "material": null,
+      "semi_diameter": 26.9,
+      "stop": true
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.005842145235730561,
+      "conic": 0.0,
+      "thickness": 28.32,
+      "material": "LAH53",
+      "semi_diameter": 35.0
+    },
+    {
+      "type": "STANDARD",
+      "curvature": -0.0017688470654827182,
+      "conic": 0.0,
+      "thickness": 9.26,
+      "material": null,
+      "semi_diameter": 35.0
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.011937447773665991,
+      "conic": 0.0,
+      "thickness": 10.16,
+      "material": "LAH53",
+      "semi_diameter": 33.0
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.0038150465435678313,
+      "conic": 0.0,
+      "thickness": 9.13,
+      "material": null,
+      "semi_diameter": 33.0
+    },
+    {
+      "type": "STANDARD",
+      "curvature": -0.004570801718621446,
+      "conic": 0.0,
+      "thickness": 15.93,
+      "material": "SF57",
+      "semi_diameter": 32.0
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.011730205278592375,
+      "conic": 0.0,
+      "thickness": 7.31,
+      "material": null,
+      "semi_diameter": 32.0
+    },
+    {
+      "type": "STANDARD",
+      "curvature": -0.0011906888134785973,
+      "conic": 0.0,
+      "thickness": 9.14,
+      "material": "BSL7",
+      "semi_diameter": 32.0
+    },
+    {
+      "type": "STANDARD",
+      "curvature": -0.010606703436571913,
+      "conic": 0.0,
+      "thickness": 0.41,
+      "material": null,
+      "semi_diameter": 32.0
+    },
+    {
+      "type": "STANDARD",
+      "curvature": -0.00029216273464319626,
+      "conic": 0.0,
+      "thickness": 9.43,
+      "material": "BSL7",
+      "semi_diameter": 32.8
+    },
+    {
+      "type": "STANDARD",
+      "curvature": -0.00864528399757932,
+      "conic": 0.0,
+      "thickness": 149.674,
+      "material": null,
+      "semi_diameter": 32.8
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.0,
+      "conic": 0.0,
+      "thickness": 0.0,
+      "material": null,
+      "comment": "IMAGE"
+    }
+  ],
+  "multiconfig": {
+    "configs": 3,
+    "current": 1,
+    "names": [
+      "short",
+      "mid",
+      "long"
+    ],
+    "rows": [
+      {
+        "type": "APER",
+        "values": [
+          28.6,
+          34.248,
+          41.8149
+        ]
+      },
+      {
+        "type": "YFIE",
+        "field": 1,
+        "values": [
+          29.4,
+          25.62,
+          21.91
+        ]
+      },
+      {
+        "type": "YFIE",
+        "field": 2,
+        "values": [
+          42.0,
+          36.6,
+          31.3
+        ]
+      },
+      {
+        "type": "THIC",
+        "surface": 8,
+        "values": [
+          59.24,
+          31.64,
+          7.21
+        ]
+      },
+      {
+        "type": "SDIA",
+        "surface": 9,
+        "values": [
+          26.9,
+          28.9,
+          31.8
+        ]
+      },
+      {
+        "type": "THIC",
+        "surface": 19,
+        "values": [
+          149.674,
+          167.189,
+          189.8
+        ]
+      }
+    ]
+  },
+  "optimization": {
+    "variables": [
+      {
+        "surface": 1,
+        "param": "curvature"
+      },
+      {
+        "surface": 2,
+        "param": "curvature"
+      },
+      {
+        "surface": 3,
+        "param": "curvature"
+      },
+      {
+        "surface": 4,
+        "param": "curvature"
+      },
+      {
+        "surface": 5,
+        "param": "curvature"
+      },
+      {
+        "surface": 6,
+        "param": "curvature"
+      },
+      {
+        "surface": 7,
+        "param": "curvature"
+      },
+      {
+        "surface": 8,
+        "param": "curvature"
+      },
+      {
+        "surface": 10,
+        "param": "curvature"
+      },
+      {
+        "surface": 11,
+        "param": "curvature"
+      },
+      {
+        "surface": 12,
+        "param": "curvature"
+      },
+      {
+        "surface": 13,
+        "param": "curvature"
+      },
+      {
+        "surface": 14,
+        "param": "curvature"
+      },
+      {
+        "surface": 15,
+        "param": "curvature"
+      },
+      {
+        "surface": 16,
+        "param": "curvature"
+      },
+      {
+        "surface": 17,
+        "param": "curvature"
+      },
+      {
+        "surface": 18,
+        "param": "curvature"
+      },
+      {
+        "surface": 19,
+        "param": "curvature"
+      },
+      {
+        "mc_row": 5,
+        "config": 1
+      },
+      {
+        "mc_row": 5,
+        "config": 2
+      },
+      {
+        "mc_row": 5,
+        "config": 3
+      }
+    ],
+    "merit_function": {
+      "rows": [
+        {
+          "type": "BLNK",
+          "target": 0.0,
+          "weight": 0,
+          "bound": "=",
+          "params": {},
+          "comment": "Default merit: spot, centroid, 3 rings x 6 arms"
+        },
+        {
+          "type": "CONF",
+          "target": 0.0,
+          "weight": 0,
+          "bound": "=",
+          "params": {
+            "cfg": 1
+          },
+          "comment": "Config 1 (short)"
+        },
+        {
+          "type": "EFFL",
+          "target": 100.0,
+          "weight": 0,
+          "bound": "=",
+          "params": {},
+          "comment": "book EFL, short"
+        },
+        {
+          "type": "RAYS",
+          "target": 0.0,
+          "weight": 1.0,
+          "bound": "=",
+          "params": {
+            "field": 0,
+            "reference": "centroid",
+            "rings": 3,
+            "arms": 6,
+            "wavelengths": null,
+            "symmetric": null
+          },
+          "comment": ""
+        },
+        {
+          "type": "RAYS",
+          "target": 0.0,
+          "weight": 1.0,
+          "bound": "=",
+          "params": {
+            "field": 1,
+            "reference": "centroid",
+            "rings": 3,
+            "arms": 6,
+            "wavelengths": null,
+            "symmetric": null
+          },
+          "comment": ""
+        },
+        {
+          "type": "RAYS",
+          "target": 0.0,
+          "weight": 1.0,
+          "bound": "=",
+          "params": {
+            "field": 2,
+            "reference": "centroid",
+            "rings": 3,
+            "arms": 6,
+            "wavelengths": null,
+            "symmetric": null
+          },
+          "comment": ""
+        },
+        {
+          "type": "CONF",
+          "target": 0.0,
+          "weight": 0,
+          "bound": "=",
+          "params": {
+            "cfg": 2
+          },
+          "comment": "Config 2 (mid)"
+        },
+        {
+          "type": "EFFL",
+          "target": 120.0,
+          "weight": 0,
+          "bound": "=",
+          "params": {},
+          "comment": "book EFL, mid"
+        },
+        {
+          "type": "RAYS",
+          "target": 0.0,
+          "weight": 1.0,
+          "bound": "=",
+          "params": {
+            "field": 0,
+            "reference": "centroid",
+            "rings": 3,
+            "arms": 6,
+            "wavelengths": null,
+            "symmetric": null
+          },
+          "comment": ""
+        },
+        {
+          "type": "RAYS",
+          "target": 0.0,
+          "weight": 1.0,
+          "bound": "=",
+          "params": {
+            "field": 1,
+            "reference": "centroid",
+            "rings": 3,
+            "arms": 6,
+            "wavelengths": null,
+            "symmetric": null
+          },
+          "comment": ""
+        },
+        {
+          "type": "RAYS",
+          "target": 0.0,
+          "weight": 1.0,
+          "bound": "=",
+          "params": {
+            "field": 2,
+            "reference": "centroid",
+            "rings": 3,
+            "arms": 6,
+            "wavelengths": null,
+            "symmetric": null
+          },
+          "comment": ""
+        },
+        {
+          "type": "CONF",
+          "target": 0.0,
+          "weight": 0,
+          "bound": "=",
+          "params": {
+            "cfg": 3
+          },
+          "comment": "Config 3 (long)"
+        },
+        {
+          "type": "EFFL",
+          "target": 145.9,
+          "weight": 0,
+          "bound": "=",
+          "params": {},
+          "comment": "book EFL, long"
+        },
+        {
+          "type": "RAYS",
+          "target": 0.0,
+          "weight": 1.0,
+          "bound": "=",
+          "params": {
+            "field": 0,
+            "reference": "centroid",
+            "rings": 3,
+            "arms": 6,
+            "wavelengths": null,
+            "symmetric": null
+          },
+          "comment": ""
+        },
+        {
+          "type": "RAYS",
+          "target": 0.0,
+          "weight": 1.0,
+          "bound": "=",
+          "params": {
+            "field": 1,
+            "reference": "centroid",
+            "rings": 3,
+            "arms": 6,
+            "wavelengths": null,
+            "symmetric": null
+          },
+          "comment": ""
+        },
+        {
+          "type": "RAYS",
+          "target": 0.0,
+          "weight": 1.0,
+          "bound": "=",
+          "params": {
+            "field": 2,
+            "reference": "centroid",
+            "rings": 3,
+            "arms": 6,
+            "wavelengths": null,
+            "symmetric": null
+          },
+          "comment": ""
+        }
+      ]
+    }
+  }
+}

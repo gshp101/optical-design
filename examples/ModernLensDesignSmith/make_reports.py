@@ -34,8 +34,26 @@ GRADES = ("exact", "close", "off")
 GRADE_TEXT = {"exact": "Exact", "close": "Close", "off": "Off"}
 
 
-# zoom lenses have one file per zoom position, e.g. "Figure 20.1 short.lens.json"
-CONFIG_ORDER = ("", "short", "mid", "long", "macro")
+# zoom lenses have one file per zoom position, e.g. "Figure 20.1 short.lens.json", and one multi-configuration
+# file with every position, "Figure 20.1 zoom.lens.json" (reported once per configuration, after the positions)
+CONFIG_ORDER = ("", "short", "mid", "long", "macro", "zoom")
+
+
+def configurations(path):
+    """(label, lens, notes) for each configuration of a model file: one for a plain model, one per zoom position
+    for a multi-configuration model, with that position's "[short] ... Book: ..." part of the notes in front of the
+    notes common to all positions."""
+    lens = lf.load(path)
+    mc = lens.multiconfig
+    if mc is None:
+        return [(figure_label(path), lens, lens.notes)]
+    common = re.sub(r"Book values by configuration: .*?\[end\] ", "", lens.notes)
+    out = []
+    for k in mc.configs:
+        name = mc.names[k - 1]
+        seg = re.search(rf"\[{name}\] (.*?)(?= \[)", lens.notes).group(1)
+        out.append((f"{figure_label(path)} ({name})", lens.config_copy(k), f"{seg} {common}"))
+    return out
 
 
 def figure_key(path):
@@ -115,9 +133,11 @@ def grade(book, unit, model, scale=0.0):
     return "off"
 
 
-def analyse(path):
-    lens = lf.load(path)
-    book = book_values(lens.notes)
+def analyse(path, label=None, lens=None, notes=None):
+    if lens is None:
+        lens = lf.load(path)
+    notes = notes if notes is None else notes
+    book = book_values(notes)
     w0 = lens.wavelengths[lens.primary_wavelength].value
     p = lens.paraxial()
     surfs = lens.surfaces
@@ -139,15 +159,15 @@ def analyse(path):
                          grade(b, unit, model[key], book["EFL"][0] if key == "BFL" and "EFL" in book else 0.0))
     # a model's notes can flag a book GIH that is not a paraxial value (e.g. Fig. 9.17), or a book VL that leaves
     # out an air space (e.g. Fig. 21.14); these are then not graded
-    ungraded = {"GIH"} if re.search(r"book's GIH [\d.]+ is not the paraxial", lens.notes) else set()
-    if re.search(r"book's VL [\d.]+ leaves out", lens.notes):
+    ungraded = {"GIH"} if re.search(r"book's GIH [\d.]+ is not the paraxial", notes) else set()
+    if re.search(r"book's VL [\d.]+ leaves out", notes):
         ungraded.add("VL")
     first = [rows[k][3] for k in FIRST_ORDER if k in rows and k not in ungraded]
     overall = max(first, key=GRADES.index) if first else "off"
-    glass = re.search(r"Glass: (.*?\.)(?: [A-Z]|$)", lens.notes)
-    disc = re.search(r"Discrepancy with the book: (.*?\.)(?= [A-Z]|$)", lens.notes)
+    glass = re.search(r"Glass: (.*?\.)(?: [A-Z]|$)", notes)
+    disc = re.search(r"Discrepancy with the book: (.*?\.)(?= [A-Z]|$)", notes)
     return {
-        "fig": figure_label(path),
+        "fig": label or figure_label(path),
         "file": os.path.basename(path),
         "name": re.sub(r"\s*\(Smith, Modern Lens Design, Fig\. [^)]+\)", "", lens.name),
         "page": book["page"],
@@ -327,12 +347,13 @@ def element_count(lens):
     return len(spans) + sum(all(abs(m - f) > 0.05 for f in faces) for m in mirrors)
 
 
-def listing_row(path):
-    lens = lf.load(path)
+def listing_row(path, label=None, lens=None):
+    if lens is None:
+        lens = lf.load(path)
     p = lens.paraxial()
     chapter = os.path.basename(os.path.dirname(path))
     return {
-        "fig": figure_label(path),
+        "fig": label or figure_label(path),
         "key": ".".join(str(k) for k in figure_key(path)[:3]),
         "file": f"{chapter}/{os.path.basename(path)}",
         "name": re.sub(r"\s*\(Smith, Modern Lens Design, Fig\. [^)]+\)", "", lens.name),
@@ -421,7 +442,8 @@ def render_listing(rows):
            '<p class="sub">Every prescription from Warren J. Smith, <i>Modern Lens Design</i>, 2nd ed., in this folder. '
            'EFL, BFL, FFL, F/# and NA are computed by lensforge (paraxial, primary wavelength): BFL and FFL are the '
            'back and front focal distances for an object at infinity, F/# is the paraxial working F/#, NA the '
-           'paraxial image-space NA, 1/(2 F/#). Elements counts lenses and mirrors (a Mangin mirror once). HFOV is the largest field angle in degrees. Click a column heading to sort; '
+           'paraxial image-space NA, 1/(2 F/#). Zoom lenses are listed once per zoom-position file and again for each '
+           'configuration of their multi-configuration file, e.g. "20.1 zoom (short)". Elements counts lenses and mirrors (a Mangin mirror once). HFOV is the largest field angle in degrees. Click a column heading to sort; '
            'sorting again by another column keeps the previous order among equal values.</p>',
            f'<div class="top"><input type="search" placeholder="Filter rows" aria-label="Filter rows">'
            f'<span class="notes"><b id="count">{len(rows)}</b> of {len(rows)} lenses</span></div>',
@@ -442,7 +464,7 @@ def main():
         files = sorted(glob.glob(os.path.join(chapter_dir, "Figure *.lens.json")), key=figure_key)
         if not files:
             continue
-        results = [analyse(f) for f in files]
+        results = [analyse(f, label, lens, notes) for f in files for label, lens, notes in configurations(f)]
         path = os.path.join(chapter_dir, "report.html")
         with open(path, "w") as fh:
             fh.write(render(os.path.basename(chapter_dir), results))
@@ -450,8 +472,9 @@ def main():
     files = sorted(glob.glob(os.path.join(HERE, "Chapter *", "Figure *.lens.json")), key=figure_key)
     path = os.path.join(HERE, "LensListing.html")
     with open(path, "w") as fh:
-        fh.write(render_listing([listing_row(f) for f in files]))
-    print(f"{path}: {len(files)} lenses")
+        fh.write(render_listing([listing_row(f, label, lens) for f in files
+                                 for label, lens, _ in configurations(f)]))
+    print(f"{path}: {len(files)} lens files")
 
 
 if __name__ == "__main__":

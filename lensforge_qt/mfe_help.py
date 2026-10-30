@@ -33,8 +33,8 @@ OPERAND_GROUPS: Dict[str, List[str]] = {
         "RAYS", "OPDS", "RSCE", "RSCH", "GEOS", "RWCE", "STRH", "MTFT", "MTFS", "MTFA", "EERA", "ZERN", "DIST",
         "LACL", "RELI"],
     "Third-order (Seidel) aberrations": ["SPHA", "COMA", "ASTI", "FCUR", "DISW", "SEID"],
-    "Maths on other rows, constants and user functions": [
-        "BLNK", "CONS", "SUMM", "DIFF", "PROD", "DIVI", "ABSO", "SQRT", "OSUM", "MAXX", "MINN", "OPGT", "OPLT",
+    "Maths on other rows, constants, configuration switching and user functions": [
+        "BLNK", "CONF", "CONS", "SUMM", "DIFF", "PROD", "DIVI", "ABSO", "SQRT", "OSUM", "MAXX", "MINN", "OPGT", "OPLT",
         "OPVA", "USER"],
 }
 
@@ -73,6 +73,8 @@ PARAM_HELP: Dict[str, str] = {
               "semi-diameter of the two surfaces.",
     "sampling": "Pupil grid size for RWCE and RELI (32 = 32 x 32).",
     "value": "CONS: the constant.",
+    "cfg": "CONF: the configuration (counting from 1) the rows below it are evaluated in; see Tools > "
+           "Multi-Configuration Editor. After the last row the lens returns to the configuration it showed.",
     "a, b": "Row references for the maths operands. They count from 0, so the first row of the editor "
             "(row 1) is a=0 and row 5 is a=4. A row can only refer to rows above it.",
     "func": "USER (scripts only): a Python function f(system, **args) returning a number or a Block.",

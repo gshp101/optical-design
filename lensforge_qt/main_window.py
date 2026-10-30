@@ -18,6 +18,7 @@ from .analyses import GROUPS, REGISTRY
 from .analysis_window import MISSING_HINT, AnalysisWindow
 from .document import LensDocument, new_system
 from .lde import LensDataEditor
+from .mce import MultiConfigEditor, switch_config
 from .mfe import MeritFunctionEditor
 from .opt_dialogs import OptimizationDialog, ToleranceDialog
 from .script_console import ScriptConsole
@@ -83,6 +84,11 @@ class MainWindow(QMainWindow):
         self.mfe = MeritFunctionEditor(self.doc)
         self.mfe.helpRequested.connect(self.help_contents)
         self.mfe_dock = self._dock("Merit Function Editor", self.mfe, Qt.BottomDockWidgetArea, "mfe")
+        self.mce = MultiConfigEditor(self.doc)
+        self.mce.helpRequested.connect(self.help_contents)
+        self.mce.statusMessage.connect(lambda m: self.statusBar().showMessage(m, 5000))
+        self.mce_dock = self._dock("Multi-Configuration Editor", self.mce, Qt.BottomDockWidgetArea, "mce")
+        self.tabifyDockWidget(self.mfe_dock, self.mce_dock)
         self.console = ScriptConsole(self.doc)
         self.console_dock = self._dock("Python Shell", self.console, Qt.BottomDockWidgetArea, "script")
         self.tabifyDockWidget(self.mfe_dock, self.console_dock)
@@ -90,6 +96,7 @@ class MainWindow(QMainWindow):
         self.undo_view.setEmptyLabel("<original lens>")
         self.undo_dock = self._dock("Undo History", self.undo_view, Qt.LeftDockWidgetArea, "undo")
         self.mfe_dock.hide()
+        self.mce_dock.hide()
         self.console_dock.hide()
         self.undo_dock.hide()
 
@@ -153,6 +160,9 @@ class MainWindow(QMainWindow):
         self.a_auto_sd = A("Make All Semi-Diameters Automatic", self.auto_semi_diameters)
         self.a_focus = A("&Quick Focus (paraxial)", self.quick_focus, "Ctrl+Shift+F")
         self.a_mfe = A("&Merit Function Editor", self.show_mfe, "F6")
+        self.a_mce = A("Multi-&Configuration Editor", self.show_mce, "F7")
+        self.a_next_config = A("&Next Configuration", lambda: self.step_config(+1), "Ctrl+]")
+        self.a_prev_config = A("Pre&vious Configuration", lambda: self.step_config(-1), "Ctrl+[")
         self.a_opt = A("&Optimization...", self.optimization, "Ctrl+U")
         self.a_tol = A("&Tolerancing...", self.tolerancing, "Ctrl+Shift+T")
         self.a_vary_curv = A("Make All Curvatures Variable", lambda: self.doc.modify(
@@ -236,6 +246,9 @@ class MainWindow(QMainWindow):
             m.addAction(a)
         m.addSeparator()
         m.addAction(self.a_mfe)
+        m.addAction(self.a_mce)
+        m.addAction(self.a_next_config)
+        m.addAction(self.a_prev_config)
         vm = m.addMenu("Variables and Solves")
         for a in (self.a_vary_curv, self.a_vary_thick, self.a_clear_vars, self.a_clear_solves):
             vm.addAction(a)
@@ -346,8 +359,10 @@ class MainWindow(QMainWindow):
         return dlg
 
     def _make_status(self):
+        self.status_config = QLabel()
         self.status_lens = QLabel()
         self.status_merit = QLabel()
+        self.statusBar().addPermanentWidget(self.status_config)
         self.statusBar().addPermanentWidget(self.status_lens)
         self.statusBar().addPermanentWidget(self.status_merit)
 
@@ -358,6 +373,10 @@ class MainWindow(QMainWindow):
 
     def _update_status(self):
         s = self.doc.system
+        mc = getattr(s, "multiconfig", None)
+        self.status_config.setText("" if mc is None or mc.n_configs < 2 else
+                                   f"{mc.name(mc.current)} of {mc.n_configs}   ")
+        self.status_config.setStyleSheet("font-weight: bold;")
         missing = s.missing_materials()
         style = ""
         if missing:
@@ -605,6 +624,19 @@ class MainWindow(QMainWindow):
         self.mfe_dock.show()
         self.mfe_dock.raise_()
 
+    def show_mce(self):
+        self.mce_dock.show()
+        self.mce_dock.raise_()
+
+    def step_config(self, step):
+        """Show the next (+1) or previous (-1) configuration, wrapping round."""
+        mc = getattr(self.doc.system, "multiconfig", None)
+        if mc is None or mc.n_configs < 2:
+            self.statusBar().showMessage("This lens has a single configuration (Tools > Multi-Configuration "
+                                         "Editor adds more)", 5000)
+            return False
+        return switch_config(self.doc, (mc.current - 1 + step) % mc.n_configs + 1)
+
     def show_console(self):
         self.console_dock.show()
         self.console_dock.raise_()
@@ -638,6 +670,8 @@ class MainWindow(QMainWindow):
             # F1 from inside the Merit Function Editor opens its own help
             focus = QApplication.focusWidget()
             item_id = ROOT if focus is not None and self.mfe.isAncestorOf(focus) else None
+            if focus is not None and self.mce.isAncestorOf(focus):
+                item_id = "Tools > Multi-Configuration Editor"
         dlg = self.dialogs.get("help")
         if dlg is None:
             dlg = self.dialogs["help"] = HelpBrowser(self.toolbar_items, self)

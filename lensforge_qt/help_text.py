@@ -194,6 +194,50 @@ HELP = {
         "explain every column, how weights work and how to balance them, the field and pupil coordinates "
         "Hx, Hy, Px, Py used by ray operands, every operand with its parameters, and a worked example that "
         "minimises the RMS spot size (File &gt; Sample Lenses &gt; Spot Size Merit Example)."),
+    "Tools > Multi-Configuration Editor": (
+        "Edit the configurations of the lens: zoom positions, focus settings and other states.",
+        "Opens the Multi-Configuration Editor. One lens can hold several <b>configurations</b>, such as the "
+        "zoom positions of a zoom lens or the far and near settings of a focusing lens. Each row of the table "
+        "is an operand naming one parameter, and each column after Type, Ref and Param holds that parameter's "
+        "value in one configuration. Everything not in the table is shared by all configurations."
+        "<p><b>Operands</b> (Ref is a surface number, or a field or wavelength number counting from 0): "
+        "THIC thickness, CRVT curvature, CONN conic, GLSS material, SDIA semi-diameter ('auto' for "
+        "automatic), PARM any other surface parameter named in the Param column (an aspheric term "
+        "coefficients[0], decenter_y, tilt_x, focal_length ...), STPS stop surface, APER aperture value, "
+        "XFIE / YFIE field x / y, FLWT field weight, FVDX / FVDY / FVCX / FVCY vignetting factors, WAVE "
+        "wavelength, WLWT wavelength weight, PRWV primary wavelength, MOFF an unused row.</p>"
+        "<p><b>Current configuration.</b> The Lens Data Editor, the status bar and every analysis show the "
+        "current configuration (its column is shaded and its header starred). Double-click a configuration "
+        "header, use <b>Make Current</b>, or Tools &gt; Next / Previous Configuration (Ctrl+] / Ctrl+[) to "
+        "switch. Editing a controlled value in the Lens Data Editor changes the current configuration's cell, "
+        "and switching back restores each configuration's own values. Every analysis window has a "
+        "<b>Config</b> box: Current follows the switch, a number keeps the window on that configuration, so "
+        "two spot diagrams can show two zoom positions side by side. Analysis &gt; Layout &gt; Multi-Configuration "
+        "Layout draws all configurations one above the other.</p>"
+        "<p><b>Editing.</b> Insert Operand adds a THIC row taking the lens's current value in every "
+        "configuration; type a different operand, Ref or Param, then the values. Add Config copies the "
+        "selected configuration; Rename names it; header right-click has the same commands. A row that "
+        "refers to something the lens does not have (a deleted surface, a field number beyond the last) is "
+        "shown red and skipped. Deleting a surface deletes the rows on it.</p>"
+        "<p><b>Optimisation.</b> Select value cells and press Ctrl+Shift+V (Toggle Variable) to make them "
+        "variables (shown blue with a V), for example the back focus of each zoom position. In the Merit "
+        "Function Editor a <b>CONF</b> row (Parameters cfg=2) switches the configuration for the rows below "
+        "it, so one merit function can cover every configuration; the Merit Function Wizard writes one group "
+        "of rows per configuration. A Lens Data Editor variable on a parameter the table controls is refused "
+        "when optimising, because each configuration has its own value; make the table's cells variable "
+        "instead.</p>"
+        "<p>The table is saved in the lens file under <code>multiconfig</code>. Scripting: "
+        "<code>mc = lf.MultiConfig.create(lens, 3, names=['short', 'mid', 'long'])</code>, "
+        "<code>mc.add_row(lens, 'THIC', 8, values=[59.24, 31.64, 7.21])</code>, <code>lens.set_config(2)</code>, "
+        "<code>lens.config_copy(3)</code>, <code>opt.set_mc_variable(lens, row, config)</code>. Examples: the "
+        "zoom lenses in Chapter 20 of the Smith examples (Figure 20.N zoom.lens.json)."),
+    "Tools > Next Configuration": (
+        "Show the next configuration of a multi-configuration lens.",
+        "Makes the next configuration current (after the last comes the first again). The Lens Data Editor, "
+        "the status bar and the analysis windows set to Current update. One undo step."),
+    "Tools > Previous Configuration": (
+        "Show the previous configuration of a multi-configuration lens.",
+        "Makes the previous configuration current (before the first comes the last). One undo step."),
     "Tools > Variables and Solves > Make All Curvatures Variable": (
         "Make every surface curvature an optimisation variable.",
         "Adds a variable for the curvature of every refracting or reflecting surface."),
@@ -238,6 +282,11 @@ HELP = {
 
 #: analysis registry key -> (summary, details)
 ANALYSIS_HELP = {
+    "mc_layout": ("2D layouts of every configuration, one above the other.",
+                  "Draws the 2D layout of each configuration of a multi-configuration lens (or one, chosen in "
+                  "Show) on a common z axis, titled with the configuration's name and focal length, so the "
+                  "moving groups of a zoom lens can be compared. Ray sampling comes from Input Rays. A lens "
+                  "with one configuration shows a single layout."),
     "layout": ("2D cross-section of the lens with traced rays.",
                "Draws the surfaces and rays in the YZ or XZ plane, coloured by field (or by wavelength when one "
                "field is shown). The number of rays, plane, fields and wavelengths are set in Input Rays; user "

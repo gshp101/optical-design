@@ -44,7 +44,7 @@ class SettingsBar(QWidget):
         doc.changed.connect(self.sync_choices)
 
     def _make(self, st, value):
-        if st.kind in ("field", "field_all", "wave", "wave_all"):
+        if st.kind in ("field", "field_all", "wave", "wave_all", "config_all"):
             w = QComboBox()
             self._fill(st, w, value)
             w.currentIndexChanged.connect(lambda _: self.changed.emit())
@@ -84,9 +84,13 @@ class SettingsBar(QWidget):
         s = self.doc.system
         w.blockSignals(True)
         w.clear()
-        if st.kind in ("field_all", "wave_all", "wave"):
+        if st.kind in ("field_all", "wave_all", "wave", "config_all"):
             w.addItem("All" if st.kind != "wave" else "Primary", -1)
-        if st.kind.startswith("field"):
+        if st.kind == "config_all":
+            mc = getattr(s, "multiconfig", None)
+            for k in (mc.configs if mc is not None else ()):
+                w.addItem(mc.name(k), k)
+        elif st.kind.startswith("field"):
             for k, f in enumerate(s.fields):
                 w.addItem(f"{k + 1}: ({f.x:g}, {f.y:g})", k)
         else:
@@ -99,7 +103,7 @@ class SettingsBar(QWidget):
     def sync_choices(self):
         """Keep field / wavelength / surface choices in step with the lens."""
         for name, (st, w) in self.widgets.items():
-            if isinstance(w, QComboBox) and st.kind in ("field", "field_all", "wave", "wave_all"):
+            if isinstance(w, QComboBox) and st.kind in ("field", "field_all", "wave", "wave_all", "config_all"):
                 self._fill(st, w, w.currentData())
             elif st.kind == "surface":
                 w.blockSignals(True)
@@ -143,6 +147,15 @@ class AnalysisWindow(QDockWidget):
         lay.setSpacing(0)
         top = QHBoxLayout()
         top.setContentsMargins(2, 2, 2, 2)
+        # which configuration of a multi-configuration lens to show ("Current" follows the editor)
+        self.config_label = QLabel("Config")
+        self.config = QComboBox()
+        self.config.setToolTip("Configuration to analyse: Current follows the configuration shown in the Lens Data "
+                               "Editor; a number keeps this window on that configuration")
+        self._fill_configs((values or {}).get("config", 0))
+        self.config.currentIndexChanged.connect(lambda _: self.request_update())
+        top.addWidget(self.config_label)
+        top.addWidget(self.config)
         self.settings = SettingsBar(self.spec, doc, values)
         self.settings.changed.connect(self.request_update)
         top.addWidget(self.settings, 1)
@@ -210,8 +223,51 @@ class AnalysisWindow(QDockWidget):
         doc.opened.connect(self.request_update)
         self.request_update()
 
+    # -- configurations -------------------------------------------------------------
+    def _fill_configs(self, value=None):
+        mc = getattr(self.doc.system, "multiconfig", None)
+        value = self.config.currentData() if value is None else value
+        self.config.blockSignals(True)
+        self.config.clear()
+        self.config.addItem("Current", 0)
+        if mc is not None:
+            for k in mc.configs:
+                self.config.addItem(mc.name(k), k)
+        i = self.config.findData(value)
+        self.config.setCurrentIndex(i if i >= 0 else 0)
+        self.config.blockSignals(False)
+        # (the multi-configuration layout chooses its configurations in its own settings)
+        many = mc is not None and mc.n_configs > 1 and self.spec.key != "mc_layout"
+        self.config.setVisible(many)
+        self.config_label.setVisible(many)
+
+    def config_number(self):
+        """The configuration this window shows (0: the current one)."""
+        return self.config.currentData() or 0
+
+    def set_config(self, k):
+        i = self.config.findData(int(k))
+        if i >= 0:
+            self.config.setCurrentIndex(i)
+
+    def _system_to_analyse(self):
+        k = self.config_number()
+        s = self.doc.system
+        mc = getattr(s, "multiconfig", None)
+        if k and mc is not None and k <= mc.n_configs and k != mc.current:
+            return s.config_copy(k)
+        return s.copy()
+
+    def _title(self):
+        mc = getattr(self.doc.system, "multiconfig", None)
+        if mc is None or mc.n_configs < 2 or not self.config_label.isVisibleTo(self):
+            return self.spec.title
+        k = self.config_number() or mc.current
+        return f"{self.spec.title} [{mc.name(k)}]" if k <= mc.n_configs else self.spec.title
+
     # -- scheduling ---------------------------------------------------------------
     def _lens_changed(self):
+        self._fill_configs()
         if self.auto.isChecked():
             self.request_update()
 
@@ -234,9 +290,9 @@ class AnalysisWindow(QDockWidget):
             return
         self._busy = True
         self._request += 1
-        self.setWindowTitle(f"{self.spec.title}  (computing...)")
+        self.setWindowTitle(f"{self._title()}  (computing...)")
         opts = self.settings.values()
-        system = self.doc.system.copy()
+        system = self._system_to_analyse()
         spec = self.spec
         workers.submit(lambda _p: spec.compute(system, **opts), self._done, self._failed,
                        tag=(self._request, opts, system))
@@ -254,7 +310,7 @@ class AnalysisWindow(QDockWidget):
                 self.result, self.error = result, None
                 self.status.hide()
                 self._show(result, opts, system)
-                self.setWindowTitle(self.spec.title)
+                self.setWindowTitle(self._title())
                 self.updates += 1
         except RuntimeError:  # window already deleted
             return
@@ -281,7 +337,7 @@ class AnalysisWindow(QDockWidget):
             self.canvas.draw_idle()
         self.status.setText(msg)
         self.status.show()
-        self.setWindowTitle(f"{self.spec.title}  (error)")
+        self.setWindowTitle(f"{self._title()}  (error)")
 
     def _show(self, result, opts, system):
         if self.text is not None:
@@ -299,7 +355,7 @@ class AnalysisWindow(QDockWidget):
                 f.write(self.text.toPlainText())
 
     def state(self):
-        return {"key": self.spec.key, "settings": self.settings.values()}
+        return {"key": self.spec.key, "settings": {**self.settings.values(), "config": self.config_number()}}
 
     def closeEvent(self, ev):
         try:

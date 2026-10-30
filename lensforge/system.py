@@ -76,6 +76,7 @@ class OpticalSystem:
         self.primary_wavelength = 0  # index into wavelengths
         self.ray_aiming = "paraxial"  # or "real"
         self.notes = ""
+        self.multiconfig = None  # lensforge.multiconfig.MultiConfig, or None for a single configuration
 
     # ------------------------------------------------------------------
     # Construction helpers
@@ -263,6 +264,37 @@ class OpticalSystem:
         return frames
 
     # ------------------------------------------------------------------
+    # Multi-configuration (see lensforge.multiconfig)
+    # ------------------------------------------------------------------
+    @property
+    def num_configs(self) -> int:
+        mc = getattr(self, "multiconfig", None)
+        return mc.n_configs if mc is not None else 1
+
+    @property
+    def current_config(self) -> int:
+        mc = getattr(self, "multiconfig", None)
+        return mc.current if mc is not None else 1
+
+    def set_config(self, k: int):
+        """Make configuration ``k`` (counting from 1) the one the lens shows."""
+        mc = getattr(self, "multiconfig", None)
+        if mc is None:
+            if int(k) != 1:
+                raise IndexError("this lens has a single configuration")
+            return
+        mc.set_config(self, k)
+
+    def config_copy(self, k: int) -> "OpticalSystem":
+        """A copy of the lens showing configuration ``k``; the lens itself is not changed."""
+        c = self.copy()
+        if getattr(c, "multiconfig", None) is not None:
+            c.multiconfig.set_config(c, k)
+        elif int(k) != 1:
+            raise IndexError("this lens has a single configuration")
+        return c
+
+    # ------------------------------------------------------------------
     # Analysis entry points (thin wrappers so users have one object)
     # ------------------------------------------------------------------
     def paraxial(self, wavelength: Optional[float] = None):
@@ -315,8 +347,16 @@ class OpticalSystem:
             "ray_aiming": self.ray_aiming,
             "notes": self.notes,
             "surfaces": surfs,
+            **self._multiconfig_dict(),
             **self._optimization_dict(),
         }
+
+    def _multiconfig_dict(self) -> dict:
+        mc = getattr(self, "multiconfig", None)
+        if mc is None:
+            return {}
+        mc.capture(self)  # the lens may have been edited since the last switch
+        return {"multiconfig": mc.to_dict()}
 
     def _optimization_dict(self) -> dict:
         """Variables, solves and the attached merit function (see lensforge.optimize)."""
@@ -348,10 +388,14 @@ class OpticalSystem:
         sys.ray_aiming = d.get("ray_aiming", "paraxial")
         sys.notes = d.get("notes", "")
         sys.surfaces = [S.surface_from_dict({k: num(v) for k, v in s.items()}) for s in d["surfaces"]]
+        if d.get("multiconfig"):
+            from .multiconfig import MultiConfig
+            sys.multiconfig = MultiConfig.from_dict(d["multiconfig"])
+            sys.multiconfig.apply(sys, solves=False)  # the stored current column wins over the surface data
         if d.get("optimization"):
-            from .optimize import MeritFunction, Variable, VariableSet, solve_from_dict
+            from .optimize import MeritFunction, VariableSet, solve_from_dict, variable_from_dict
             o = d["optimization"]
-            sys.variables = VariableSet(Variable(**v) for v in o.get("variables", []))
+            sys.variables = VariableSet(variable_from_dict(v) for v in o.get("variables", []))
             sys.solves = [solve_from_dict(x) for x in o.get("solves", [])]
             if "merit_function" in o:
                 sys.merit_function = MeritFunction.from_dict(o["merit_function"])

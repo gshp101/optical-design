@@ -138,6 +138,14 @@ ICONS = {
                              '<path d="M6 9l3 3-3 3" stroke="#7fe08a" stroke-width="2"/>'
                              '<path d="M11 16h6" stroke="#ffd54f" stroke-width="2"/>'),
     "Tools > Merit Function Editor": TABLE + f'<path d="M12 12l2 2 5-5" stroke="{GREEN}" stroke-width="2.2"/>',
+    "Tools > Multi-Configuration Editor": ('<rect x="2.5" y="4" width="19" height="16" rx="1" fill="#fff"/>'
+                                           '<path d="M2.5 9h19M8 4v16M14.5 4v16"/>'
+                                           + letter(11.2, 17.5, "1", ORANGE, 7) + letter(18, 17.5, "2", PURPLE, 7)),
+    "Tools > Next Configuration": (lens(7, 6, 1.8) + lens(13, 6, 1.8)
+                                   + f'<path d="M15 19h6m-2.5-2.5L21 19l-2.5 2.5" stroke="{GREEN}" stroke-width="1.8"/>'),
+    "Tools > Previous Configuration": (lens(11, 6, 1.8) + lens(17, 6, 1.8)
+                                       + f'<path d="M9 19H3m2.5-2.5L3 19l2.5 2.5" stroke="{ORANGE}" '
+                                       'stroke-width="1.8"/>'),
     "Tools > Variables and Solves > Make All Curvatures Variable": ('<path d="M4 3c5 5 5 13 0 18M9 3c5 5 5 13 0 18" '
                                                                     'stroke-width="1.8"/>'
                                                                     + letter(18, 16, "V", ORANGE, 11)),
@@ -167,6 +175,9 @@ ICONS = {
 ICONS["View > Undo History"] = ICONS["Edit > Undo History"]  # the same command in two menus
 
 ANALYSIS_ICONS = {
+    "mc_layout": (f'<path d="M2 7h20M2 17h20" stroke="{GREY}" stroke-width="0.8"/>'
+                  + '<path d="M6 3v8M6 13v8" stroke-width="2.2"/>'
+                  + f'<path d="M12 3v8M17 13v8" stroke="{PURPLE}" stroke-width="2.2"/>'),
     "layout": (lens(9, 8, 2.4) + '<path d="M2 5h7l12 7M2 12h19M2 19h7l12-7" stroke-width="1.2"/>'
                f'<path d="M2 8h7l12 4M2 16h7l12-4" stroke="{RED}" stroke-width="1.2"/>'),
     "footprint": ('<circle cx="12" cy="12" r="9" fill="#fff"/>'

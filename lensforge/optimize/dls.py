@@ -118,6 +118,19 @@ def _step(J, r, C, c, lam, free):
     return dx
 
 
+def check_mc_conflicts(system, vs):
+    """Refuse lens variables on parameters the multi-configuration table sets per configuration:
+    they would change only the current configuration and be overwritten when it is switched."""
+    mc = getattr(system, "multiconfig", None)
+    if mc is None:
+        return
+    bad = [v.name for v in vs if getattr(v, "surface", None) is not None and mc.controls(v.surface, v.param)]
+    if bad:
+        raise ValueError(f"{', '.join(bad)} {'is' if len(bad) == 1 else 'are'} set per configuration by the "
+                         "multi-configuration table; make its cells variable instead "
+                         "(lensforge.optimize.set_mc_variable)")
+
+
 def optimize(system, merit: MeritFunction, variables: Optional[VariableSet] = None, cycles: int = 50,
              tol: float = 1e-7, damping: float = 1e-3, constraint_tol: float = 1e-9,
              callback: Optional[Callable] = None, verbose: bool = False) -> OptimizationResult:
@@ -133,6 +146,7 @@ def optimize(system, merit: MeritFunction, variables: Optional[VariableSet] = No
     vs = VariableSet(variables if variables is not None else _system_variables(system))
     if not vs:
         raise ValueError("No variables: use lensforge.optimize.set_variable(system, surface, param)")
+    check_mc_conflicts(system, vs)
     merit.auto_weight()
     prob = _Problem(system, merit, vs)
     x = np.clip(vs.values(system), prob.lo, prob.hi)

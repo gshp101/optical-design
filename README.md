@@ -63,17 +63,18 @@ python -m lensforge_qt --sample achromat            # singlet, achromat, parabol
 
 | Window | What it does |
 |---|---|
-| Menus | File (New, Open, Open Recent, Save, Save As, Insert Lens, Inspect Lens File, System Explorer, Fields, Wavelengths, Input Rays, samples, AGF catalogs), Edit (Undo, Redo, surface editing), Analysis (all plots and reports), Tools (Optimization, Tolerancing, Python Shell, Merit Function Editor), View (toolbar on/off, Customize Toolbar), Help (Help Contents, What's This?, Keyboard Shortcuts). The menu bar is inside the window on every platform, macOS included. |
+| Menus | File (New, Open, Open Recent, Save, Save As, Insert Lens, Inspect Lens File, System Explorer, Fields, Wavelengths, Input Rays, samples, AGF catalogs), Edit (Undo, Redo, surface editing), Analysis (all plots and reports), Tools (Optimization, Tolerancing, Python Shell, Merit Function Editor, Multi-Configuration Editor, Next / Previous Configuration), View (toolbar on/off, Customize Toolbar), Help (Help Contents, What's This?, Keyboard Shortcuts). The menu bar is inside the window on every platform, macOS included. |
 | Lens Data Editor (centre) | Spreadsheet of surfaces: type (combo), comment, radius, thickness, material (glass name completion, `nd,vd` model glass, index, MIRROR, or the material picker: "..." button in the cell, right-click or Ctrl+G opens a dialog with the catalog table, a clickable glass map, model glass and air/mirror/constant index), semi-diameter (automatic in grey, typed = fixed `U`), conic, Par 1-8 with headers per surface type (asphere terms, toroid radius X, coordinate-break decentres/tilts, paraxial focal length, binary-2 terms, grating lines/um and order). Cell markers: `V` variable, `M`/`C`/`F`/`E`/`T`/`S`/`P` solves. Right-click: make variable, solves (marginal/chief ray height and angle, F/#, concentric, edge thickness, position, pickup), surface type, stop, surface properties (apertures, obscurations, XY-polynomial terms). Insert / Ctrl+Insert / Shift+Delete insert and delete surfaces, renumbering variables, solves and merit operands. |
 | Input Rays (F5) | Rays drawn in the layout (rays per fan, fan plane, fields, wavelengths), pupil sampling of spot diagrams (with a live diagram of the pattern and ray count), fans and footprints, and user-defined rays (Hx, Hy, Px, Py, wavelength) drawn in red on the layout and listed in Analysis > Reports > User Ray Trace. Saved in the lens file's `"ui"` section and undoable. |
 | System Explorer (F2-F4) | Aperture type/value, ray aiming, field type and field table (weights, vignetting factors, equal-area helper), wavelengths with presets and primary, units, title, notes. |
+| Multi-Configuration Editor (F7) | Table of configurations (zoom positions, focus settings ...): one row per operand (THIC, CRVT, CONN, GLSS, SDIA, PARM, STPS, APER, XFIE/YFIE, FLWT, vignetting factors, WAVE, WLWT, PRWV, MOFF), one column per configuration. The current configuration (shaded, starred header; also in the status bar) is what the Lens Data Editor and the analyses show; switch with a header double-click or Tools > Next / Previous Configuration (Ctrl+] / Ctrl+[). Editing the lens updates the current column. Add, delete and rename configurations, insert and delete operands, toggle cells as optimisation variables (Ctrl+Shift+V); rows referring to a missing surface or field are shown red. Every analysis window gets a Config box (Current, or a fixed configuration), and Analysis > Layout > Multi-Configuration Layout draws all configurations on one z axis. |
 | Merit Function Editor (F6) | Operand spreadsheet (type with completion, `name=value` parameters, bound, target, weight, live value and % contribution computed in the background), wizard (default spot / wavefront / MTF merit with glass/air boundaries), searchable operand list, column and operand tooltips. Its help pages (Help button or F1 in the editor) cover the columns, the merit function formula, weights, Hx/Hy/Px/Py ray coordinates, a reference of every operand generated from the code, and a worked spot-size example (File > Sample Lenses > Spot Size Merit Example). |
 | Toolbar | Hidden by default. Every menu command has its own icon and a tooltip saying what it does (name, shortcut, one-line description). View > Customize Toolbar (or right-click the toolbar) opens a dialog listing every menu command by menu; add, remove, reorder and separate buttons, choose icons only / icons with text / text only, or reset to the defaults. The layout, button style and whether the toolbar is shown are saved between sessions. |
 | Insert Lens (Ctrl+I) | File > Insert Lens copies a range of surfaces from a `.json` or `.zmx` file into the current lens before a chosen surface, with a scale factor (all lengths, aspheric/freeform/phase terms) and an option to reverse the surface order (curvatures and sag terms change sign, thicknesses and media shift, coordinate breaks are inverted). "Copy semi-diameters" brings in the lens's semi-diameters as fixed values (automatic ones computed in the source lens), otherwise the inserted surfaces are automatic. Preview with the group's focal length; one undo step. Scripting: `lf.insert_lens(lens, 'file.json', at=3, scale=0.5, reverse=True, copy_semi_diameters=True)`, plus `lf.scale_surface`, `lf.scale_system`, `lf.reverse_surfaces`, `lf.lens_surfaces`. |
 | Delete Surfaces (Ctrl+Shift+Delete) | Edit > Delete Surfaces deletes a contiguous range of surfaces chosen by first and last surface (prefilled from the rows selected in the Lens Data Editor, where shift-click selects a range; Shift+Delete on a multi-row selection does the same). The object and image surfaces cannot be deleted. A confirmation prompt lists the surfaces and the variables and solves that will be dropped; merit operands on deleted surfaces move to the surface before the range and later references are renumbered. One undo step. Scripting: `lf.delete_surfaces(lens, 2, 4)`. |
 | Inspect Lens File (Ctrl+Shift+O) | File > Inspect Lens File shows the System Report of a `.json` or `.zmx` file in its own non-modal window without changing the current lens; open several to compare designs. Copy, Save, or Open in Editor. Scripting: `lf.system_report(lf.load('file.json'))`. |
 | Help (F1) | Help > Help Contents is a searchable browser with a page for every menu command (icon, menu path, shortcut, description) and every menu. Status-bar tips, tooltips and Help > What's This? (Shift+F1) use the same text; Help > Keyboard Shortcuts is generated from the menus. |
-| Analysis windows | 36 dockable windows (Analysis menu): layout, footprint, sag; ray / OPD fans, spot, through-focus spot, RMS vs field; wavefront, interferogram, Zernike; FFT/Huygens PSF and cross-section; FFT/Huygens/geometric MTF, through-focus MTF, MTF vs field, encircled energy; field curvature/distortion, grid distortion, lateral colour, longitudinal aberration, chromatic focal shift, Seidel diagram and coefficients, pupil aberration; relative illumination, vignetting, polarisation pupil map, transmission; prescription, system report, single ray trace, cardinal points, glass dispersion, user ray trace. Choosing an analysis that is already open brings its window to the front. Each has its own settings bar, matplotlib zoom/pan/save toolbar, and recomputes in a worker thread when the lens changes. |
+| Analysis windows | 37 dockable windows (Analysis menu): layout, multi-configuration layout, footprint, sag; ray / OPD fans, spot, through-focus spot, RMS vs field; wavefront, interferogram, Zernike; FFT/Huygens PSF and cross-section; FFT/Huygens/geometric MTF, through-focus MTF, MTF vs field, encircled energy; field curvature/distortion, grid distortion, lateral colour, longitudinal aberration, chromatic focal shift, Seidel diagram and coefficients, pupil aberration; relative illumination, vignetting, polarisation pupil map, transmission; prescription, system report, single ray trace, cardinal points, glass dispersion, user ray trace. Choosing an analysis that is already open brings its window to the front. Each has its own settings bar, matplotlib zoom/pan/save toolbar, and recomputes in a worker thread when the lens changes. |
 | Diffractive surfaces | Diffraction Grating (`DGRATING`: linear grating on a conic surface, lines/um and order, transmissive or reflective, `n'M' = nM + m lambda T`; follow it with a coordinate break onto the diffracted order, see `examples/grating_demo.lens.json`) and Binary 2 (rotationally symmetric diffractive phase). |
 | Optimization (Ctrl+U) | Damped least squares, hammer, global search, glass substitution, on a copy of the lens in the background with live merit plot and Stop (keeps the best design so far); the result is one undo step. |
 | Tolerancing (Ctrl+Shift+T) | Tolerance wizard, editable tolerance table, criterion (RMS spot / wavefront / MTF / merit function), compensator, sensitivity analysis with worst offenders, Monte Carlo with histogram and "load worst lens". |
@@ -175,13 +176,41 @@ tols = opt.default_tolerances(lens)
 opt.sensitivity_analysis(lens, tols); opt.monte_carlo(lens, tols, trials=200)
 ```
 
+### Multi-configuration
+
+One lens can hold several configurations (`lensforge.multiconfig`, saved in the lens file under
+`"multiconfig"`). The lens always shows the current configuration, so every analysis works on it unchanged;
+switching stores the lens's values of the controlled parameters in the current column first.
+
+```python
+mc = lf.MultiConfig.create(lens, 3, names=["short", "mid", "long"])
+mc.add_row(lens, "THIC", 8, values=[59.24, 31.64, 7.21])   # a moving air space
+mc.add_row(lens, "APER", values=[28.6, 34.248, 41.8149])   # EPD per position
+mc.add_row(lens, "YFIE", 2, values=[42.0, 36.6, 31.3])     # field 2 (counting from 0)
+print(mc.table(lens))
+lens.set_config(2)                                         # the lens now shows "mid"
+long = lens.config_copy(3)                                 # a copy showing "long"; lens unchanged
+spots = [lf.spot_diagram(c, field=0) for c in lf.config_systems(lens)]
+opt.set_mc_variable(lens, row=0, config=3)                 # a table cell as a variable
+mf = opt.default_merit(lens)                               # one CONF group of rows per configuration
+mf.add("CONF", weight=0, cfg=2); mf.add("EFFL", 120.0, 1)  # rows after CONF use configuration 2
+opt.optimize(lens, mf)
+```
+
+Operands: THIC, CRVT, CONN, GLSS, SDIA, PARM (any surface parameter by name), STPS, APER, XFIE, YFIE,
+FLWT, FVDX/FVDY/FVCX/FVCY, WAVE, WLWT, PRWV, MOFF (`lf.MC_OPERANDS`). Configurations count from 1;
+surfaces, fields and wavelengths use the usual lensforge indices. Inserting or deleting surfaces renumbers the
+table. A lens variable on a parameter the table controls is refused by the optimiser (vary the cells instead).
+Examples: `examples/ModernLensDesignSmith/Chapter 20 - Zoom Lenses/Figure 20.N zoom.lens.json`, one per Smith
+zoom lens, built from the per-position files by `make_zoom_multiconfig.py`.
+
 | Zemax feature | lensforge.optimize |
 |---|---|
 | Variables (V), bounds | `set_variable(sys, surface, param, min, max)`, `vary_curvatures`, `vary_thicknesses`; radius varied as curvature; catalog glass auto-converted to a model glass for `glass.nd` / `glass.vd` / `glass.dpgf` |
 | Solves | `MarginalRayHeight` (paraxial or real at a pupil zone), `ChiefRayHeight`, `MarginalRayAngle`, `ChiefRayAngle`, `FNumber`, `Concentric`, `EdgeThickness`, `Position`, `Pickup` (any parameter or material, scale + offset); re-applied at every evaluation |
 | Merit function editor | `MeritFunction`: `add` / `insert` / `remove`, targets, weights, bounds (`=`, `>`, `<`), `table`, `evaluate` (values and % contribution), JSON |
-| Operands (`operand_help()` lists ~80) | first order (EFFL, WFNO, ISFN, PMAG, TOTR, EPDI, EXPP, PIMH, POWR, PARY/PARB, AXCL), real rays (REAX/Y/Z/R, REAB, RANG, RAID, RAED, TRAX/Y/R, OPDC), image quality (RSCE, RSCH, GEOS, RWCE, STRH, MTFT/S/A, EERA, ZERN, DIST, LACL, RELI), Seidel (SPHA, COMA, ASTI, FCUR, DISW, SEID), construction (CT/ET/CV/CO VA/GT/LT, MNCT..MXEA, TTHI, PARV, INDX, ABBE), maths on rows (CONS, SUMM, DIFF, PROD, DIVI, ABSO, SQRT, OSUM, MAXX, MINN, OPGT, OPLT, OPVA), USER (any Python function) |
-| Default merit function | `default_merit(kind="spot" / "wavefront" / "mtf", reference="centroid" / "chief", rings, arms)`: Gaussian quadrature pupil sampling (half pupil for symmetric systems), field and wavelength weights, glass / air centre and edge thickness boundaries |
+| Operands (`operand_help()` lists ~80) | first order (EFFL, WFNO, ISFN, PMAG, TOTR, EPDI, EXPP, PIMH, POWR, PARY/PARB, AXCL), real rays (REAX/Y/Z/R, REAB, RANG, RAID, RAED, TRAX/Y/R, OPDC), image quality (RSCE, RSCH, GEOS, RWCE, STRH, MTFT/S/A, EERA, ZERN, DIST, LACL, RELI), Seidel (SPHA, COMA, ASTI, FCUR, DISW, SEID), construction (CT/ET/CV/CO VA/GT/LT, MNCT..MXEA, TTHI, PARV, INDX, ABBE), maths on rows (CONS, SUMM, DIFF, PROD, DIVI, ABSO, SQRT, OSUM, MAXX, MINN, OPGT, OPLT, OPVA), CONF (switch configuration), USER (any Python function) |
+| Default merit function | `default_merit(kind="spot" / "wavefront" / "mtf", reference="centroid" / "chief", rings, arms)`: Gaussian quadrature pupil sampling (half pupil for symmetric systems), field and wavelength weights, glass / air centre and edge thickness boundaries, one group per configuration of a multi-configuration lens (`configs`, `config_weights`) |
 | Local optimisation | `optimize`: damped least squares (Levenberg-Marquardt with Marquardt scaling, several damping values per cycle), bound handling, Lagrange-multiplier hard constraints with second-order correction |
 | Global optimisation | `global_search` (Latin-hypercube multi-start, keeps the best distinct designs), `hammer` (perturb + re-optimise, optional glass moves) |
 | Glass substitution | `glass_substitution` (trial substitution with re-optimisation), `nearest_glasses`, `snap_to_catalog` (model glass to nearest real glass) |
@@ -203,6 +232,7 @@ coordinate return, so the rest of the lens stays put (tested to 1e-14). Perturbe
 | `optimize/` | Variables, solves, operands and merit function editor, damped least squares, global search / hammer, glass substitution, tolerancing (see above). |
 | `plot.py` | Optional matplotlib helpers that draw analysis dicts (no computation). |
 | `io/` | Native JSON format; Zemax `.zmx` importer (common subset). |
+| `multiconfig.py` | `MultiConfig` table (operand rows x configurations), switching, cell parsing shared by front ends. |
 | `compose.py` | Scale surfaces and systems, reverse a group of surfaces, insert one lens into another (`insert_lens`), delete a range of surfaces with variables, solves and merit operands renumbered (`delete_surfaces`). |
 | `samples.py` | Example systems (singlet, achromat, parabola, Cassegrain) and a paraxial focus solve. |
 
@@ -233,8 +263,8 @@ principal planes; Zernike orthonormality and exact fit recovery.
 ## Not yet implemented
 
 Thermal glass effects, gradient index, non-sequential mode, Zernike sag surfaces, object-space
-telecentric systems, multi-configuration. Optimisation gaps vs Zemax: orthogonal descent, multi-start genetic global search,
-TIRR (irregularity) tolerances, multi-configuration merit functions.
+telecentric systems, multi-configuration import from .zmx. Optimisation gaps vs Zemax: orthogonal descent, multi-start
+genetic global search, TIRR (irregularity) tolerances, multi-configuration tolerancing.
 Analysis gaps vs Zemax: physical optics propagation / Gaussian beams, ghost focus, extended-source geometric image
 analysis, thin-film coatings and bulk absorption in polarisation/transmission, annular Zernikes, diffractive and
 odd/XY-polynomial terms in the Seidel sums. The FFT PSF/MTF ignores off-diagonal pupil scaling (fields with both
