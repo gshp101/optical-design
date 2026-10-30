@@ -21,7 +21,7 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass
-from typing import List, Optional
+from typing import ClassVar, List, Optional
 
 import numpy as np
 
@@ -177,6 +177,83 @@ class Variable:
         return f"Variable({self.name}{b})"
 
 
+@dataclass
+class MCVariable:
+    """A cell of the multi-configuration table as an optimisation variable: row ``row``
+    (counting from 0) in configuration ``config`` (counting from 1)."""
+
+    row: int
+    config: int
+    min: Optional[float] = None
+    max: Optional[float] = None
+    step: Optional[float] = None
+    # not a lens cell: code that looks up variables by (surface, param) never matches one
+    surface: ClassVar[None] = None
+    param: ClassVar[None] = None
+
+    def _row(self, system):
+        mc = getattr(system, "multiconfig", None)
+        if mc is None or not 0 <= self.row < len(mc.rows) or not 1 <= self.config <= mc.n_configs:
+            raise ValueError(f"{self.name}: no such multi-configuration cell")
+        r = mc.rows[self.row]
+        if r.type in ("GLSS", "STPS", "PRWV", "MOFF"):
+            raise ValueError(f"{self.name}: a {r.type} cell cannot be a variable")
+        return mc, r
+
+    @property
+    def name(self) -> str:
+        return f"MC{self.row}.C{self.config}"
+
+    def describe(self, system) -> str:
+        """e.g. 'THIC 8, config 2'."""
+        try:
+            return f"{self._row(system)[1].label}, config {self.config}"
+        except ValueError:
+            return self.name
+
+    def get(self, system) -> float:
+        mc, r = self._row(system)
+        if self.config == mc.current:
+            return float(r.get(system))  # the lens may have been edited since the last switch
+        v = r.values[self.config - 1]
+        if v is None:
+            raise ValueError(f"{self.name}: the cell is empty")
+        return float(v)
+
+    def set(self, system, value: float):
+        mc, _ = self._row(system)
+        mc.set_value(system, self.row, self.config, float(value))
+
+    def clip(self, value: float) -> float:
+        return Variable.clip(self, value)
+
+    def fd_step(self, system) -> float:
+        if self.step:
+            return self.step
+        mc, r = self._row(system)
+        if r.ref_kind == "surface" and r.type != "SDIA":
+            name = r.param if r.type == "PARM" else {"THIC": "thickness", "CRVT": "curvature",
+                                                     "CONN": "conic"}[r.type]
+            return typical_step(system, r.ref, name)
+        return 1e-6 * max(abs(self.get(system)), 1.0)
+
+    def to_dict(self):
+        d = {"mc_row": self.row, "config": self.config}
+        d.update({k: v for k, v in (("min", self.min), ("max", self.max), ("step", self.step)) if v is not None})
+        return d
+
+    def __repr__(self):
+        return f"MCVariable(row {self.row}, config {self.config})"
+
+
+def variable_from_dict(d: dict):
+    """A :class:`Variable` or :class:`MCVariable` from its saved form."""
+    d = dict(d)
+    if "mc_row" in d:
+        return MCVariable(d.pop("mc_row"), d.pop("config"), **d)
+    return Variable(**d)
+
+
 class VariableSet(list):
     """List of :class:`Variable` with vector get/set helpers."""
 
@@ -225,6 +302,26 @@ def remove_variable(system, surface: int, param: str):
     p = "curvature" if param == "radius" else param
     vs = variables(system)
     vs[:] = [v for v in vs if (v.surface, v.param) != (surface, p)]
+
+
+def set_mc_variable(system, row: int, config: int, min: Optional[float] = None, max: Optional[float] = None,
+                    step: Optional[float] = None) -> MCVariable:
+    """Make a cell of the multi-configuration table variable (row from 0, configuration from 1)."""
+    var = MCVariable(int(row), int(config), min, max, step)
+    var._row(system)
+    vs = variables(system)
+    vs[:] = [v for v in vs if not (isinstance(v, MCVariable) and (v.row, v.config) == (var.row, var.config))]
+    vs.append(var)
+    return var
+
+
+def remove_mc_variable(system, row: int, config: int):
+    vs = variables(system)
+    vs[:] = [v for v in vs if not (isinstance(v, MCVariable) and (v.row, v.config) == (row, config))]
+
+
+def is_mc_variable(system, row: int, config: int) -> bool:
+    return any(isinstance(v, MCVariable) and (v.row, v.config) == (row, config) for v in variables(system))
 
 
 def clear_variables(system):

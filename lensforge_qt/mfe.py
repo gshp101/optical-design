@@ -330,7 +330,7 @@ class MeritFunctionEditor(QWidget):
                 new = opt.default_merit(s, **kw)
                 old = merit_function(s)
                 if keep:  # keep the user's rows that are not part of a default merit function
-                    user = [r for r in old.rows if r.type not in ("RAYS", "OPDS", "MTFA") and
+                    user = [r for r in old.rows if r.type not in ("RAYS", "OPDS", "MTFA", "CONF") and
                             not (r.type == "BLNK" and r.comment.startswith("Default merit"))
                             and r.type not in ("MNCG", "MXCG", "MNEG", "MNCA", "MXCA", "MNEA")]
                     new.rows = user + new.rows
@@ -391,6 +391,12 @@ class MeritWizard(QDialog):
             row.addWidget(sb, 1)
             f.addRow(label, row)
             self.bounds[name] = (cb, sb)
+        mc = getattr(system, "multiconfig", None)
+        self.all_configs = QCheckBox(f"All {mc.n_configs} configurations (a CONF row heads each group)"
+                                     if mc is not None and mc.n_configs > 1 else "All configurations")
+        self.all_configs.setChecked(True)
+        self.all_configs.setEnabled(mc is not None and mc.n_configs > 1)
+        f.addRow("Configurations", self.all_configs)
         self.keep = QCheckBox("Keep my other operands (above the default rows)")
         self.keep.setChecked(True)
         f.addRow("", self.keep)
@@ -409,6 +415,8 @@ class MeritWizard(QDialog):
         for name, (cb, sb) in self.bounds.items():
             if cb.isChecked():
                 kw[name] = sb.value()
+        if self.all_configs.isEnabled() and not self.all_configs.isChecked():
+            kw["configs"] = []  # the current configuration only
         return kw, self.keep.isChecked()
 
 

@@ -26,7 +26,7 @@ from . import rays as R
 class Setting:
     name: str
     label: str
-    kind: str  # field, field_all, wave, wave_all, surface, int, float, choice, bool
+    kind: str  # field, field_all, wave, wave_all, config_all, surface, int, float, choice, bool
     default: Any = None
     choices: Optional[list] = None  # (label, value) pairs for "choice"
     minimum: float = 0
@@ -167,6 +167,57 @@ def _connect_lens_edges(ax, r, system, j):
 
 register(AnalysisSpec("layout", "2D Layout", "Layout", _layout_compute, _layout_plot, [], shortcut="Ctrl+L",
                       uses_rays=True))
+
+
+def _mc_layout_compute(system, configs=-1):
+    """2-D layout of every configuration (or one), on a common z axis."""
+    mc = getattr(system, "multiconfig", None)
+    ks = list(mc.configs) if mc is not None else [1]
+    if configs is not None and configs > 0:
+        ks = [k for k in ks if k == configs] or ks[:1]
+    out = []
+    for k in ks:
+        c = system.config_copy(k) if mc is not None else system
+        r = _layout_compute(c)
+        r["config"] = k
+        r["label"] = mc.name(k) if mc is not None else "Single configuration"
+        r["efl"] = c.paraxial().efl
+        r["system"] = c
+        out.append(r)
+    return out
+
+
+def _mc_layout_plot(fig, results, opts, system):
+    n = len(results)
+    axes = fig.subplots(n, 1, sharex=True, squeeze=False)[:, 0]
+    plane = results[0].get("plane", "y")
+    j = 0 if plane == "x" else 1
+    # one height for every panel, so the configurations are drawn to the same scale
+    h = max((float(np.nanmax(np.abs(srf["points"][:, j]))) for r in results for srf in r["surfaces"]
+             if np.isfinite(srf["points"][:, j]).any()), default=1.0) * 1.15
+    for ax, r in zip(axes, results):
+        c = r["system"]
+        for srf in r["surfaces"]:
+            p = srf["points"]
+            ax.plot(p[:, 2], p[:, j], color="k", lw=1.5 if srf["mirror"] else 1)
+        _connect_lens_edges(ax, r, c, j)
+        fields = sorted({ray["field"] for ray in r["rays"] if isinstance(ray["field"], int)})
+        for ray in r["rays"]:
+            k = fields.index(ray["field"]) if ray["field"] in fields else 0
+            ax.plot(ray["path"][:, :, 2], ray["path"][:, :, j], color=f"C{k % 10}", lw=0.6)
+        ax.set_ylim(-h, h)
+        ax.set_aspect("equal", adjustable="box")
+        ax.set_ylabel(f"{'x' if plane == 'x' else 'y'}", fontsize=8)
+        cur = getattr(system, "multiconfig", None)
+        star = " (current)" if cur is not None and cur.n_configs > 1 and r["config"] == cur.current else ""
+        ax.set_title(f"{r['label']}{star}: EFL {r['efl']:.6g}", fontsize=8, loc="left")
+        ax.tick_params(labelsize=7)
+    axes[-1].set_xlabel(f"z ({system.units})")
+    fig.suptitle(f"{system.name or 'Lens'}: all configurations", fontsize=9)
+
+
+register(AnalysisSpec("mc_layout", "Multi-Configuration Layout", "Layout", _mc_layout_compute, _mc_layout_plot,
+                      [Setting("configs", "Show", "config_all", -1)], uses_rays=True))
 
 
 def _footprint_compute(system, surface=1, wave=-1, field=-1):

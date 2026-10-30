@@ -20,8 +20,9 @@ squares (:mod:`.dls`), global search and hammer (:mod:`.global_opt`), glass
 substitution (:mod:`.glass`) and tolerancing (:mod:`.tolerance`).
 """
 
-from .variables import (Variable, VariableSet, clear_variables, get_param, remove_variable, set_param,
-                        set_variable, to_model_glass, variables, vary_curvatures, vary_thicknesses)
+from .variables import (MCVariable, Variable, VariableSet, clear_variables, get_param, is_mc_variable,
+                        remove_mc_variable, remove_variable, set_mc_variable, set_param, set_variable,
+                        to_model_glass, variable_from_dict, variables, vary_curvatures, vary_thicknesses)
 from .solves import (ChiefRayAngle, ChiefRayHeight, Concentric, EdgeThickness, FNumber, MarginalRayAngle,
                      MarginalRayHeight, Pickup, Position, Solve, apply_solves, remove_solve, set_solve, solves,
                      solve_from_dict)

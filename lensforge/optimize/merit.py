@@ -168,11 +168,34 @@ class MeritFunction:
 
     # -- evaluation ------------------------------------------------------------
     def _compute(self, system):
+        mc = getattr(system, "multiconfig", None)
+        switching = mc is not None and any(r.type == "CONF" for r in self.rows)
+        if not switching:
+            return self._compute_rows(system, None)
+        # CONF rows switch the lens to another configuration; afterwards it is put back as it was
+        start = mc.current
+        mc.capture(system)
+        try:
+            return self._compute_rows(system, mc)
+        finally:
+            if mc.current != start:
+                mc.apply(system, start)
+
+    def _compute_rows(self, system, mc):
         ctx = EvalContext(system)
         blocks, scalars = [], []
         err = None
         for r in self.rows:
             try:
+                if r.type == "CONF" and mc is not None:
+                    k = int(r.params.get("cfg", 1))
+                    if not 1 <= k <= mc.n_configs:
+                        raise OperandError(f"configuration {k} does not exist (1 to {mc.n_configs})")
+                    if k != mc.current:
+                        mc.apply(system, k)
+                        values = ctx.values
+                        ctx = EvalContext(system)  # cached traces belong to the previous configuration
+                        ctx.values = values
                 b = r.compute(ctx)
                 if not np.all(np.isfinite(b.values)):
                     raise OperandError("non-finite value")
@@ -267,7 +290,8 @@ def default_merit(system, kind: str = "spot", reference: str = "centroid", rings
                   glass_min: Optional[float] = None, glass_max: Optional[float] = None,
                   glass_edge: Optional[float] = None, air_min: Optional[float] = None,
                   air_max: Optional[float] = None, air_edge: Optional[float] = None,
-                  boundary_weight: float = 1.0) -> MeritFunction:
+                  boundary_weight: float = 1.0, configs: Optional[Sequence[int]] = None,
+                  config_weights: Optional[Sequence[float]] = None) -> MeritFunction:
     """Default merit function (the "optimisation wizard").
 
     ``kind``: "spot" (RMS transverse ray error), "wavefront" (RMS OPD, waves)
@@ -278,6 +302,12 @@ def default_merit(system, kind: str = "spot", reference: str = "centroid", rings
     weights; wavelength weights are applied inside each block.
 
     Optional thickness boundaries add MNCG / MXCG / MNEG / MNCA / MXCA / MNEA rows.
+
+    For a multi-configuration lens the image-quality rows are repeated for
+    every configuration (or those listed in ``configs``), each group headed by
+    a ``CONF`` row and scaled by its ``config_weights`` entry; pass
+    ``configs=[]`` for the current configuration only.  Boundary rows apply
+    to the configuration the lens shows.
     """
     mf = MeritFunction()
     sym = symmetric  # None: decided at each evaluation, so perturbed copies stay correct
@@ -291,9 +321,28 @@ def default_merit(system, kind: str = "spot", reference: str = "centroid", rings
             mf.add(op_max, hi_t, boundary_weight)
         if edge is not None:
             mf.add(op_edge, edge, boundary_weight)
+    mc = getattr(system, "multiconfig", None)
+    if configs is None:
+        configs = list(mc.configs) if mc is not None and mc.n_configs > 1 else []
+    configs = list(configs)
+    if configs and mc is None:
+        raise ValueError("configs given, but the lens has no multi-configuration table")
+    cw = [1.0] * len(configs) if config_weights is None else [float(w) for w in config_weights]
+    if len(cw) != len(configs):
+        raise ValueError("give one config weight per configuration")
+    for k, w in zip(configs, cw):
+        mf.add("CONF", weight=0, cfg=int(k), comment=mc.name(int(k)))
+        _image_quality_rows(mf, system.config_copy(int(k)), kind, reference, rings, arms, frequency, fields,
+                            wavelengths, sym, w)
+    if not configs:
+        _image_quality_rows(mf, system, kind, reference, rings, arms, frequency, fields, wavelengths, sym, 1.0)
+    return mf
+
+
+def _image_quality_rows(mf, system, kind, reference, rings, arms, frequency, fields, wavelengths, sym, scale):
     idx = range(len(system.fields)) if fields is None else fields
     for i in idx:
-        w = system.fields[i].weight
+        w = system.fields[i].weight * scale
         if w <= 0:
             continue
         if kind == "spot":
@@ -308,7 +357,6 @@ def default_merit(system, kind: str = "spot", reference: str = "centroid", rings
             mf.add("MTFA", 1.0, w, freq=frequency, field=i)
         else:
             raise ValueError("kind must be 'spot', 'wavefront' or 'mtf'")
-    return mf
 
 
 def operand_help(name: Optional[str] = None) -> str:

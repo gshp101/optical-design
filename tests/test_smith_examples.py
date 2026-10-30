@@ -26,11 +26,32 @@ BFL_TOL = {"Figure 16.21": 0.5, "Figure 21.7": 0.3, "Figure 21.12": 30.0, "Figur
 EFL_TOL = {"Figure 20.3 long": 0.2, "Figure 21.7": 0.3, "Figure 21.14": 10.0, "Figure 22.5": 0.5}
 
 
-@pytest.mark.parametrize("path", MODELS, ids=[os.path.basename(p).removesuffix(".lens.json") for p in MODELS])
-def test_matches_book(path):
+def configurations(path):
+    """(name, lens, notes) for each configuration: one for a plain model; for a multi-configuration zoom model
+    ("Figure 20.1 zoom") one per zoom position, named like the position file ("Figure 20.1 short"), with that
+    position's "[short] ... Book: ..." part of the notes."""
     lens = lf.load(path)
     name = os.path.basename(path).removesuffix(".lens.json")
-    book = dict(re.findall(r"\b(EFL|BFL) (-?[\d.]+)", lens.notes))
+    mc = lens.multiconfig
+    if mc is None:
+        return [(name, lens, lens.notes)]
+    fig = name.rsplit(" ", 1)[0]
+    out = []
+    for k in mc.configs:
+        seg = re.search(rf"\[{mc.names[k - 1]}\] (.*?)(?= \[)", lens.notes)
+        assert seg, f"no book values for configuration {mc.names[k - 1]} in the notes"
+        out.append((f"{fig} {mc.names[k - 1]}", lens.config_copy(k), seg.group(1)))
+    return out
+
+
+@pytest.mark.parametrize("path", MODELS, ids=[os.path.basename(p).removesuffix(".lens.json") for p in MODELS])
+def test_matches_book(path):
+    for name, lens, notes in configurations(path):
+        check_matches_book(name, lens, notes)
+
+
+def check_matches_book(name, lens, notes):
+    book = dict(re.findall(r"\b(EFL|BFL) (-?[\d.]+)", notes))
     p = lens.paraxial()
     if name in BOOK_TABLE_MISMATCH:
         p = None
@@ -64,5 +85,6 @@ def test_lens_listing_lists_every_model():
     with open(os.path.join(HERE, "..", "examples", "ModernLensDesignSmith", "LensListing.html")) as fh:
         page = fh.read()
     listed = re.findall(r'<a href="([^"]+\.lens\.json)">', page)
-    assert sorted(html.unescape(p) for p in listed) == sorted(
+    # (a multi-configuration zoom file is listed once per configuration)
+    assert sorted({html.unescape(p) for p in listed}) == sorted(
         os.path.relpath(m, os.path.dirname(os.path.dirname(m))) for m in MODELS)
