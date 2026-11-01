@@ -282,6 +282,33 @@ HELP = {
 
 #: analysis registry key -> (summary, details)
 ANALYSIS_HELP = {
+    "ghost_focus": ("Table of every two-bounce ghost: where it focuses, how big and how bright it is.",
+                    "The Ghost Focus Generator. For every pair of refracting surfaces i > j it follows the light "
+                    "that reflects at surface i, goes back, reflects again at surface j and then reaches the "
+                    "image. Each row gives the reflectances R_i and R_j (uncoated Fresnel at normal incidence, "
+                    "or the coating reflectance you set), the ghost power R = R_i R_j, the paraxial ghost focus "
+                    "relative to the image surface (negative = in front of it), the ghost beam radius on the "
+                    "image and its F-number, and the irradiance ratio: an estimate of the ghost's peak "
+                    "irradiance relative to the peak of the diffraction-limited image, used to rank ghosts. Real "
+                    "rays give the RMS radius of the ghost footprint and the fraction of ghost rays that get "
+                    "through clear apertures. Set an image surface reflectance above 0 to include ghosts off "
+                    "the detector. Groups with coordinate breaks, mirrors, ideal or phase surfaces between the "
+                    "two reflections are skipped (use the non-sequential tracer for those). From Python: "
+                    "<code>lf.format_ghost_table(lf.ghost_focus(lens, coating=0.005))</code>; "
+                    "<code>lf.ghost_system(lens, i, j)</code> returns the unfolded lens of one ghost for any "
+                    "other analysis."),
+    "ghost_image": ("Irradiance on the image surface from all ghosts of one field point.",
+                    "Traces a grid of rays across the entrance pupil along every two-bounce ghost path and bins "
+                    "their power on the image surface. Each ray carries the angle-dependent unpolarised Fresnel "
+                    "reflectances at its two reflections (or the coating reflectance) and the transmittances of "
+                    "the other surfaces. Show the ghosts only, the nominal image, or both; a log colour scale "
+                    "makes faint ghosts visible. The title gives the fraction of the beam power that ends up "
+                    "in ghosts. From Python: <code>lf.ghost_image(lens, field=1)</code>, plotted with "
+                    "<code>lensforge.plot.ghost_image</code>."),
+    "ghost_layout": ("Cross-section of the lens with the rays of one ghost.",
+                     "Draws the lens and the path of the ghost that reflects at surface i and then at surface j "
+                     "(the brightest ghost when both are 0), so you can see where it goes and which surfaces it "
+                     "uses. From Python: <code>lf.ghost_layout(lens, i, j)</code>."),
     "mc_layout": ("2D layouts of every configuration, one above the other.",
                   "Draws the 2D layout of each configuration of a multi-configuration lens (or one, chosen in "
                   "Show) on a common z axis, titled with the configuration's name and focal length, so the "

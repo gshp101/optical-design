@@ -175,6 +175,14 @@ ICONS = {
 ICONS["View > Undo History"] = ICONS["Edit > Undo History"]  # the same command in two menus
 
 ANALYSIS_ICONS = {
+    "ghost_focus": (TABLE + f'<path d="M12 6.5l7 0M12 12l7 0M12 17l7 0" stroke="{PURPLE}" stroke-width="0.9"/>'
+                    + f'<circle cx="6" cy="12" r="2.3" fill="{PURPLE}" stroke="{PURPLE}" opacity="0.55"/>'),
+    "ghost_image": ('<rect x="3" y="3" width="18" height="18" fill="#1b1b2f" stroke="#1b1b2f"/>'
+                    '<circle cx="9" cy="10" r="2" fill="#ffe08a" stroke="none"/>'
+                    f'<circle cx="14" cy="14" r="5" fill="{PURPLE}" stroke="none" opacity="0.5"/>'
+                    f'<circle cx="15" cy="8" r="2.6" fill="{RED}" stroke="none" opacity="0.5"/>'),
+    "ghost_layout": ('<path d="M7 3c2.5 4 2.5 14 0 18M15 3c2.5 4 2.5 14 0 18" fill="none"/>'
+                     f'<path d="M2 9h6.5l7.5 1-7.5 2 7.5 1 6 3" stroke="{PURPLE}" stroke-width="1.4"/>'),
     "mc_layout": (f'<path d="M2 7h20M2 17h20" stroke="{GREY}" stroke-width="0.8"/>'
                   + '<path d="M6 3v8M6 13v8" stroke-width="2.2"/>'
                   + f'<path d="M12 3v8M17 13v8" stroke="{PURPLE}" stroke-width="2.2"/>'),

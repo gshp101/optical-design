@@ -9,6 +9,7 @@ Module                 Analyses
 =====================  ============================================================
 ``fans``, ``spot``     ray fans, OPD fans, wavefront maps, spot diagrams
 ``pointsource``        rays from any 3-D object point to the image plane
+``ghost``              two-bounce ghosts: ghost focus table, ghost irradiance, unfolded ghost systems
 ``pupilfn``            complex pupil function (input of all diffraction analyses)
 ``psf``                FFT and Huygens PSF, Strehl ratio, image simulation
 ``mtf``                FFT / Huygens / geometric MTF, through-focus MTF, MTF vs field
@@ -33,6 +34,8 @@ the less common helpers.
 from .fans import opd, opd_fan, ray_fan, wavefront
 from .spot import spot_diagram
 from .pointsource import point_source_trace
+from .ghost import (format_ghost_table, ghost_focus, ghost_image, ghost_layout, ghost_pairs, ghost_system,
+                    ghost_trace)
 from .pupilfn import PupilFunction, pupil_function
 from .psf import fft_psf, huygens_psf, image_simulation, psf_cross_section, strehl
 from .mtf import (diffraction_limited_mtf, fft_mtf, geometric_mtf, huygens_mtf, mtf, mtf_at, mtf_from_psf,
@@ -50,7 +53,8 @@ from .report import cardinal_points, dispersion, format_ray_table, ray_trace_tab
 from . import metrics
 
 __all__ = [
-    "opd", "opd_fan", "ray_fan", "wavefront", "spot_diagram", "point_source_trace", "PupilFunction", "pupil_function",
+    "opd", "opd_fan", "ray_fan", "wavefront", "spot_diagram", "point_source_trace",
+    "format_ghost_table", "ghost_focus", "ghost_image", "ghost_layout", "ghost_pairs", "ghost_system", "ghost_trace", "PupilFunction", "pupil_function",
     "fft_psf", "huygens_psf", "image_simulation", "psf_cross_section", "strehl",
     "diffraction_limited_mtf", "fft_mtf", "geometric_mtf", "huygens_mtf", "mtf", "mtf_at", "mtf_from_psf",
     "mtf_vs_field", "through_focus_mtf",

@@ -74,7 +74,7 @@ python -m lensforge_qt --sample achromat            # singlet, achromat, parabol
 | Delete Surfaces (Ctrl+Shift+Delete) | Edit > Delete Surfaces deletes a contiguous range of surfaces chosen by first and last surface (prefilled from the rows selected in the Lens Data Editor, where shift-click selects a range; Shift+Delete on a multi-row selection does the same). The object and image surfaces cannot be deleted. A confirmation prompt lists the surfaces and the variables and solves that will be dropped; merit operands on deleted surfaces move to the surface before the range and later references are renumbered. One undo step. Scripting: `lf.delete_surfaces(lens, 2, 4)`. |
 | Inspect Lens File (Ctrl+Shift+O) | File > Inspect Lens File shows the System Report of a `.json` or `.zmx` file in its own non-modal window without changing the current lens; open several to compare designs. Copy, Save, or Open in Editor. Scripting: `lf.system_report(lf.load('file.json'))`. |
 | Help (F1) | Help > Help Contents is a searchable browser with a page for every menu command (icon, menu path, shortcut, description) and every menu. Status-bar tips, tooltips and Help > What's This? (Shift+F1) use the same text; Help > Keyboard Shortcuts is generated from the menus. |
-| Analysis windows | 37 dockable windows (Analysis menu): layout, multi-configuration layout, footprint, sag; ray / OPD fans, spot, through-focus spot, RMS vs field; wavefront, interferogram, Zernike; FFT/Huygens PSF and cross-section; FFT/Huygens/geometric MTF, through-focus MTF, MTF vs field, encircled energy; field curvature/distortion, grid distortion, lateral colour, longitudinal aberration, chromatic focal shift, Seidel diagram and coefficients, pupil aberration; relative illumination, vignetting, polarisation pupil map, transmission; prescription, system report, single ray trace, cardinal points, glass dispersion, user ray trace. Choosing an analysis that is already open brings its window to the front. Each has its own settings bar, matplotlib zoom/pan/save toolbar, and recomputes in a worker thread when the lens changes. |
+| Analysis windows | 40 dockable windows (Analysis menu): layout, multi-configuration layout, footprint, sag; ray / OPD fans, spot, through-focus spot, RMS vs field; wavefront, interferogram, Zernike; FFT/Huygens PSF and cross-section; FFT/Huygens/geometric MTF, through-focus MTF, MTF vs field, encircled energy; field curvature/distortion, grid distortion, lateral colour, longitudinal aberration, chromatic focal shift, Seidel diagram and coefficients, pupil aberration; relative illumination, vignetting, polarisation pupil map, transmission; prescription, system report, single ray trace, cardinal points, glass dispersion, user ray trace; ghost focus generator, ghost image, ghost ray layout (Stray Light). Choosing an analysis that is already open brings its window to the front. Each has its own settings bar, matplotlib zoom/pan/save toolbar, and recomputes in a worker thread when the lens changes. |
 | Diffractive surfaces | Diffraction Grating (`DGRATING`: linear grating on a conic surface, lines/um and order, transmissive or reflective, `n'M' = nM + m lambda T`; follow it with a coordinate break onto the diffracted order, see `examples/grating_demo.lens.json`) and Binary 2 (rotationally symmetric diffractive phase). |
 | Optimization (Ctrl+U) | Damped least squares, hammer, global search, glass substitution, on a copy of the lens in the background with live merit plot and Stop (keeps the best design so far); the result is one undo step. |
 | Tolerancing (Ctrl+Shift+T) | Tolerance wizard, editable tolerance table, criterion (RMS spot / wavefront / MTF / merit function), compensator, sensitivity analysis with worst offenders, Monte Carlo with histogram and "load worst lens". |
@@ -116,6 +116,7 @@ plotting helpers with the same names are in `lensforge.plot`.
 | Polarisation ray trace, pupil map, transmission, diattenuation (Fresnel, uncoated) | `polarization_trace`, `polarization_pupil_map`, `transmission`, `diattenuation` |
 | Cardinal points, single ray trace, dispersion, system report | `cardinal_points`, `ray_trace_table`, `dispersion`, `system_report` |
 | Merit operands, sensitivities, universal plot | `metrics.OPERANDS` / `evaluate`, `sensitivity`, `sweep` |
+| Ghost focus generator, ghost irradiance, ghost ray paths (two-bounce ghosts) | `ghost_focus`, `format_ghost_table`, `ghost_image`, `ghost_layout`, `ghost_system`, `ghost_trace`, `ghost_pairs` (see below) |
 
 Diffraction analyses share one pupil sampler (`pupil_function`): real-ray OPD on an n x n
 grid, vignetting as zero amplitude and image-space NA fitted from real ray directions (so
@@ -154,6 +155,26 @@ import lensforge.plot as P; P.point_source(r, scale=1000)
 * Status codes: 0 ok, 1 missed a surface, 2 total internal reflection, 3 clipped by an aperture;
   `apertures=False` ignores clear apertures. Real aiming maps pupil coordinates onto the stop exactly,
   which matters for wide-angle lenses with strong pupil aberration.
+
+### Ghost analysis
+
+A ghost reflects at surface `i`, travels back, reflects again at an earlier surface `j` and then
+reaches the image. `ghost_system(lens, i, j)` unfolds that path into an ordinary sequential lens
+(mirror copies of `i` and `j`, the surfaces in between traversed backwards), so every other
+analysis works on it; `ghost.ghost_map[k]` names the original surface of each row.
+
+```python
+r = lf.ghost_focus(lens, coating=None,          # None: uncoated Fresnel; 0.005 for all; {3: 0.002} per surface
+                   include_image=True, image_reflectance=0.04)   # ghosts off a reflective detector
+print(lf.format_ghost_table(r))   # per pair: R_i, R_j, ghost focus from image, beam radius, F/#,
+                                  # irradiance ratio (ranking estimate), real-ray RMS and throughput
+im = lf.ghost_image(lens, field=1)     # ghost + nominal irradiance on the image, angle-dependent Fresnel
+P.ghost_image(im); P.ghost_layout(lf.ghost_layout(lens, 4, 2))
+t = lf.ghost_trace(lens, 4, 2, hx, hy, px, py)   # real rays from the lens's own pupil along a ghost
+```
+
+Pairs with coordinate breaks, mirrors, ideal or phase surfaces between the two reflections are
+skipped; the non-sequential tracer covers those. In the desktop app: Analysis > Stray Light.
 
 ## Optimisation and tolerancing
 
@@ -265,7 +286,7 @@ principal planes; Zernike orthonormality and exact fit recovery.
 Thermal glass effects, gradient index, non-sequential mode, Zernike sag surfaces, object-space
 telecentric systems, multi-configuration import from .zmx. Optimisation gaps vs Zemax: orthogonal descent, multi-start
 genetic global search, TIRR (irregularity) tolerances, multi-configuration tolerancing.
-Analysis gaps vs Zemax: physical optics propagation / Gaussian beams, ghost focus, extended-source geometric image
+Analysis gaps vs Zemax: physical optics propagation / Gaussian beams, extended-source geometric image
 analysis, thin-film coatings and bulk absorption in polarisation/transmission, annular Zernikes, diffractive and
 odd/XY-polynomial terms in the Seidel sums. The FFT PSF/MTF ignores off-diagonal pupil scaling (fields with both
 x and y components on strongly anamorphic systems); use the Huygens PSF there. The ideal `Paraxial` surface's OPD

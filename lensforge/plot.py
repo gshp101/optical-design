@@ -304,3 +304,40 @@ def polarization_pupil(result, ax=None, scale=0.08):
     ax.set_aspect("equal")
     ax.set_title(f"Polarisation pupil map, T = {result['total_transmission']:.4f}")
     return ax
+
+
+def ghost_layout(result, ax=None):
+    """Lens cross-section with the rays of one ghost (:func:`lensforge.analysis.ghost.ghost_layout`)."""
+    ax = _ax(ax, figsize=(9, 4))
+    j = 0 if result.get("plane") == "x" else 1
+    for s in result["surfaces"]:
+        P = s["points"]
+        ax.plot(P[:, 2], P[:, j], color="k", lw=1.5 if s["mirror"] else 1)
+    p = result["path"]
+    ax.plot(p[:, :, 2], p[:, :, j], color="C3", lw=0.7)
+    i, k = result["pair"]
+    ax.set_title(f"Ghost {i}-{k}: reflected at surface {i}, then at surface {k}")
+    ax.set_aspect("equal", adjustable="datalim")
+    ax.set_xlabel("z")
+    ax.set_ylabel("x" if j == 0 else "y")
+    return ax
+
+
+def ghost_image(result, ax=None, log=True, show="ghost"):
+    """Image-plane irradiance of ghosts (:func:`lensforge.analysis.ghost.ghost_image`).
+
+    ``show``: "ghost", "nominal" or "both" (sum).  ``log`` uses a log10 colour scale.
+    """
+    ax = _ax(ax, figsize=(6, 5))
+    Z = {"ghost": result["ghost"], "nominal": result["nominal"],
+         "both": result["ghost"] + result["nominal"]}[show]
+    if log:
+        pos = Z[Z > 0]
+        floor = pos.min() if pos.size else 1e-12
+        Z = np.log10(np.maximum(Z, floor))
+    im = ax.imshow(Z, origin="lower", extent=result["extent"], cmap="inferno")
+    ax.figure.colorbar(im, ax=ax, label=("log10 " if log else "") + f"irradiance (fraction / {result['units']}²)")
+    ax.set_xlabel(f"x ({result['units']})")
+    ax.set_ylabel(f"y ({result['units']})")
+    ax.set_title(f"Ghost irradiance: {result['ghost_power']:.3g} of the beam in {len(result['pairs'])} ghosts")
+    return ax
