@@ -348,7 +348,7 @@ def ns_layout(result, ax=None, plane="y", max_segments=4000, color_by="reflectio
 
     ``color_by``: "reflections" (direct / one / two+ Fresnel reflections), "source" or "power"
     (grey level by log power).  At most ``max_segments`` segments are drawn: the strongest of
-    each reflection order.
+    reflection order, as complete ray paths picked at random.
     """
     from matplotlib.collections import LineCollection
     ax = _ax(ax, figsize=(9, 4))
@@ -361,12 +361,17 @@ def ns_layout(result, ax=None, plane="y", max_segments=4000, color_by="reflectio
     pw = seg["power"]
     keep = np.flatnonzero(pw >= min_power)
     if len(keep) > max_segments:
-        # strongest segments of each reflection order, so faint ghost paths stay visible
+        # whole ray paths, picked at random within each reflection order, so faint ghost paths stay visible
+        rng = np.random.default_rng(0)
         order = np.minimum(seg["n_reflections"][keep], 2)
         parts = []
         for k in range(3):
             g = keep[order == k]
-            parts.append(g[np.argsort(pw[g])[::-1][:max_segments // 3]])
+            ids = np.unique(seg["ray"][g])
+            rng.shuffle(ids)
+            per_ray = max(len(g) / max(len(ids), 1), 1.0)
+            take = set(ids[: max(1, int(max_segments / 3 / per_ray))].tolist())
+            parts.append(g[np.isin(seg["ray"][g], list(take))])
         keep = np.concatenate(parts)
     a, b = seg["start"][keep], seg["end"][keep]
     lines = np.stack([np.stack([a[:, 2], a[:, j]], 1), np.stack([b[:, 2], b[:, j]], 1)], axis=1)

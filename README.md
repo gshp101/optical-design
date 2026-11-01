@@ -63,7 +63,7 @@ python -m lensforge_qt --sample achromat            # singlet, achromat, parabol
 
 | Window | What it does |
 |---|---|
-| Menus | File (New, Open, Open Recent, Save, Save As, Insert Lens, Inspect Lens File, System Explorer, Fields, Wavelengths, Input Rays, samples, AGF catalogs), Edit (Undo, Redo, surface editing), Analysis (all plots and reports), Tools (Optimization, Tolerancing, Python Shell, Merit Function Editor, Multi-Configuration Editor, Next / Previous Configuration), View (toolbar on/off, Customize Toolbar), Help (Help Contents, What's This?, Keyboard Shortcuts). The menu bar is inside the window on every platform, macOS included. |
+| Menus | File (New, Open, Open Recent, Save, Save As, Insert Lens, Inspect Lens File, System Explorer, Fields, Wavelengths, Input Rays, samples, AGF catalogs), Edit (Undo, Redo, surface editing), Analysis (all plots and reports), Tools (Optimization, Tolerancing, Python Shell, Merit Function Editor, Multi-Configuration Editor, Next / Previous Configuration, Non-Sequential Editor, Convert Lens to Non-Sequential), View (toolbar on/off, Customize Toolbar), Help (Help Contents, What's This?, Keyboard Shortcuts). The menu bar is inside the window on every platform, macOS included. |
 | Lens Data Editor (centre) | Spreadsheet of surfaces: type (combo), comment, radius, thickness, material (glass name completion, `nd,vd` model glass, index, MIRROR, or the material picker: "..." button in the cell, right-click or Ctrl+G opens a dialog with the catalog table, a clickable glass map, model glass and air/mirror/constant index), semi-diameter (automatic in grey, typed = fixed `U`), conic, Par 1-8 with headers per surface type (asphere terms, toroid radius X, coordinate-break decentres/tilts, paraxial focal length, binary-2 terms, grating lines/um and order). Cell markers: `V` variable, `M`/`C`/`F`/`E`/`T`/`S`/`P` solves. Right-click: make variable, solves (marginal/chief ray height and angle, F/#, concentric, edge thickness, position, pickup), surface type, stop, surface properties (apertures, obscurations, XY-polynomial terms). Insert / Ctrl+Insert / Shift+Delete insert and delete surfaces, renumbering variables, solves and merit operands. |
 | Input Rays (F5) | Rays drawn in the layout (rays per fan, fan plane, fields, wavelengths), pupil sampling of spot diagrams (with a live diagram of the pattern and ray count), fans and footprints, and user-defined rays (Hx, Hy, Px, Py, wavelength) drawn in red on the layout and listed in Analysis > Reports > User Ray Trace. Saved in the lens file's `"ui"` section and undoable. |
 | System Explorer (F2-F4) | Aperture type/value, ray aiming, field type and field table (weights, vignetting factors, equal-area helper), wavelengths with presets and primary, units, title, notes. |
@@ -78,6 +78,7 @@ python -m lensforge_qt --sample achromat            # singlet, achromat, parabol
 | Diffractive surfaces | Diffraction Grating (`DGRATING`: linear grating on a conic surface, lines/um and order, transmissive or reflective, `n'M' = nM + m lambda T`; follow it with a coordinate break onto the diffracted order, see `examples/grating_demo.lens.json`) and Binary 2 (rotationally symmetric diffractive phase). |
 | Optimization (Ctrl+U) | Damped least squares, hammer, global search, glass substitution, on a copy of the lens in the background with live merit plot and Stop (keeps the best design so far); the result is one undo step. |
 | Tolerancing (Ctrl+Shift+T) | Tolerance wizard, editable tolerance table, criterion (RMS spot / wavefront / MTF / merit function), compensator, sensitivity analysis with worst offenders, Monte Carlo with histogram and "load worst lens". |
+| Non-Sequential Editor (Ctrl+Shift+N) | Tools > Non-Sequential: a window with object and source tables (type, comment, position, tilts, material, coating, `name=value` parameters), trace settings (split rays, Fresnel losses, minimum relative intensity, maximum segments), a ray layout coloured by number of Fresnel reflections (direct, one, ghosts) and the irradiance on a chosen detector filtered by reflections. Toolbar: New / Open / Save scene (`.ns.json`), From Current Lens, Add Object, Add Source, Delete Row, Trace (F5), Help. Tools > Non-Sequential > Convert Lens to Non-Sequential opens the current lens as a scene. |
 | Python script (F8) | Runs Python against the open lens (`lens`, `lf`, `opt`, `np`); changes become one undo step, a failing script leaves the lens unchanged. |
 
 Also: undo/redo of every edit (Edit > Undo History), open `.json` / import `.zmx`, save, recent files,
@@ -176,6 +177,41 @@ t = lf.ghost_trace(lens, 4, 2, hx, hy, px, py)   # real rays from the lens's own
 Pairs with coordinate breaks, mirrors, ideal or phase surfaces between the two reflections are
 skipped; the non-sequential tracer covers those. In the desktop app: Analysis > Stray Light.
 
+## Non-sequential ray tracing
+
+`lensforge.nonseq` traces rays through objects placed anywhere in 3-D, in whatever order the rays
+meet them, with optional ray splitting at every refracting face.
+
+```python
+from lensforge import nonseq as ns
+scene = ns.NonSequentialSystem("Ball lens")
+scene.add(ns.SourceEllipse(half_x=1, half_y=1, n_rays=20000, z=-20))       # collimated along +z
+scene.add(ns.Sphere(radius=5, material="N-BK7"))                          # paraxial focus 7.34 from centre
+scene.add(ns.Detector(half_x=0.5, half_y=0.5, nx=101, ny=101, z=7.34))
+r = scene.trace(split=True, min_relative_intensity=1e-6)   # NSTraceResult
+print(r.summary())                           # where the power ended; power per detector
+d = r.detector(0)
+d.image("ghost")                             # irradiance of light with 2+ Fresnel reflections
+d.total_power("direct"), d.rms_radius(), d.select(2, tir=False)
+P.ns_layout(r); P.ns_detector(r, 0, rays="ghost", log=True)
+scene = ns.from_sequential(lens)             # any sequential lens -> objects, sources, image detector
+ns.save(scene, "scene.ns.json"); ns.load("scene.ns.json")
+```
+
+| Kind | Objects |
+|---|---|
+| Volumes (`material` = glass; faces refract, split by Fresnel or `coating=R`) | `StandardLens` (two faces of any sequential surface type + cylindrical edge), `Sphere`, `RectangularVolume`, `CylinderVolume` |
+| Surfaces (`material` = `"MIRROR"` or `"ABSORB"`) | `StandardSurface` (annular aperture), `Annulus`, `Rectangle` |
+| Detectors | `Detector` (pixels, absorbing or `transparent`; records position, power, direction, wavelength, source, Fresnel reflections and TIR count of every hit) |
+| Sources (rays along local +z, `random` or `grid` sampling, several wavelengths) | `SourcePoint` (cone), `SourceEllipse`, `SourceRectangle` (optional divergence) |
+
+Poses are position + tilts about local X, then Y, then Z (degrees). Volumes must not overlap,
+except that touching faces (cemented doublets) pass light directly from glass to glass. Without
+splitting, rays take the transmitted path (losing the Fresnel reflection with `fresnel=True`);
+TIR is always followed. Checks in `tests/test_nonseq.py`: converted lenses reproduce the sequential
+trace to 1e-9, two-reflection light matches `ghost_image`, energy is conserved, ball-lens focus,
+TIR light pipe, fold mirror, coated plate. Desktop app: Tools > Non-Sequential.
+
 ## Optimisation and tolerancing
 
 All in `lensforge.optimize` (`from lensforge import optimize as opt`). Variables, solves and an attached
@@ -255,6 +291,7 @@ coordinate return, so the rest of the lens stays put (tested to 1e-14). Perturbe
 | `io/` | Native JSON format; Zemax `.zmx` importer (common subset). |
 | `multiconfig.py` | `MultiConfig` table (operand rows x configurations), switching, cell parsing shared by front ends. |
 | `compose.py` | Scale surfaces and systems, reverse a group of surfaces, insert one lens into another (`insert_lens`), delete a range of surfaces with variables, solves and merit operands renumbered (`delete_surfaces`). |
+| `nonseq/` | Non-sequential objects, sources, scene + JSON (`system.py`), tracer with ray splitting (`trace.py`), sequential-to-non-sequential conversion (`convert.py`). |
 | `samples.py` | Example systems (singlet, achromat, parabola, Cassegrain) and a paraxial focus solve. |
 
 ## Conventions
@@ -283,7 +320,7 @@ principal planes; Zernike orthonormality and exact fit recovery.
 
 ## Not yet implemented
 
-Thermal glass effects, gradient index, non-sequential mode, Zernike sag surfaces, object-space
+Thermal glass effects, gradient index, Zernike sag surfaces, object-space
 telecentric systems, multi-configuration import from .zmx. Optimisation gaps vs Zemax: orthogonal descent, multi-start
 genetic global search, TIRR (irregularity) tolerances, multi-configuration tolerancing.
 Analysis gaps vs Zemax: physical optics propagation / Gaussian beams, extended-source geometric image

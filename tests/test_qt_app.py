@@ -1233,3 +1233,75 @@ def test_merit_wizard_covers_every_configuration(win, monkeypatch):
     rows = win.doc.system.merit_function.rows
     assert [r.params["cfg"] for r in rows if r.type == "CONF"] == [1, 2, 3]
     assert sum(r.type == "CONF" for r in rows) == 3  # the old CONF rows were replaced, not kept
+
+
+# ---------------------------------------------------------------------------
+# Non-sequential editor and ghost analyses
+# ---------------------------------------------------------------------------
+
+def test_non_sequential_editor_convert_trace_and_edit(win, tmp_path):
+    from lensforge_qt import ns_window as NW
+    w = win.convert_to_ns()
+    assert w is win.show_ns()  # one window, brought to the front
+    kinds = [o.kind for o in w.scene.objects]
+    assert kinds == ["STANDARD_LENS", "STANDARD_LENS", "ANNULUS", "DETECTOR"]
+    assert w.obj_table.rowCount() == 4 and w.src_table.rowCount() == 3
+    w.split.setChecked(True)
+    w.trace()
+    r = w.result
+    assert r is not None and r.n_rays_total > r.n_launched  # split rays were followed
+    assert "Detector image" in w.summary.toPlainText()
+    assert len(w.figure.axes) >= 2
+    w.filter_box.setCurrentIndex(w.filter_box.findData("ghost"))
+    assert r.detector(0).total_power("ghost") > 0
+
+    # edit a pose cell and a parameter, and reject a bad parameter
+    w.obj_table.item(0, 4).setText("1.5")  # Z
+    assert w.scene.objects[0].z == 1.5
+    col = len(NW.OBJ_COLS) - 1
+    w.obj_table.item(0, col).setText("semi_diameter=7")
+    assert w.scene.objects[0].semi_diameter == 7
+    w.obj_table.item(0, col).setText("bogus=1")
+    assert "bogus" in w.statusBar().currentMessage()
+    w.src_table.item(0, 8).setText("77")
+    assert w.scene.sources[0].n_rays == 77
+
+    # add and delete rows, save and reopen
+    w.obj_table.setCurrentCell(3, 0)
+    w.add_item("SPHERE")
+    assert w.scene.objects[4].kind == "SPHERE"
+    w.tabs.setCurrentIndex(0)
+    w.obj_table.setCurrentCell(4, 0)
+    w.delete_row()
+    assert len(w.scene.objects) == 4
+    w.add_item("SOURCE_POINT")
+    assert w.scene.sources[-1].kind == "SOURCE_POINT"
+    p = str(tmp_path / "scene.ns.json")
+    w.save_scene(p)
+    w.new_scene(ask=False)
+    assert not w.scene.objects
+    w.open_scene(p)
+    assert len(w.scene.objects) == 4 and len(w.scene.sources) == 4
+    w.close()
+
+
+def test_non_sequential_toolbar_icons_and_tooltips(win):
+    from lensforge_qt import icons
+    from lensforge_qt.ns_window import BUTTONS
+    w = win.show_ns()
+    assert set(icons.NS_ICONS) == set(BUTTONS)
+    assert len(set(icons.NS_ICONS.values())) == len(icons.NS_ICONS)  # every button its own icon
+    main_icons = set(icons.ICONS.values()) | set(icons.ANALYSIS_ICONS.values()) | set(icons.SAMPLE_ICONS.values())
+    for key, a in w.actions_.items():
+        assert not a.icon().isNull(), key
+        assert BUTTONS[key][1] in a.toolTip()
+        assert icons.NS_ICONS[key] not in main_icons
+    w.close()
+
+
+def test_ghost_analysis_windows(win):
+    win.doc.reset(lf.load(TRIPLET))
+    w = win.open_analysis("ghost_focus")
+    assert "6-4" in w.text.toPlainText()
+    w = win.open_analysis("ghost_layout", {"i": 3, "j": 1})
+    assert w.error is None and w.result["pair"] == (3, 1)

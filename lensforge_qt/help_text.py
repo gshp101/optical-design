@@ -194,6 +194,49 @@ HELP = {
         "explain every column, how weights work and how to balance them, the field and pupil coordinates "
         "Hx, Hy, Px, Py used by ray operands, every operand with its parameters, and a worked example that "
         "minimises the RMS spot size (File &gt; Sample Lenses &gt; Spot Size Merit Example)."),
+    "Tools > Non-Sequential > Non-Sequential Editor": (
+        "Open the non-sequential editor: objects anywhere in 3-D, rays in any order, ray splitting.",
+        "Opens the Non-Sequential Editor window. A non-sequential scene holds <b>objects</b> placed anywhere "
+        "(position X, Y, Z and tilts about the local X, then Y, then Z axes, in degrees) and <b>sources</b>. "
+        "Rays go to whichever object they meet next, in any order, so stray light, ghosts, light pipes, prisms "
+        "and fold mirrors are traced as they really behave.<br><br>"
+        "<b>Objects</b> (Add Object button): Standard Lens (two faces and a cylindrical edge; Parameters "
+        "radius1, conic1, thickness, radius2, conic2, semi_diameter), Sphere (radius), Rectangular Volume "
+        "(half_x, half_y, length), Cylinder Volume (radius, length), Standard Surface (one mirror or absorbing "
+        "surface: radius, conic, semi_diameter, inner_radius), Annulus (flat ring: stops and baffles), "
+        "Rectangle (fold mirror or baffle) and Detector Rectangle (half_x, half_y, nx, ny pixels, transparent "
+        "1/0). Volumes take a glass in Material; surfaces take MIRROR or ABSORB. Coating R sets the "
+        "reflectance of a volume's faces (empty = uncoated Fresnel). Edit the Parameters cell as "
+        "name=value pairs; hovering it lists the names. Volumes must not overlap, except that touching faces "
+        "(a cemented doublet) pass light straight from one glass to the other.<br><br>"
+        "<b>Sources</b> (Add Source button): Source Point (cone_angle), Source Ellipse and Source Rectangle "
+        "(half_x, half_y, divergence cone_angle; collimated at 0). Rays leave along the source's local +z "
+        "axis; the power is shared evenly by its rays and wavelengths. Sampling is random (Monte Carlo) or "
+        "grid.<br><br>"
+        "<b>Trace</b> (F5) traces every source. <b>Split rays</b> follows both the reflected and the "
+        "transmitted part at each refracting face (unpolarised Fresnel or the coating reflectance); split rays "
+        "weaker than <b>Min. intensity</b> times their source ray are dropped, and no ray has more than "
+        "<b>Max. segments</b>. Total internal reflection is always followed. Without splitting, rays take the "
+        "transmitted path and lose the reflected power when <b>Fresnel losses</b> is on. The left plot shows "
+        "the objects and rays (blue direct, green one reflection, red two or more: ghosts); the right plot "
+        "shows the irradiance on the chosen detector, filtered by Show (all, direct, ghosts, or an exact "
+        "number of reflections). The text below gives where the power ended (absorbed, detected, escaped) "
+        "and the power on each detector.<br><br>"
+        "The toolbar also has New Scene, Open Scene, Save Scene (.ns.json), From Current Lens (converts the "
+        "lens in the main window) and Delete Row. From Python: <code>from lensforge import nonseq as ns</code>; "
+        "<code>scene = ns.from_sequential(lens)</code>; <code>r = scene.trace(split=True)</code>; "
+        "<code>r.detector(0).image('ghost')</code>; plots with <code>lensforge.plot.ns_layout</code> and "
+        "<code>lensforge.plot.ns_detector</code>."),
+    "Tools > Non-Sequential > Convert Lens to Non-Sequential": (
+        "Turn the current lens into a non-sequential scene and open it in the Non-Sequential Editor.",
+        "Every glass element becomes a Standard Lens object with the exact surface shapes (aspheres, toroids "
+        "and freeforms included); cemented groups become touching lenses. Mirrors become mirror surfaces (a "
+        "Cassegrain primary gets the central hole the returning beam needs), the stop gets an absorbing "
+        "annulus and the image surface a detector. Each field becomes a source that fills the entrance pupil: "
+        "collimated for objects at infinity, a point source otherwise. Ideal (paraxial) and phase surfaces "
+        "cannot be converted. The lens itself is not changed. Trace with Split rays on to see the ghosts; "
+        "the two-reflection light matches Analysis > Stray Light > Ghost Image. From Python: "
+        "<code>lensforge.nonseq.from_sequential(lens)</code>."),
     "Tools > Multi-Configuration Editor": (
         "Edit the configurations of the lens: zoom positions, focus settings and other states.",
         "Opens the Multi-Configuration Editor. One lens can hold several <b>configurations</b>, such as the "
