@@ -628,6 +628,46 @@ def _opds(ctx, field=0, reference="centroid", rings=3, arms=6, wavelengths=None,
 
 
 # ---------------------------------------------------------------------------
+# Non-sequential (the lens converted with lensforge.nonseq.from_sequential)
+# ---------------------------------------------------------------------------
+
+def _ns_detector(ctx, field, wave, n_rays, sampling, split, seed):
+    """Image-detector hits of the lens traced non-sequentially (cached per row settings)."""
+    def idx(v):
+        return None if v is None else tuple(int(k) for k in (v if isinstance(v, (list, tuple)) else [v]))
+    key = ("ns", idx(field), idx(wave), int(n_rays), sampling, bool(split), int(seed))
+
+    def run():
+        from ..nonseq import from_sequential
+        f, w = key[1], key[2]
+        scene = from_sequential(ctx.system, fields=None if f is None else list(f),
+                                wavelengths=None if w is None else list(w), n_rays=int(n_rays), sampling=sampling)
+        res = scene.trace(split=bool(split), seed=int(seed), record_segments=False)
+        if res.launched_power <= 0:
+            raise OperandError("no rays launched")
+        return res.detector(0), res.launched_power
+    return ctx.cached(key, run)
+
+
+@operand("NSDP", "Non-sequential: fraction of the launched power that reaches the image detector, for rays "
+                 "'all', 'direct' or 'ghost' (two or more Fresnel reflections); the lens is converted to a "
+                 "non-sequential scene and traced with ray splitting")
+def _nsdp(ctx, rays="all", field=None, wave=None, n_rays=500, sampling="grid", split=True, seed=0):
+    det, launched = _ns_detector(ctx, field, wave, n_rays, sampling, split, seed)
+    return det.total_power(rays) / launched
+
+
+@operand("NSRR", "Non-sequential: power-weighted RMS radius of the light on the image detector about its "
+                 "centroid, for rays 'all', 'direct' or 'ghost' (lens units)")
+def _nsrr(ctx, rays="all", field=None, wave=None, n_rays=500, sampling="grid", split=True, seed=0):
+    det, _ = _ns_detector(ctx, field, wave, n_rays, sampling, split, seed)
+    v = det.rms_radius(rays)
+    if not np.isfinite(v):
+        raise OperandError(f"no {rays} rays reach the image detector")
+    return v
+
+
+# ---------------------------------------------------------------------------
 # Maths on other rows and user operands
 # ---------------------------------------------------------------------------
 

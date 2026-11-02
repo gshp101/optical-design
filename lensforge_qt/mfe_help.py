@@ -33,6 +33,7 @@ OPERAND_GROUPS: Dict[str, List[str]] = {
         "RAYS", "OPDS", "RSCE", "RSCH", "GEOS", "RWCE", "STRH", "MTFT", "MTFS", "MTFA", "EERA", "ZERN", "DIST",
         "LACL", "RELI"],
     "Third-order (Seidel) aberrations": ["SPHA", "COMA", "ASTI", "FCUR", "DISW", "SEID"],
+    "Non-sequential (stray light and ghosts)": ["NSDP", "NSRR"],
     "Maths on other rows, constants, configuration switching and user functions": [
         "BLNK", "CONF", "CONS", "SUMM", "DIFF", "PROD", "DIVI", "ABSO", "SQRT", "OSUM", "MAXX", "MINN", "OPGT", "OPLT",
         "OPVA", "USER"],
@@ -49,10 +50,12 @@ PARAM_HELP: Dict[str, str] = {
     "px, py": "Normalised pupil coordinates on the unit circle (see Field and pupil coordinates).",
     "field": "Which field point: an index counting from 0 (field=0 is the first row of the Fields table), or "
              "normalised coordinates written as a pair, field=(0, 0.7). For DIST it is a fraction of the full "
-             "field instead (field=1.0 is the edge).",
+             "field instead (field=1.0 is the edge). For NSDP / NSRR: a field index or a list of indices; left "
+             "out, all fields.",
     "wave": "Which wavelength: an index counting from 0 (wave=0 is the first row of the Wavelengths table). "
             "Left out: the primary wavelength for single-wavelength operands, and all wavelengths with their "
-            "weights (polychromatic) for RSCE, RSCH, GEOS, STRH, MTF.., EERA.",
+            "weights (polychromatic) for RSCE, RSCH, GEOS, STRH, MTF.., EERA, NSDP, NSRR (which also take a "
+            "list of indices).",
     "wavelengths": "For RAYS and OPDS: a list of wavelength indices, e.g. wavelengths=[1]. Left out: all "
                    "wavelengths, weighted by their wavelength weights.",
     "reference": "'centroid' (spot measured about its centroid; tilt removed for OPDS) or 'chief' (about the "
@@ -71,7 +74,15 @@ PARAM_HELP: Dict[str, str] = {
     "kind": "ZERN: 'fringe' or 'standard'. DIST: 'ftan' (F-tan(theta)) or 'ftheta' (F-theta).",
     "height": "ETVA / ETGT / ETLT: the height at which the edge thickness is measured. Left out: the larger "
               "semi-diameter of the two surfaces.",
-    "sampling": "Pupil grid size for RWCE and RELI (32 = 32 x 32).",
+    "sampling": "Pupil grid size for RWCE and RELI (32 = 32 x 32). For NSDP / NSRR: how the sources fill the "
+                "entrance pupil, 'grid' (regular, repeatable) or 'random' (seeded Monte Carlo).",
+    "rays": "NSDP / NSRR: which light on the image detector counts: 'all', 'direct' (no Fresnel "
+            "reflection) or 'ghost' (two or more reflections, i.e. ghost images), or a number of reflections.",
+    "n_rays": "NSDP / NSRR: rays launched per field and wavelength (before splitting). More rays are smoother "
+              "but slower; the merit is re-traced at every optimisation step.",
+    "split": "NSDP / NSRR: True traces the Fresnel-reflected part of every ray too (needed for 'ghost').",
+    "seed": "NSDP / NSRR: random-number seed for sampling='random'. A fixed seed traces the same rays every "
+            "time, so the merit changes only when the lens does.",
     "value": "CONS: the constant.",
     "cfg": "CONF: the configuration (counting from 1) the rows below it are evaluated in; see Tools > "
            "Multi-Configuration Editor. After the last row the lens returns to the configuration it showed.",

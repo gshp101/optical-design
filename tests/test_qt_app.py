@@ -438,6 +438,26 @@ def test_stop_keeps_best_design():
     assert best.merit_function.value(best) <= m0
 
 
+def test_orthogonal_descent_in_the_optimization_dialog(win):
+    from lensforge_qt.opt_dialogs import ALGORITHMS, run_optimization
+    assert "od" in [k for _, k in ALGORITHMS]
+    _singlet_problem(win.doc)
+    d = win.optimization()
+    d.algorithm.setCurrentIndex(d.algorithm.findData("od"))
+    assert d.cycles.isEnabled() and not d.trials.isEnabled()
+    s = win.doc.system.copy()
+    m0 = s.merit_function.value(s)
+    best, msg, hist = run_optimization(s, s.merit_function.copy(), "od", threading.Event(), lambda p: None,
+                                       cycles=30)
+    assert msg.startswith("Orthogonal descent")
+    dls, _, _ = run_optimization(win.doc.system.copy(), s.merit_function.copy(), "dls", threading.Event(),
+                                 lambda p: None)
+    assert best.merit_function.value(best) == pytest.approx(dls.merit_function.value(dls), rel=1e-3)
+    assert best.merit_function.value(best) < 0.95 * m0
+    assert best.paraxial().efl == pytest.approx(100.0, abs=1e-4)
+    assert hist[-1] <= hist[0]
+
+
 def test_tolerance_dialog(win):
     from lensforge_qt.opt_dialogs import ToleranceDialog
     win.doc.reset(lf.samples.singlet())

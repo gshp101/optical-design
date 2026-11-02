@@ -294,6 +294,114 @@ def test_ray_failure_is_rejected_not_crashing():
 
 
 # ---------------------------------------------------------------------------
+# Orthogonal descent (derivative-free)
+# ---------------------------------------------------------------------------
+
+def test_minimize_od_rosenbrock_and_ill_conditioned_quadratic():
+    r = opt.minimize_od(lambda x: (1 - x[0]) ** 2 + 100 * (x[1] - x[0] ** 2) ** 2, [-1.2, 1.0],
+                        scale=[0.5, 0.5], cycles=500, tol=1e-14, min_step=1e-10)
+    assert r.fun < 1e-10 and r.evaluations < 1000
+    assert r.x == pytest.approx([1.0, 1.0], abs=1e-4)
+    R = np.linalg.qr(np.random.default_rng(0).normal(size=(5, 5)))[0]
+    A = np.diag([1.0, 10, 100, 1e3, 1e4])
+
+    def quad(x):
+        y = R @ (x - 1.0)
+        return float(y @ A @ y)
+    r = opt.minimize_od(quad, np.zeros(5), scale=np.full(5, 0.5), cycles=500, tol=1e-14, min_step=1e-10)
+    assert r.fun < 1e-8 and r.evaluations < 2000
+    assert r.history == sorted(r.history, reverse=True)
+
+
+def test_minimize_od_respects_bounds_and_failed_evaluations():
+    def f(x):
+        if x[1] > 2.5:
+            return math.inf                        # "ray failure" region
+        return (x[0] - 5.0) ** 2 + (x[1] - 3.0) ** 2
+    r = opt.minimize_od(f, [0.0, 0.0], lo=[-1.0, -1.0], hi=[2.0, 10.0])
+    assert r.x[0] == pytest.approx(2.0)              # minimum outside the box: lands on the bound
+    assert 2.0 < r.x[1] <= 2.5
+    assert np.all(r.x >= -1.0) and r.x[0] <= 2.0
+
+
+def test_orthogonal_descent_matches_dls_on_a_smooth_problem():
+    def problem():
+        s = lf.samples.achromat()
+        for i in (1, 2, 3):
+            opt.set_variable(s, i, "curvature")
+        opt.set_solve(s, opt.MarginalRayHeight(3))
+        return s, opt.default_merit(s, "spot")
+    s1, mf1 = problem()
+    dls = opt.optimize(s1, mf1)
+    s2, mf2 = problem()
+    od = opt.orthogonal_descent(s2, mf2)
+    assert isinstance(od, opt.OptimizationResult)
+    assert od.merit == pytest.approx(dls.merit, rel=0.01)
+    assert od.merit == pytest.approx(mf2.value(s2), rel=1e-12)       # the lens holds the result
+    assert od.history[0] == pytest.approx(od.initial_merit) and od.history == sorted(od.history, reverse=True)
+
+
+def test_orthogonal_descent_hard_constraint_and_bounds():
+    s = lf.samples.achromat()
+    for i in (1, 2, 3):
+        opt.set_variable(s, i, "curvature")
+    opt.set_variable(s, 1, "curvature", max=0.0175)
+    opt.set_solve(s, opt.MarginalRayHeight(3))
+    mf = opt.default_merit(s, "spot")
+    mf.add("EFFL", 90.0, -1)
+    start = opt.merit_value(s, mf)
+    res = opt.orthogonal_descent(s, mf, cycles=60)
+    assert s.paraxial().efl == pytest.approx(90.0, abs=1e-5)
+    assert res.constraint_error < 1e-5
+    assert s.surfaces[1].curvature <= 0.0175
+    assert res.merit < 0.2 * start
+
+
+def test_orthogonal_descent_copes_with_a_noisy_merit_function():
+    """Noise of 1e-4 mm on the RMS spot: DLS's finite-difference derivatives are dominated by it,
+    orthogonal descent still finds best focus."""
+    rng = np.random.default_rng(3)
+    k = lf.samples.singlet().image_index - 1
+
+    def noisy(sys):
+        return float(lf.analysis.spot_diagram(sys, field=0)["rms_radius"]) + 1e-4 * rng.random()
+    ref = lf.samples.singlet()
+    opt.set_variable(ref, k, "thickness")
+    clean = opt.MeritFunction()
+    clean.add("RSCE", 0, 1, field=0)
+    opt.optimize(ref, clean)
+    best = ref.surfaces[k].thickness
+    s = lf.samples.singlet()
+    s.surfaces[k].thickness += 4.0
+    opt.set_variable(s, k, "thickness")
+    res = opt.orthogonal_descent(s, noisy, cycles=30)
+    assert s.surfaces[k].thickness == pytest.approx(best, abs=0.1)
+    assert res.merit < res.initial_merit
+
+
+def test_non_sequential_operands_and_od_focus():
+    s = lf.samples.achromat()
+    mf = opt.MeritFunction()
+    mf.add("NSDP", 0, 1)
+    mf.add("NSDP", 0, 1, rays="ghost")
+    mf.add("NSRR", 0, 1, field=0, n_rays=300)
+    ev = mf.evaluate(s)
+    assert ev.error is None
+    total, ghost, rms = ev.scalars
+    assert 0.5 < total <= 1.0 and 0.0 < ghost < 1e-3 * total and rms > 0
+    # focus a defocused singlet on the non-sequential (Monte Carlo) RMS radius
+    s = lf.samples.singlet()
+    k = s.image_index - 1
+    s.surfaces[k].thickness += 3.0
+    opt.set_variable(s, k, "thickness")
+    mf = opt.MeritFunction()
+    mf.add("NSRR", 0, 1, field=0, n_rays=300, sampling="random")
+    res = opt.orthogonal_descent(s, mf, cycles=20)
+    assert res.merit < 0.75 * res.initial_merit
+    assert abs(s.surfaces[k].thickness - (lf.samples.singlet().surfaces[k].thickness)) < 2.0
+
+
+# ---------------------------------------------------------------------------
 # Global optimisation and glass substitution
 # ---------------------------------------------------------------------------
 

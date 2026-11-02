@@ -16,7 +16,8 @@ Typical use::
 
 Contents: variables and solves (:mod:`.variables`, :mod:`.solves`), operands
 and the merit function editor (:mod:`.operands`, :mod:`.merit`), damped least
-squares (:mod:`.dls`), global search and hammer (:mod:`.global_opt`), glass
+squares (:mod:`.dls`), derivative-free orthogonal descent
+(:mod:`.orthogonal`), global search and hammer (:mod:`.global_opt`), glass
 substitution (:mod:`.glass`) and tolerancing (:mod:`.tolerance`).
 """
 
@@ -29,6 +30,7 @@ from .solves import (ChiefRayAngle, ChiefRayHeight, Concentric, EdgeThickness, F
 from .operands import OPERAND_INFO, OPERANDS, Block, EvalContext, gaussian_quadrature, is_symmetric
 from .merit import MeritFunction, Operand, default_merit, operand_help
 from .dls import OptimizationResult, merit_value, optimize
+from .orthogonal import ODResult, minimize_od, orthogonal_descent
 from .global_opt import GlobalResult, global_search, hammer
 from .glass import glass_substitution, nearest_glasses, snap_to_catalog
 from .tolerance import (MonteCarloResult, Tolerance, default_tolerances, inverse_sensitivity, monte_carlo,

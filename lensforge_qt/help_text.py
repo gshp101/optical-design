@@ -177,10 +177,16 @@ HELP = {
     # ------------------------------------------------------------------ Tools
     "Tools > Optimization": (
         "Optimise the variables to minimise the merit function.",
-        "Runs damped least squares, Hammer, global (multi-start) or glass substitution optimisation on the "
-        "lens's variables against the merit function, in the background with live progress. Stop keeps the "
-        "best design found so far; the result is one undo step. Glass substitution tries the catalog glasses "
-        "nearest each current glass; Glass catalog limits them to one maker (e.g. only OHARA)."),
+        "Runs damped least squares, orthogonal descent, Hammer, global (multi-start) or glass substitution "
+        "optimisation on the lens's variables against the merit function, in the background with live "
+        "progress. Stop keeps the best design found so far; the result is one undo step. Damped least squares "
+        "uses derivatives and is fastest for smooth merit functions. Orthogonal descent uses no derivatives: "
+        "it searches along a set of orthogonal directions that turn to follow the valley, so it copes with "
+        "noisy or jumpy merit functions such as the non-sequential operands NSDP and NSRR (stray light, "
+        "ghosts) or rays that clip an aperture; it meets hard constraints (negative weight) only to about "
+        "1e-6, so use a solve where one must hold exactly. Cycles limits either local optimiser. Glass "
+        "substitution tries the catalog glasses nearest each current glass; Glass catalog limits them to one "
+        "maker (e.g. only OHARA)."),
     "Tools > Tolerancing": (
         "Estimate how manufacturing errors degrade the lens.",
         "Builds a tolerance list (radius, thickness, index, Abbe, decentre and tilt tolerances), then runs a "
