@@ -12,3 +12,17 @@ INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM
 LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR
 OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
 PERFORMANCE OF THIS SOFTWARE.
+
+-------------------------------------------------------------------------------
+
+Third-party material
+
+The license above covers lensforge's own code and files. It does not cover
+the lens prescriptions in examples/ModernLensDesignSmith/. They are taken from
+Warren J. Smith, "Modern Lens Design", 2nd ed. (McGraw-Hill, 2005). Many of
+these designs come from patents, some may still be patented, and others may
+be protected by copyright or other rights. No rights to them are granted
+here. Check before using any of them commercially.
+
+See the "Third-party data" section of README.md for the sources of the
+bundled glass catalog data.
