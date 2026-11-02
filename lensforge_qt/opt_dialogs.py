@@ -70,7 +70,8 @@ class WatchedMerit(opt.MeritFunction):
         return float(np.sqrt(np.sum(r * r))) if ok else math.inf
 
 
-ALGORITHMS = [("Local: damped least squares", "dls"), ("Hammer", "hammer"), ("Global search (multi-start)", "global"),
+ALGORITHMS = [("Local: damped least squares", "dls"),
+              ("Local: orthogonal descent (no derivatives)", "od"), ("Hammer", "hammer"), ("Global search (multi-start)", "global"),
               ("Glass substitution", "glass")]
 
 
@@ -86,6 +87,11 @@ def run_optimization(system, merit, algorithm, stop, report, cycles=50, trials=5
         if algorithm == "dls":
             res = opt.optimize(system, wm, cycles=cycles)
             msg = f"DLS: {res.initial_merit:.8g} -> {res.merit:.8g} in {res.cycles} cycles ({res.message})"
+            hist = res.history
+        elif algorithm == "od":
+            res = opt.orthogonal_descent(system, wm, cycles=cycles)
+            msg = (f"Orthogonal descent: {res.initial_merit:.8g} -> {res.merit:.8g} in {res.cycles} cycles "
+                   f"({res.message})")
             hist = res.history
         elif algorithm == "hammer":
             res = opt.hammer(system, wm, trials=trials, time_limit=tl, cycles=min(cycles, 20))
@@ -155,7 +161,9 @@ class OptimizationDialog(QDialog):
         self.auto_apply = QCheckBox("Load the result into the lens when finished")
         self.auto_apply.setChecked(True)
         form.addRow("Algorithm", self.algorithm)
-        form.addRow("DLS cycles", self.cycles)
+        self.cycles.setToolTip("Most cycles of the local optimiser (damped least squares or orthogonal "
+                               "descent); Hammer and global search use up to 20 / 30 per local run")
+        form.addRow("Cycles", self.cycles)
         form.addRow("Trials / starts", self.trials)
         form.addRow("Time limit", self.time_limit)
         form.addRow("Glass candidates (nearest)", self.nearest)
