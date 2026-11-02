@@ -13,7 +13,7 @@ from PySide6.QtWidgets import (QAbstractItemView, QComboBox, QDialog, QDialogBut
                                QMessageBox, QPushButton, QRadioButton, QSplitter, QTableWidget, QTableWidgetItem,
                                QTabWidget, QVBoxLayout, QWidget)
 
-from lensforge.materials import ConstantIndex, ModelGlass
+from lensforge.materials import ConstantIndex, ModelGlass, _squash
 
 from . import edits as E
 
@@ -70,7 +70,7 @@ class MaterialDialog(QDialog):
         top = QHBoxLayout()
         self.catalog = QComboBox()
         self.filter = QLineEdit()
-        self.filter.setPlaceholderText("Filter by name, e.g. SF or BK")
+        self.filter.setPlaceholderText("Filter by any part of the name, e.g. BK7 or LAH")
         load = QPushButton("Load AGF Catalog...")
         load.clicked.connect(self._load_agf)
         top.addWidget(QLabel("Catalog"))
@@ -116,8 +116,8 @@ class MaterialDialog(QDialog):
         self._fill_table()
 
     def _visible_rows(self):
-        cat, t = self.catalog.currentData(), self.filter.text().strip().upper()
-        return [r for r in self.rows if (cat is None or r[1] == cat) and (not t or t in r[2].upper())]
+        cat, t = self.catalog.currentData(), _squash(self.filter.text())  # ignore case and hyphens
+        return [r for r in self.rows if (cat is None or r[1] == cat) and (not t or t in _squash(r[2]))]
 
     def _fill_table(self):
         rows = self._visible_rows()

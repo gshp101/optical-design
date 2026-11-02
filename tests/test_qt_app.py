@@ -618,6 +618,47 @@ def test_material_dialog(win):
     assert win.doc.undo_stack.undoText().startswith("Surface 1 material")
 
 
+def test_material_cell_substring_completion(win, qtbot):
+    """Typing part of a glass name offers every glass containing it (bk7 -> N-BK7)."""
+    from lensforge_qt.lde import MaterialEditor
+    view = win.lde.view
+    idx = lde_index(win, 1, "material")
+    ed = MaterialEditor(view.itemDelegate(), idx, view)
+    ed.edit.setText("bk7")
+    ed._update_completions("bk7")
+    hits = ed.completions.stringList()
+    assert hits[0] == "N-BK7" and "N-BK7HT" in hits and "K-BK7" in hits
+    ed._update_completions("cdgm:h-k9")
+    assert ed.completions.stringList()[0] == "CDGM:H-K9L"
+    ed._update_completions("1.6,40")
+    assert ed.completions.stringList() == []
+    ed._update_completions("mir")
+    assert ed.completions.stringList() == ["MIRROR"]
+    # the material picker filter ignores case and hyphens too
+    from lensforge_qt.material_dialog import MaterialDialog
+    d = MaterialDialog(win.doc.system, None)
+    d.filter.setText("nbk7")
+    names = {d.table.item(r, 0).text() for r in range(d.table.rowCount())}
+    assert "N-BK7" in names and all("BK7" in n.upper() for n in names)
+    d.catalog.setCurrentIndex(d.catalog.findData("OHARA"))
+    d.filter.setText("bsl7")
+    assert d.table.rowCount() >= 1 and d.table.item(0, 1).text() == "OHARA"
+    d.reject()
+
+
+def test_optimization_dialog_glass_catalog(win):
+    from lensforge_qt.opt_dialogs import OptimizationDialog
+    d = OptimizationDialog(win.doc)
+    cats = [d.glass_catalog.itemData(i) for i in range(d.glass_catalog.count())]
+    assert cats[0] is None and {"SCHOTT", "OHARA", "HOYA", "CDGM", "SUMITA", "HIKARI"} <= set(cats)
+    assert d.glass_catalog.toolTip()
+    d.algorithm.setCurrentIndex(d.algorithm.findData("glass"))
+    assert d.glass_catalog.isEnabled()
+    d.algorithm.setCurrentIndex(d.algorithm.findData("dls"))
+    assert not d.glass_catalog.isEnabled()
+    d.close()
+
+
 def test_grating_surface_in_editor(win):
     m = win.lde.model
     win.doc.reset(lf.samples.singlet())

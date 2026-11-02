@@ -473,3 +473,10 @@ def test_single_merit_row_gets_weight_one():
     assert [r.weight for r in two.rows] == [0.0, 0.0]  # several rows: weights are left alone
     blank = opt.MeritFunction.from_dict({"rows": [{"type": "BLNK", "weight": 0}]})
     assert blank.rows[0].weight == 0.0
+
+
+def test_nearest_glasses_from_one_maker():
+    lib = lf.samples.singlet().library
+    near = opt.nearest_glasses("N-BK7", lib, 3, catalogs=["OHARA"])
+    assert near and all(lib.resolve(spec).catalog == "OHARA" for spec, *_ in near)
+    assert all("BSL7" in spec for spec, *_ in near)  # S-BSL7, L-BSL7 and the obsolete BSL7

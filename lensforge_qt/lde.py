@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import math
 
-from PySide6.QtCore import QAbstractTableModel, QModelIndex, QRect, Qt, Signal
+from PySide6.QtCore import QAbstractTableModel, QModelIndex, QRect, QStringListModel, Qt, Signal
 from PySide6.QtGui import QAction, QColor, QFont, QKeySequence
 from PySide6.QtWidgets import (QAbstractItemView, QCheckBox, QComboBox, QCompleter, QDialog, QDialogButtonBox,
                                QFormLayout, QHBoxLayout, QHeaderView, QLabel, QLineEdit, QMenu, QMessageBox,
@@ -301,6 +301,14 @@ class MarkerDelegate(QStyledItemDelegate):
             model.setData(index, editor.text(), Qt.EditRole)
 
 
+def _is_number(t):
+    try:
+        float(t)
+        return True
+    except ValueError:
+        return False
+
+
 class MaterialEditor(QWidget):
     """Material cell editor: text with glass-name completion plus a "..." button
     that opens the material picker dialog."""
@@ -309,10 +317,18 @@ class MaterialEditor(QWidget):
         super().__init__(parent)
         self.delegate, self.row = delegate, index.row()
         self.edit = QLineEdit(self)
-        names = sorted({g.name for g in delegate.model.system.library.all_glasses()}) + ["MIRROR"]
-        c = QCompleter(names, self.edit)
-        c.setCaseSensitivity(Qt.CaseInsensitive)
-        self.edit.setCompleter(c)
+        self.edit.setToolTip("Type any part of a glass name (bk7 offers N-BK7), CATALOG:NAME, 'nd,vd', "
+                             "an index or MIRROR")
+        # Substring completion: MaterialLibrary.search matches anywhere in the name, ignoring case and hyphens.
+        self.library = delegate.model.system.library
+        self.completions = QStringListModel(self)
+        c = QCompleter(self.completions, self.edit)
+        c.setCompletionMode(QCompleter.UnfilteredPopupCompletion)
+        c.setMaxVisibleItems(15)
+        c.setWidget(self.edit)
+        c.activated.connect(self._completion_chosen)
+        self.completer = c
+        self.edit.textEdited.connect(self._update_completions)
         self.button = QToolButton(self)
         self.button.setText("...")
         self.button.setToolTip("Choose a material from the catalog")
@@ -324,6 +340,26 @@ class MaterialEditor(QWidget):
         lay.addWidget(self.button)
         self.setFocusProxy(self.edit)
         self.setAutoFillBackground(True)
+
+    def _update_completions(self, text):
+        t = text.strip()
+        if not t or "," in t or _is_number(t):
+            self.completions.setStringList([])
+            self.completer.popup().hide()
+            return
+        hits = self.library.search(t, limit=200)
+        if "MIRROR".startswith(t.upper()):
+            hits.append("MIRROR")
+        self.completions.setStringList(hits)
+        if hits:
+            self.completer.complete()
+        else:
+            self.completer.popup().hide()
+
+    def _completion_chosen(self, text):
+        self.edit.setText(text)
+        self.delegate.commitData.emit(self)
+        self.delegate.closeEditor.emit(self)
 
     def setText(self, t):
         self.edit.setText(t)
