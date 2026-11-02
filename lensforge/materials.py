@@ -427,6 +427,53 @@ class MaterialLibrary:
         for cat in self.catalogs.values():
             yield from cat
 
+    def glass_specs(self):
+        """(spec, glass) for every catalog glass, in search order.  The spec is
+        the plain name for the first glass of that name (the one :meth:`find`
+        returns) and ``"CATALOG:NAME"`` for later ones."""
+        seen = set()
+        out = []
+        for cname, cat in self.catalogs.items():
+            for g in cat:
+                key = g.name.upper()
+                out.append((g.name if key not in seen else f"{cname}:{g.name}", g))
+                seen.add(key)
+        return out
+
+    def search(self, text: str, limit: Optional[int] = None):
+        """Glass specs whose name contains ``text``, ignoring case, hyphens,
+        spaces and other punctuation: ``search("bk7")`` gives ``N-BK7``,
+        ``N-BK7HT``, ... and ``search("CDGM:f2")`` limits the search to CDGM.
+        Exact matches come first, then names with a hyphen-separated part
+        equal to the text (N-BK7), then names or parts starting with it, then
+        the rest; ties are ordered by name length, catalog order (SCHOTT
+        first) and name."""
+        cat_filter, q = None, text.strip()
+        if ":" in q:
+            cat_filter, q = (p.strip().upper() for p in q.split(":", 1))
+        q = _squash(q)
+        hits = []
+        order = {c: k for k, c in enumerate(self.catalogs)}
+        for spec, g in self.glass_specs():
+            if cat_filter is not None and not g.catalog.upper().startswith(cat_filter):
+                continue
+            n = _squash(g.name)
+            if q not in n:
+                continue
+            if cat_filter is not None and ":" not in spec:
+                spec = f"{g.catalog}:{g.name}" if cat_filter else spec
+            parts = [_squash(p) for p in re.split(r"[-\s]", g.name)]
+            tier = 0 if n == q else 1 if q in parts else 2 if any(p.startswith(q) for p in [n, *parts]) else 3
+            hits.append(((tier, len(n), order.get(g.catalog.upper(), 99), n), spec))
+        hits.sort(key=lambda h: h[0])
+        out = [spec for _, spec in hits]
+        return out[:limit] if limit else out
+
+
+def _squash(name: str) -> str:
+    """Upper-case name with everything but letters and digits removed (N-BK7 -> NBK7)."""
+    return re.sub(r"[^0-9A-Z]", "", name.upper())
+
 
 def default_library() -> MaterialLibrary:
     from .glass_data import builtin_catalogs

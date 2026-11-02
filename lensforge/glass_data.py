@@ -7,6 +7,7 @@ can verify each entry.
 
 from .materials import Glass, GlassCatalog
 from .schott_catalog import SCHOTT_INQUIRY, SCHOTT_PREFERRED
+from .vendor_catalogs import VENDOR_CATALOGS
 
 # Current SCHOTT catalog (preferred + inquiry glasses), see schott_catalog.py.
 # name: (B1, B2, B3, C1, C2, C3, nd, vd)
@@ -343,15 +344,24 @@ def builtin_catalogs():
               extra={"status": "obsolete"})
         for n, v in _SCHOTT_VISIBLE_FIT.items()
     ])
-    others = [GlassCatalog(cat, [
-        Glass(n, 1, v[:6], catalog=cat, nd_catalog=v[6], vd_catalog=v[7], wavelength_range=v[8:10],
-              extra={"status": "obsolete"})
-        for n, v in glasses.items()
-    ] + [
-        Glass(n, 2, (v[0], v[3], v[1], v[4], v[2], v[5]), catalog=cat, nd_catalog=v[6], vd_catalog=v[7],
-              wavelength_range=v[8:10], extra={"status": "obsolete"})
-        for n, v in _OTHER_LEGACY_SELLMEIER.get(cat, {}).items()
-    ]) for cat, glasses in _OTHER_LEGACY.items()]
+    # Current catalogs of other makers (vendor_catalogs.py), each followed by that maker's obsolete
+    # glasses that the current data sheet no longer lists.
+    others = []
+    for cat in [*VENDOR_CATALOGS, *(c for c in _OTHER_LEGACY if c not in VENDOR_CATALOGS)]:
+        current = [Glass(n, f, c, catalog=cat, nd_catalog=nd, vd_catalog=vd, wavelength_range=(lo, hi),
+                         extra={"status": status})
+                   for n, (f, c, nd, vd, lo, hi, status) in VENDOR_CATALOGS.get(cat, {}).items()]
+        have = {g.name.upper() for g in current}
+        legacy = [
+            Glass(n, 1, v[:6], catalog=cat, nd_catalog=v[6], vd_catalog=v[7], wavelength_range=v[8:10],
+                  extra={"status": "obsolete"})
+            for n, v in _OTHER_LEGACY.get(cat, {}).items()
+        ] + [
+            Glass(n, 2, (v[0], v[3], v[1], v[4], v[2], v[5]), catalog=cat, nd_catalog=v[6], vd_catalog=v[7],
+                  wavelength_range=v[8:10], extra={"status": "obsolete"})
+            for n, v in _OTHER_LEGACY_SELLMEIER.get(cat, {}).items()
+        ]
+        others.append(GlassCatalog(cat, current + [g for g in legacy if g.name.upper() not in have]))
     misc = GlassCatalog("MISC", [
         Glass(n, 2, (v[0], v[3] ** 2, v[1], v[4] ** 2, v[2], v[5] ** 2), catalog="MISC",
               nd_catalog=v[6], vd_catalog=v[7], wavelength_range=(0.2, 5.0))

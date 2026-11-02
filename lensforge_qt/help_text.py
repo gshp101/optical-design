@@ -86,10 +86,14 @@ HELP = {
         "Adds the glasses of an .agf catalog file to the glass library. They then appear in the material "
         "picker and can be typed into the Material column. The catalog is remembered and loaded again every "
         "time lensforge starts (also when loaded from the material picker), until you use File > Forget "
-        "Loaded Glass Catalogs. The built-in SCHOTT catalog already holds every current SCHOTT glass "
-        "(preferred and inquiry) plus common obsolete types, and the built-in INFRARED catalog holds "
-        "GERMANIUM, SILICON, ZNSE, ZNS_BROAD and AMTIR1 (type these names in the Material column; they "
-        "have no visible-light index, so the picker, which lists glasses by nd and Vd, leaves them out)."),
+        "Loaded Glass Catalogs. Built in are the current catalogs of SCHOTT (every preferred and inquiry "
+        "glass plus common obsolete types), OHARA, HOYA, CDGM, SUMITA and HIKARI (about 1250 glasses, from "
+        "each maker's own data sheet, plus obsolete OHARA and HOYA types used by older designs), and the "
+        "INFRARED catalog with GERMANIUM, SILICON, ZNSE, ZNS_BROAD and AMTIR1 (type these names in the "
+        "Material column; they have no visible-light index, so the picker, which lists glasses by nd and Vd, "
+        "leaves them out). A glass name found in more than one catalog (F2 is both SCHOTT and CDGM) means "
+        "the first catalog in that order; write CDGM:F2 for another one. An AGF file with the same name as a "
+        "built-in catalog (e.g. OHARA.AGF) replaces it."),
     "File > Forget Loaded Glass Catalogs": (
         "Stop loading your AGF catalogs at start-up.",
         "Clears the list of AGF catalogs that lensforge loads at every start. Catalogs already loaded stay "
@@ -142,7 +146,10 @@ HELP = {
         "Pick a glass or other material for the selected surface from a dialog.",
         "Opens the material picker: catalog glasses with a filterable table and an n-V glass map, a model "
         "glass (index and Abbe number), or air, mirror or a constant index. Also opened by the ... button in "
-        "a Material cell."),
+        "a Material cell. Choose a maker (SCHOTT, OHARA, HOYA, CDGM, SUMITA, HIKARI or a loaded AGF "
+        "catalog) or All, and filter by any part of the name: BK7 finds N-BK7, N-BK7HT and so on. Typing in "
+        "a Material cell offers the same matches: any glass whose name contains what you typed, ignoring "
+        "case, hyphens and spaces (bk7 offers N-BK7, nbk7 too; k9l offers H-K9L)."),
     "Edit > Surface Properties": (
         "Edit the selected surface's comment, stop, aperture and extra parameters.",
         "Opens the Surface Properties dialog: comment, stop, clear aperture or obscuration (optionally "
@@ -172,7 +179,8 @@ HELP = {
         "Optimise the variables to minimise the merit function.",
         "Runs damped least squares, Hammer, global (multi-start) or glass substitution optimisation on the "
         "lens's variables against the merit function, in the background with live progress. Stop keeps the "
-        "best design found so far; the result is one undo step."),
+        "best design found so far; the result is one undo step. Glass substitution tries the catalog glasses "
+        "nearest each current glass; Glass catalog limits them to one maker (e.g. only OHARA)."),
     "Tools > Tolerancing": (
         "Estimate how manufacturing errors degrade the lens.",
         "Builds a tolerance list (radius, thickness, index, Abbe, decentre and tilt tolerances), then runs a "

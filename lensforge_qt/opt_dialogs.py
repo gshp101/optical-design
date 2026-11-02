@@ -75,7 +75,7 @@ ALGORITHMS = [("Local: damped least squares", "dls"), ("Hammer", "hammer"), ("Gl
 
 
 def run_optimization(system, merit, algorithm, stop, report, cycles=50, trials=50, time_limit=0.0, nearest=5,
-                     starts=20, report_interval=0.25):
+                     starts=20, report_interval=0.25, catalogs=None):
     """Run one optimisation algorithm on ``system`` (a copy) and return
     (system, message, history).  Shared by the dialog and the tests."""
     wm = WatchedMerit(merit, stop, report, report_interval)
@@ -98,7 +98,8 @@ def run_optimization(system, merit, algorithm, stop, report, cycles=50, trials=5
                    f"{len(res.designs)} designs kept")
             hist = res.history
         elif algorithm == "glass":
-            res = opt.glass_substitution(system, wm, nearest=nearest, cycles=min(cycles, 10))
+            res = opt.glass_substitution(system, wm, nearest=nearest, cycles=min(cycles, 10),
+                                         catalogs=catalogs)
             ch = ", ".join(f"S{k}: {v}" for k, v in res.choices.items())
             msg = f"Glass substitution: {res.initial_merit:.8g} -> {res.merit:.8g}; {ch}"
             hist = [res.initial_merit, res.merit]
@@ -143,6 +144,14 @@ class OptimizationDialog(QDialog):
         self.nearest = QSpinBox()
         self.nearest.setRange(1, 200)
         self.nearest.setValue(5)
+        self.nearest.setToolTip("Glass substitution tries this many catalog glasses nearest each current glass")
+        self.glass_catalog = QComboBox()
+        self.glass_catalog.addItem("All catalogs", None)
+        for c in doc.system.library.catalogs:
+            if c not in ("MISC", "INFRARED"):
+                self.glass_catalog.addItem(c, c)
+        self.glass_catalog.setToolTip("Catalog that glass substitution takes candidate glasses from "
+                                      "(and that model glasses are snapped to)")
         self.auto_apply = QCheckBox("Load the result into the lens when finished")
         self.auto_apply.setChecked(True)
         form.addRow("Algorithm", self.algorithm)
@@ -150,6 +159,7 @@ class OptimizationDialog(QDialog):
         form.addRow("Trials / starts", self.trials)
         form.addRow("Time limit", self.time_limit)
         form.addRow("Glass candidates (nearest)", self.nearest)
+        form.addRow("Glass catalog", self.glass_catalog)
         form.addRow("", self.auto_apply)
         self.algorithm.currentIndexChanged.connect(self._enable)
 
@@ -200,6 +210,7 @@ class OptimizationDialog(QDialog):
         self.trials.setEnabled(a in ("hammer", "global"))
         self.time_limit.setEnabled(a in ("hammer", "global"))
         self.nearest.setEnabled(a == "glass")
+        self.glass_catalog.setEnabled(a == "glass")
 
     def refresh_info(self):
         if self.running:
@@ -244,7 +255,8 @@ class OptimizationDialog(QDialog):
         self.log.appendPlainText(f"--- {self.algorithm.currentText()} started")
         system, merit = s.copy(), mf.copy()
         kw = dict(cycles=self.cycles.value(), trials=self.trials.value(), starts=self.trials.value(),
-                  time_limit=self.time_limit.value(), nearest=self.nearest.value())
+                  time_limit=self.time_limit.value(), nearest=self.nearest.value(),
+                  catalogs=[self.glass_catalog.currentData()] if self.glass_catalog.currentData() else None)
         self._t0 = time.time()
         workers.submit(lambda report: run_optimization(system, merit, alg, self.stop, report, **kw),
                        self._done, self._failed, self._progress)
