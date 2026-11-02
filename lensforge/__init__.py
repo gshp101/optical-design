@@ -29,6 +29,7 @@ from .analysis import *  # noqa: F401,F403  (all analyses, see lensforge.analysi
 from .analysis import metrics
 from . import optimize
 from . import samples
+from . import nonseq
 from .io import load, save, load_zmx
 from .multiconfig import MC_OPERANDS, MCRow, MultiConfig, config_systems
 from .compose import delete_surfaces, insert_lens, lens_surfaces, reverse_surfaces, scale_surface, scale_system

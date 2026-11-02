@@ -138,6 +138,13 @@ ICONS = {
                              '<path d="M6 9l3 3-3 3" stroke="#7fe08a" stroke-width="2"/>'
                              '<path d="M11 16h6" stroke="#ffd54f" stroke-width="2"/>'),
     "Tools > Merit Function Editor": TABLE + f'<path d="M12 12l2 2 5-5" stroke="{GREEN}" stroke-width="2.2"/>',
+    "Tools > Non-Sequential > Non-Sequential Editor": (
+        f'<path d="M3 20l5-14 5 9 4-7 4 12" stroke="{RED}" stroke-width="1.4"/>'
+        f'<circle cx="8" cy="6" r="2.2" fill="{GLASS}"/><rect x="11" y="13" width="4" height="4" fill="{GLASS}"/>'
+        f'<path d="M15 6l2 2" stroke="{GREEN}" stroke-width="2"/>'),
+    "Tools > Non-Sequential > Convert Lens to Non-Sequential": (
+        lens(6, 7, 2.2) + f'<path d="M10 12h5m-2-2.5 2.5 2.5-2.5 2.5" stroke="{GREEN}" stroke-width="1.8"/>'
+        f'<circle cx="19" cy="8" r="2.4" fill="{GLASS}"/><rect x="17" y="13.5" width="4" height="5" fill="{GLASS}"/>'),
     "Tools > Multi-Configuration Editor": ('<rect x="2.5" y="4" width="19" height="16" rx="1" fill="#fff"/>'
                                            '<path d="M2.5 9h19M8 4v16M14.5 4v16"/>'
                                            + letter(11.2, 17.5, "1", ORANGE, 7) + letter(18, 17.5, "2", PURPLE, 7)),
@@ -175,6 +182,14 @@ ICONS = {
 ICONS["View > Undo History"] = ICONS["Edit > Undo History"]  # the same command in two menus
 
 ANALYSIS_ICONS = {
+    "ghost_focus": (TABLE + f'<path d="M12 6.5l7 0M12 12l7 0M12 17l7 0" stroke="{PURPLE}" stroke-width="0.9"/>'
+                    + f'<circle cx="6" cy="12" r="2.3" fill="{PURPLE}" stroke="{PURPLE}" opacity="0.55"/>'),
+    "ghost_image": ('<rect x="3" y="3" width="18" height="18" fill="#1b1b2f" stroke="#1b1b2f"/>'
+                    '<circle cx="9" cy="10" r="2" fill="#ffe08a" stroke="none"/>'
+                    f'<circle cx="14" cy="14" r="5" fill="{PURPLE}" stroke="none" opacity="0.5"/>'
+                    f'<circle cx="15" cy="8" r="2.6" fill="{RED}" stroke="none" opacity="0.5"/>'),
+    "ghost_layout": ('<path d="M7 3c2.5 4 2.5 14 0 18M15 3c2.5 4 2.5 14 0 18" fill="none"/>'
+                     f'<path d="M2 9h6.5l7.5 1-7.5 2 7.5 1 6 3" stroke="{PURPLE}" stroke-width="1.4"/>'),
     "mc_layout": (f'<path d="M2 7h20M2 17h20" stroke="{GREY}" stroke-width="0.8"/>'
                   + '<path d="M6 3v8M6 13v8" stroke-width="2.2"/>'
                   + f'<path d="M12 3v8M17 13v8" stroke="{PURPLE}" stroke-width="2.2"/>'),
@@ -316,6 +331,35 @@ def svg(item_id: str) -> Optional[str]:
         return None
     return ('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" fill="none" '
             f'stroke="{INK}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">{body}</svg>')
+
+
+#: toolbar of the Non-Sequential Editor window (keys of ns_window.BUTTONS)
+NS_ICONS = {
+    "new": PAGE + f'<circle cx="12" cy="13" r="2.4" fill="{GLASS}"/>' + plus(17, 18, r=2.6),
+    "open": ('<path d="M3 6.5h6l2 2h9v11H3z" fill="#f6d78b"/><path d="M3 19.5l3-8h17l-3 8" fill="#fbe7b4"/>'
+             f'<circle cx="14" cy="15.5" r="2" fill="{GLASS}"/>'),
+    "save": floppy(f'<circle cx="12" cy="16.5" r="2" fill="#fff"/>'),
+    "convert": (lens(5, 7, 2) + f'<path d="M9 12h6m-2.5-3 3 3-3 3" stroke="{ORANGE}" stroke-width="1.8"/>'
+                f'<path d="M17 5l4 14M21 5l-4 14" stroke="{RED}" stroke-width="1.2"/>'),
+    "add_object": f'<circle cx="10" cy="11" r="6" fill="{GLASS}"/>' + plus(17.5, 17.5),
+    "add_source": (f'<circle cx="7" cy="12" r="2.6" fill="#ffd54f" stroke="{ORANGE}"/>'
+                   f'<path d="M10.5 12h6M10 8.5l5-3M10 15.5l5 3" stroke="{ORANGE}"/>' + plus(18, 18, r=2.6)),
+    "delete": TABLE + cross(16, 15),
+    "trace": (f'<path d="M2 12h6l5-7 4 14 5-7" stroke="{RED}" stroke-width="1.8"/>'
+              f'<circle cx="13" cy="5" r="1.5" fill="{GREEN}" stroke="none"/>'),
+    "help": '<circle cx="12" cy="12" r="9" fill="#fff"/>' + letter(12, 16.5, "?", INK, 13),
+}
+
+
+def ns_icon(key: str) -> QIcon:
+    """Icon of a Non-Sequential Editor toolbar button."""
+    body = NS_ICONS[key]
+    markup = ('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" fill="none" '
+              f'stroke="{INK}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">{body}</svg>')
+    ic = QIcon()
+    for size in (16, 24, 32, 48):
+        ic.addPixmap(QPixmap.fromImage(render(markup, size)))
+    return ic
 
 
 def render(markup: str, size: int = 64) -> QImage:

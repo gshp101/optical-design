@@ -304,3 +304,115 @@ def polarization_pupil(result, ax=None, scale=0.08):
     ax.set_aspect("equal")
     ax.set_title(f"Polarisation pupil map, T = {result['total_transmission']:.4f}")
     return ax
+
+
+def ghost_layout(result, ax=None):
+    """Lens cross-section with the rays of one ghost (:func:`lensforge.analysis.ghost.ghost_layout`)."""
+    ax = _ax(ax, figsize=(9, 4))
+    j = 0 if result.get("plane") == "x" else 1
+    for s in result["surfaces"]:
+        P = s["points"]
+        ax.plot(P[:, 2], P[:, j], color="k", lw=1.5 if s["mirror"] else 1)
+    p = result["path"]
+    ax.plot(p[:, :, 2], p[:, :, j], color="C3", lw=0.7)
+    i, k = result["pair"]
+    ax.set_title(f"Ghost {i}-{k}: reflected at surface {i}, then at surface {k}")
+    ax.set_aspect("equal", adjustable="datalim")
+    ax.set_xlabel("z")
+    ax.set_ylabel("x" if j == 0 else "y")
+    return ax
+
+
+def ghost_image(result, ax=None, log=True, show="ghost"):
+    """Image-plane irradiance of ghosts (:func:`lensforge.analysis.ghost.ghost_image`).
+
+    ``show``: "ghost", "nominal" or "both" (sum).  ``log`` uses a log10 colour scale.
+    """
+    ax = _ax(ax, figsize=(6, 5))
+    Z = {"ghost": result["ghost"], "nominal": result["nominal"],
+         "both": result["ghost"] + result["nominal"]}[show]
+    if log:
+        pos = Z[Z > 0]
+        floor = pos.min() if pos.size else 1e-12
+        Z = np.log10(np.maximum(Z, floor))
+    im = ax.imshow(Z, origin="lower", extent=result["extent"], cmap="inferno")
+    ax.figure.colorbar(im, ax=ax, label=("log10 " if log else "") + f"irradiance (fraction / {result['units']}²)")
+    ax.set_xlabel(f"x ({result['units']})")
+    ax.set_ylabel(f"y ({result['units']})")
+    ax.set_title(f"Ghost irradiance: {result['ghost_power']:.3g} of the beam in {len(result['pairs'])} ghosts")
+    return ax
+
+
+def ns_layout(result, ax=None, plane="y", max_segments=4000, color_by="reflections", min_power=0.0):
+    """2-D projection of a non-sequential trace (:class:`lensforge.nonseq.NSTraceResult`) with its objects.
+
+    ``color_by``: "reflections" (direct / one / two+ Fresnel reflections), "source" or "power"
+    (grey level by log power).  At most ``max_segments`` segments are drawn: the strongest of
+    reflection order, as complete ray paths picked at random.
+    """
+    from matplotlib.collections import LineCollection
+    ax = _ax(ax, figsize=(9, 4))
+    j = 0 if plane == "x" else 1
+    for o in result.system.objects:
+        for line in o.outline():
+            ax.plot(line[:, 2], line[:, j], color="k" if o.is_volume else ("C1" if o.is_detector else "0.3"),
+                    lw=1.4 if o.action == "mirror" or o.is_detector else 1)
+    seg = result.segments
+    pw = seg["power"]
+    keep = np.flatnonzero(pw >= min_power)
+    if len(keep) > max_segments:
+        # whole ray paths, picked at random within each reflection order, so faint ghost paths stay visible
+        rng = np.random.default_rng(0)
+        order = np.minimum(seg["n_reflections"][keep], 2)
+        parts = []
+        for k in range(3):
+            g = keep[order == k]
+            ids = np.unique(seg["ray"][g])
+            rng.shuffle(ids)
+            per_ray = max(len(g) / max(len(ids), 1), 1.0)
+            take = set(ids[: max(1, int(max_segments / 3 / per_ray))].tolist())
+            parts.append(g[np.isin(seg["ray"][g], list(take))])
+        keep = np.concatenate(parts)
+    a, b = seg["start"][keep], seg["end"][keep]
+    lines = np.stack([np.stack([a[:, 2], a[:, j]], 1), np.stack([b[:, 2], b[:, j]], 1)], axis=1)
+    if color_by == "power":
+        lp = np.log10(np.maximum(pw[keep], 1e-300))
+        lo, hi = (lp.min(), lp.max()) if len(lp) else (0, 1)
+        g = (lp - lo) / max(hi - lo, 1e-12)
+        colors = [(0.85 * (1 - v), 0.85 * (1 - v), 0.85 * (1 - v) + 0.15 * v) for v in g]
+        labels = {}
+    elif color_by == "source":
+        colors = [f"C{int(s) % 10}" for s in seg["source"][keep]]
+        labels = {}
+    else:
+        nr = np.minimum(seg["n_reflections"][keep], 2)
+        cmap = {0: "C0", 1: "C2", 2: "C3"}
+        colors = [cmap[int(v)] for v in nr]
+        labels = {"C0": "direct", "C2": "1 reflection", "C3": "2+ reflections (ghosts)"}
+    ax.add_collection(LineCollection(lines, colors=colors, linewidths=0.5))
+    for c, lab in labels.items():
+        ax.plot([], [], color=c, label=lab)
+    if labels:
+        ax.legend(fontsize=7, loc="upper right")
+    ax.autoscale()
+    ax.set_aspect("equal", adjustable="datalim")
+    ax.set_xlabel("z")
+    ax.set_ylabel("x" if j == 0 else "y")
+    return ax
+
+
+def ns_detector(result, det=0, ax=None, rays="all", log=False, **select):
+    """Irradiance on a detector of a non-sequential trace.  ``rays``: "all", "direct", "ghost" or a count."""
+    ax = _ax(ax, figsize=(6, 5))
+    d = result.detector(det)
+    Z = d.image(rays, **select)
+    if log:
+        pos = Z[Z > 0]
+        Z = np.log10(np.maximum(Z, pos.min() if pos.size else 1e-300))
+    im = ax.imshow(Z, origin="lower", extent=d.extent, cmap="inferno")
+    ax.figure.colorbar(im, ax=ax, label=("log10 " if log else "") + "irradiance (power / area)")
+    name = d.detector.comment or f"object {d.object_index + 1}"
+    ax.set_title(f"Detector {name} ({rays}): total {d.total_power(rays, **select):.4g}")
+    ax.set_xlabel("x")
+    ax.set_ylabel("y")
+    return ax

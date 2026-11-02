@@ -161,6 +161,8 @@ class MainWindow(QMainWindow):
         self.a_focus = A("&Quick Focus (paraxial)", self.quick_focus, "Ctrl+Shift+F")
         self.a_mfe = A("&Merit Function Editor", self.show_mfe, "F6")
         self.a_mce = A("Multi-&Configuration Editor", self.show_mce, "F7")
+        self.a_ns = A("&Non-Sequential Editor", self.show_ns, "Ctrl+Shift+N")
+        self.a_ns_convert = A("&Convert Lens to Non-Sequential", self.convert_to_ns)
         self.a_next_config = A("&Next Configuration", lambda: self.step_config(+1), "Ctrl+]")
         self.a_prev_config = A("Pre&vious Configuration", lambda: self.step_config(-1), "Ctrl+[")
         self.a_opt = A("&Optimization...", self.optimization, "Ctrl+U")
@@ -249,6 +251,9 @@ class MainWindow(QMainWindow):
         m.addAction(self.a_mce)
         m.addAction(self.a_next_config)
         m.addAction(self.a_prev_config)
+        nm = m.addMenu("Non-Sequential")
+        nm.addAction(self.a_ns)
+        nm.addAction(self.a_ns_convert)
         vm = m.addMenu("Variables and Solves")
         for a in (self.a_vary_curv, self.a_vary_thick, self.a_clear_vars, self.a_clear_solves):
             vm.addAction(a)
@@ -627,6 +632,23 @@ class MainWindow(QMainWindow):
     def show_mce(self):
         self.mce_dock.show()
         self.mce_dock.raise_()
+
+    def show_ns(self):
+        """Open (or bring to the front) the Non-Sequential Editor window."""
+        from .ns_window import NonSequentialWindow
+        w = getattr(self, "ns_window", None)
+        if w is None:
+            w = self.ns_window = NonSequentialWindow(self)
+        w.show()
+        w.raise_()
+        w.activateWindow()
+        return w
+
+    def convert_to_ns(self):
+        """Convert the current lens and show it in the Non-Sequential Editor."""
+        w = self.show_ns()
+        w.from_current_lens()
+        return w
 
     def step_config(self, step):
         """Show the next (+1) or previous (-1) configuration, wrapping round."""

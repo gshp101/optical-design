@@ -698,3 +698,65 @@ def _dispersion_plot(fig, r, opts, system):
 
 register(AnalysisSpec("dispersion", "Glass Dispersion", "Reports", _dispersion_compute, _dispersion_plot,
                       [Setting("surface", "Surface (material after)", "surface", 1)]))
+
+# ---------------------------------------------------------------------------
+# Stray light: ghosts
+# ---------------------------------------------------------------------------
+
+def _coating(c):
+    return None if c is None or c <= 0 else float(c)
+
+
+def _ghost_focus_text(system, wave=-1, coating=0.0, image_reflectance=0.0, sort="irradiance"):
+    r = lf.ghost_focus(system, _wave(system, wave), coating=_coating(coating),
+                       include_image=image_reflectance > 0, image_reflectance=image_reflectance, sort=sort)
+    return lf.format_ghost_table(r)
+
+
+_GHOST_COMMON = [Setting("coating", "Coating reflectance (0 = uncoated)", "float", 0.0, minimum=0, maximum=1),
+                 Setting("image_reflectance", "Image surface reflectance", "float", 0.0, minimum=0, maximum=1)]
+
+register(AnalysisSpec("ghost_focus", "Ghost Focus Generator", "Stray Light", _ghost_focus_text, None,
+                      [WAVE] + _GHOST_COMMON
+                      + [Setting("sort", "Sort by", "choice", "irradiance",
+                                 [("Irradiance ratio", "irradiance"), ("Ghost power", "R"),
+                                  ("Focus nearest image", "focus"), ("Surface pair", "pairs")])]))
+
+
+def _ghost_image_compute(system, field=0, wave=-1, coating=0.0, image_reflectance=0.0, n_rays=96, pixels=61,
+                         show="ghost", log=True):
+    return lf.ghost_image(system, field, _wave(system, wave), coating=_coating(coating),
+                          include_image=image_reflectance > 0, image_reflectance=image_reflectance,
+                          n_rays=int(n_rays), pixels=int(pixels))
+
+
+def _ghost_image_plot(fig, r, opts, system):
+    P.ghost_image(r, fig.add_subplot(111), log=bool(opts.get("log", True)), show=opts.get("show", "ghost"))
+
+
+register(AnalysisSpec("ghost_image", "Ghost Image", "Stray Light", _ghost_image_compute, _ghost_image_plot,
+                      [FIELD, WAVE] + _GHOST_COMMON
+                      + [Setting("n_rays", "Rays across pupil", "int", 96, minimum=4, maximum=512),
+                         Setting("pixels", "Pixels", "int", 61, minimum=11, maximum=1001),
+                         Setting("show", "Show", "choice", "ghost",
+                                 [("Ghosts only", "ghost"), ("Nominal image", "nominal"), ("Both", "both")]),
+                         Setting("log", "Log scale", "bool", True)]))
+
+
+def _ghost_layout_compute(system, i=0, j=0, field=0, wave=-1, n_rays=7):
+    if i <= 0 or j <= 0:  # default: the brightest ghost
+        rows = lf.ghost_focus(system, _wave(system, wave), real_rays=False)["rows"]
+        if not rows:
+            raise ValueError("The lens needs at least two refracting surfaces to make a ghost.")
+        i, j = rows[0]["i"], rows[0]["j"]
+    if j > i:
+        i, j = j, i
+    return lf.ghost_layout(system, int(i), int(j), field, _wave(system, wave), n_rays=int(n_rays))
+
+
+register(AnalysisSpec("ghost_layout", "Ghost Ray Layout", "Stray Light", _ghost_layout_compute,
+                      lambda fig, r, o, s: P.ghost_layout(r, fig.add_subplot(111)),
+                      [Setting("i", "First reflection at surface (0 = brightest ghost)", "int", 0, minimum=0,
+                               maximum=999),
+                       Setting("j", "Second reflection at surface", "int", 0, minimum=0, maximum=999),
+                       FIELD, WAVE, Setting("n_rays", "Rays", "int", 7, minimum=1, maximum=101)]))
