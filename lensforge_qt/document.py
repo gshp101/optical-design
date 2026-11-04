@@ -103,7 +103,8 @@ class LensDocument(QObject):
         self._bump()
 
     # -- files ------------------------------------------------------------------
-    def open(self, path: str):
+    def open(self, path: str, copy: bool = False):
+        """Open a lens file. ``copy`` (examples) opens it untitled, so Save asks for a new file."""
         system = lf.load(path)
         if not path.lower().endswith((".zmx", ".zos")):
             with open(path, encoding="utf-8") as f:
@@ -112,9 +113,10 @@ class LensDocument(QObject):
                 system.input_rays = ui["input_rays"]
         finalize(system)
         self.system = system
-        self.path = path if not path.lower().endswith((".zmx", ".zos")) else None
+        self.path = path if not (copy or path.lower().endswith((".zmx", ".zos"))) else None
         if self.path is None:
-            self._import_name = os.path.splitext(os.path.basename(path))[0]
+            base = os.path.basename(path)
+            self._import_name = base[:-len(".lens.json")] if base.lower().endswith(".lens.json") else os.path.splitext(base)[0]
         self.undo_stack.clear()
         self.undo_stack.setClean()
         self._bump()
@@ -139,6 +141,7 @@ class LensDocument(QObject):
         finalize(system)
         self.system = system
         self.path = path
+        self._import_name = None
         self.undo_stack.clear()
         self.undo_stack.setClean()
         self._bump()

@@ -6,7 +6,7 @@ The site is plain files, so any static host serves it (GitHub Pages, ``python -m
 * ``py/lensforge.zip``: the Python the page runs in Pyodide (``lensforge``, the Qt-free modules of
   ``lensforge_qt`` and ``lensforge_web``) plus the sample lens files of File > Sample Lenses;
 * ``examples/``: every example lens of the repository, listed in ``examples/index.json`` (the
-  Examples tab of File > Open);
+  Examples menu and the Examples tab of File > Open);
 * ``config.js``: where Pyodide is loaded from and the build id (cache busting).
 """
 
@@ -57,23 +57,16 @@ def _python_zip() -> bytes:
 
 
 def _examples(out):
-    """Copy the example lenses and write examples/index.json: [{path, group, name}]."""
-    index = []
+    """Copy the example lenses and write examples/index.json: [{path, name, folders, group}] in menu
+    order (lensforge_qt.commands.example_index, the same list as the desktop app's Examples menu)."""
+    from lensforge_qt.commands import example_index
+    index = example_index(EXAMPLES)
     dest = os.path.join(out, "examples")
-    for dirpath, dirnames, files in os.walk(EXAMPLES):
-        dirnames.sort()
-        rel_dir = os.path.relpath(dirpath, EXAMPLES)
-        for f in sorted(files):
-            if not f.endswith(".json") or f.endswith(".ns.json"):
-                continue
-            rel = os.path.normpath(os.path.join(rel_dir, f)).replace(os.sep, "/")
-            os.makedirs(os.path.join(dest, os.path.dirname(rel)), exist_ok=True)
-            shutil.copy2(os.path.join(dirpath, f), os.path.join(dest, rel))
-            group = "Examples" if rel_dir == "." else rel_dir.replace(os.sep, " / ")
-            if group == "output":
-                group = "Examples"
-            name = f[:-len(".lens.json")] if f.endswith(".lens.json") else f[:-5]
-            index.append({"path": rel, "group": group, "name": name})
+    os.makedirs(dest, exist_ok=True)
+    for x in index:
+        target = os.path.join(dest, *x["path"].split("/"))
+        os.makedirs(os.path.dirname(target), exist_ok=True)
+        shutil.copy2(os.path.join(EXAMPLES, *x["path"].split("/")), target)
     with open(os.path.join(dest, "index.json"), "w", encoding="utf-8") as fh:
         json.dump(index, fh, indent=0)
     return len(index)

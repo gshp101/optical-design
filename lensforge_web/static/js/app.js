@@ -64,6 +64,19 @@ async function saveAs() {
   return name ? saveTo(name) : false;
 }
 
+/** Open a bundled example (Examples menu) as an unsaved lens named after the file. */
+async function openExample(x) {
+  if (!(await maybeSave())) return;
+  const text = await D.fetchExample(x.path);
+  if (text == null) { statusError(`Could not load the example ${x.path}`); return; }
+  if (await openSource({ name: x.name, text, path: null, filename: x.path.split("/").pop() }))
+    status(`Opened a copy of the example ${x.name}; File > Save keeps it in this browser`);
+}
+
+async function browseExamples() {
+  if (await maybeSave()) await openSource(await D.chooseLens({ title: "Open Example", tab: 1 }));
+}
+
 async function importFromDisk() {
   if (!(await maybeSave())) return;
   const f = await pickFile(".json,.zmx,.ZMX,.zos");
@@ -129,6 +142,7 @@ function buildCommands() {
     "File > Load Glass Catalog (AGF)": () => D.loadAGF(),
     "File > Forget Loaded Glass Catalogs": forgetCatalogs,
     "File > Export Prescription": exportPrescription,
+    "Examples > Browse Examples": browseExamples,
 
     "Edit > Undo": lensCmd("undo"),
     "Edit > Redo": lensCmd("redo"),
@@ -204,6 +218,25 @@ function menuItems(items) {
   });
 }
 
+/** The Examples menu's lens entries, nested by folder like examples/ (built from examples/index.json). */
+function exampleItems() {
+  const ex = App.examples || [];
+  if (!ex.length) return [{ label: "(no example lenses found)", disabled: true }];
+  const root = { files: [], folders: new Map() };
+  for (const x of ex) {
+    let node = root;
+    for (const f of x.folders || []) {
+      if (!node.folders.has(f)) node.folders.set(f, { files: [], folders: new Map() });
+      node = node.folders.get(f);
+    }
+    node.files.push(x);
+  }
+  const items = (node) => [
+    ...node.files.map((x) => ({ label: x.name, title: `Open a copy of the example examples/${x.path}`, action: () => openExample(x) })),
+    ...[...node.folders].map(([label, sub]) => ({ label, items: items(sub) }))];
+  return items(root);
+}
+
 function recentItems() {
   const names = store.recent();
   if (!names.length) return [{ label: "(no recent lenses)", disabled: true }];
@@ -222,7 +255,8 @@ function buildMenubar() {
       t.classList.add("open");
       openTop = t;
       const r = t.getBoundingClientRect();
-      popupMenu(menuItems(top.items), r.left, r.bottom, { onhover: (it) => status(it.title || "", 0) });
+      const items = top.label === "Examples" ? [...menuItems(top.items), null, ...exampleItems()] : menuItems(top.items);
+      popupMenu(items, r.left, r.bottom, { onhover: (it) => status(it.title || "", 0) });
     };
     t.addEventListener("pointerdown", (e) => {
       e.preventDefault();
@@ -464,6 +498,7 @@ async function boot() {
   const [menus, specs, help, about, operandNames] = await Promise.all([
     call("menus"), call("analysis_specs"), call("help_data"), call("about"), call("operand_names")]);
   Object.assign(App, { menus, specs, help, operandNames, info: { ...info, ...about } });
+  D.examplesIndex().then((ex) => { App.examples = ex; });  // the Examples menu's entries
   await reloadCatalogs();
   lde.init();
   onState((s, old) => {

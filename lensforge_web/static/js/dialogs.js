@@ -397,13 +397,24 @@ export async function inputRaysDialog() {
 }
 
 // ================================================================== Open / Save As (browser storage)
-async function examplesIndex() {
-  try { return await (await fetch("examples/index.json")).json(); } catch (e) { return []; }
+let examplesCache = null;
+/** The example lenses bundled with the site (examples/index.json, written by build.py):
+ *  [{path, name, folders: [menu labels], group}], in menu order. */
+export async function examplesIndex() {
+  if (!examplesCache) {
+    try { examplesCache = await (await fetch("examples/index.json")).json(); } catch (e) { return []; }
+  }
+  return examplesCache;
+}
+
+/** Text of a bundled example lens (path relative to examples/), or null. */
+export async function fetchExample(path) {
+  try { const r = await fetch("examples/" + path.split("/").map(encodeURIComponent).join("/")); return r.ok ? await r.text() : null; } catch (e) { return null; }
 }
 
 /** Choose a lens: from browser storage, the examples or a file. Resolves {name, text, path|null} or null.
  *  opts: {title, okLabel, allowManage} */
-export function chooseLens({ title = "Open", okLabel = "Open", manage = true } = {}) {
+export function chooseLens({ title = "Open", okLabel = "Open", manage = true, tab = 0 } = {}) {
   return dialog({ title, width: 760, height: 560, resizable: true }, async (win, done, bar) => {
     let lenses = await store.listLenses();
     let selected = null;   // {kind: "stored"|"example", name, path}
@@ -454,9 +465,6 @@ export function chooseLens({ title = "Open", okLabel = "Open", manage = true } =
       if (examples) fillExamples();
     };
     filter.addEventListener("input", () => { fillStored(); if (examples) fillExamples(); });
-    const fetchExample = async (path) => {
-      try { const r = await fetch("examples/" + path.split("/").map(encodeURIComponent).join("/")); return r.ok ? await r.text() : null; } catch (e) { return null; }
-    };
     const accept = async () => {
       if (!selected) return;
       if (selected.kind === "stored") {
@@ -496,11 +504,12 @@ export function chooseLens({ title = "Open", okLabel = "Open", manage = true } =
       if (l) download(safeFile(selected.name) + ".lens.json", l.text);
     }, { disabled: true, title: "Download this lens as a .lens.json file" });
     const manageBtns = manage ? [rename, del, exp] : [];
-    const t = tabs([["Saved in this browser", list], ["Examples", exList]], 0, (i) => { if (i === 1) fillExamples(); });
+    const t = tabs([["Saved in this browser", list], ["Examples", exList]], tab, (i) => { if (i === 1) fillExamples(); });
     win.body.append(el("div", { class: "row" }, filter), t.element, info);
     if (manage) bar.append(el("div", { class: "left" }, rename, del, exp));
     bar.append(fromDisk, btn("Cancel", () => done(null)), okBtn);
     fillStored();
+    if (tab === 1) fillExamples();
     filter.focus();
   });
 }

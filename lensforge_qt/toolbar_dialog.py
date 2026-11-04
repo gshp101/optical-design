@@ -30,13 +30,14 @@ def plain(text: str) -> str:
 def menu_items(menubar, skip=()) -> list[tuple[str, tuple[str, ...], object]]:
     """Every command in the menu bar as (id, path, QAction), in menu order.
 
-    Submenus in ``skip`` (e.g. Open Recent, whose entries change) are left out.
+    Submenus in ``skip`` (e.g. Open Recent, whose entries change) are left out, and so are actions
+    marked with the ``lf_dynamic`` property (the generated lens entries of the Examples menu).
     """
     out = []
 
     def walk(menu, path):
         for a in menu.actions():
-            if a.isSeparator():
+            if a.isSeparator() or a.property("lf_dynamic"):
                 continue
             sub = a.menu()
             if sub is not None:
