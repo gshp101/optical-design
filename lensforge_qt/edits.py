@@ -437,3 +437,102 @@ def fill_auto_semi_diameters(system):
             c.surfaces[i].semi_diameter = v
             vals[i] = v
     return c, vals
+
+
+# ---------------------------------------------------------------------------
+# Document helpers (shared by document.py and the web front end)
+# ---------------------------------------------------------------------------
+
+def finalize(system):
+    """Re-apply solves after an edit, as a lens data editor does, and keep the current
+    configuration's column of the multi-configuration table in step with the lens."""
+    if getattr(system, "solves", None):
+        try:
+            opt.apply_solves(system)
+        except Exception:  # a solve that cannot be met leaves the old value
+            pass
+    mc = getattr(system, "multiconfig", None)
+    if mc is not None:
+        mc.capture(system)
+
+
+def same_lens(a, b) -> bool:
+    """True when two systems are the same lens (no undo step is needed between them)."""
+    if getattr(a, "input_rays", None) != getattr(b, "input_rays", None):
+        return False
+    try:
+        return a.to_dict() == b.to_dict()
+    except Exception:  # unserialisable content (USER operands): assume changed
+        return False
+
+
+def new_system():
+    """The empty lens of File > New: object at infinity, a stop, the image."""
+    s = lf.OpticalSystem("New lens")
+    s.set_aperture("EPD", 10.0)
+    s.set_fields([0.0])
+    s.set_wavelengths([0.5875618])
+    s.add_surface(radius=float("inf"), thickness=0.0, stop=True)
+    return s
+
+
+# ---------------------------------------------------------------------------
+# Multi-configuration table helpers (Multi-Configuration Editor)
+# ---------------------------------------------------------------------------
+
+def multiconfig(system, create=False):
+    """The lens's table; with ``create`` a one-configuration table is made if there is none."""
+    mc = getattr(system, "multiconfig", None)
+    if mc is None and create:
+        mc = lf.MultiConfig.create(system, 1)
+    return mc
+
+
+def drop_row_variables(system, row):
+    """Remove the cell variables of multi-configuration row ``row``."""
+    vs = opt.variables(system)
+    vs[:] = [v for v in vs if not (isinstance(v, opt.MCVariable) and v.row == row)]
+
+
+def shift_mc_variables(system, row, delta):
+    """Cell variables of rows at or after ``row`` move down (a row was inserted there)."""
+    for v in opt.variables(system):
+        if isinstance(v, opt.MCVariable) and v.row >= row:
+            v.row += delta
+
+
+def shift_mc_configs(system, k, delta):
+    """Keep cell variables on their configuration when configuration ``k`` is inserted (+1) or deleted (-1)."""
+    vs = opt.variables(system)
+    keep = []
+    for v in vs:
+        if isinstance(v, opt.MCVariable):
+            if delta < 0 and v.config == k:
+                continue
+            if v.config >= k + (1 if delta < 0 else 0):
+                v.config += delta
+        keep.append(v)
+    vs[:] = keep
+
+
+# ---------------------------------------------------------------------------
+# Glass catalogs (material picker)
+# ---------------------------------------------------------------------------
+
+def catalog_rows(library):
+    """(spec, catalog, name, nd, vd) for every refracting catalog glass."""
+    names = {}
+    rows = []
+    for cname, cat in library.catalogs.items():
+        for g in cat:
+            try:
+                nd, vd = float(g.nd), float(g.vd)
+            except Exception:  # noqa: BLE001 - glass outside its data range
+                continue
+            if nd <= 1.0 or not math.isfinite(vd):
+                continue
+            names[g.name.upper()] = names.get(g.name.upper(), 0) + 1
+            rows.append([None, cname, g.name, nd, vd])
+    for r in rows:  # plain name when unique, CATALOG:NAME otherwise
+        r[0] = r[2] if names[r[2].upper()] == 1 else f"{r[1]}:{r[2]}"
+    return [tuple(r) for r in rows]
