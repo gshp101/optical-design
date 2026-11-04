@@ -17,20 +17,9 @@ from PySide6.QtCore import QObject, Signal
 from PySide6.QtGui import QUndoCommand, QUndoStack
 
 import lensforge as lf
-from lensforge import optimize as opt
 
-
-def finalize(system):
-    """Re-apply solves after an edit, as a lens data editor does, and keep the current
-    configuration's column of the multi-configuration table in step with the lens."""
-    if getattr(system, "solves", None):
-        try:
-            opt.apply_solves(system)
-        except Exception:  # a solve that cannot be met leaves the old value
-            pass
-    mc = getattr(system, "multiconfig", None)
-    if mc is not None:
-        mc.capture(system)
+from .edits import finalize, new_system  # noqa: F401 - new_system is part of this module's API
+from .edits import same_lens as _same
 
 
 class _SnapshotCommand(QUndoCommand):
@@ -165,22 +154,3 @@ class LensDocument(QObject):
         if self.path:
             return os.path.basename(self.path)
         return getattr(self, "_import_name", None) or self.system.name or "Untitled"
-
-
-def _same(a, b) -> bool:
-    if getattr(a, "input_rays", None) != getattr(b, "input_rays", None):
-        return False
-    try:
-        return a.to_dict() == b.to_dict()
-    except Exception:  # unserialisable content (USER operands): assume changed
-        return False
-
-
-def new_system():
-    """The empty lens of File > New: object at infinity, a stop, the image."""
-    s = lf.OpticalSystem("New lens")
-    s.set_aperture("EPD", 10.0)
-    s.set_fields([0.0])
-    s.set_wavelengths([0.5875618])
-    s.add_surface(radius=float("inf"), thickness=0.0, stop=True)
-    return s

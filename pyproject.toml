@@ -20,4 +20,7 @@ test = ["pytest", "pytest-qt"]
 lensforge-qt = "lensforge_qt.app:main"
 
 [tool.setuptools.packages.find]
-include = ["lensforge*", "lensforge_qt*"]
+include = ["lensforge*", "lensforge_qt*", "lensforge_web*"]
+
+[tool.setuptools.package-data]
+lensforge_web = ["static/*", "static/js/*"]

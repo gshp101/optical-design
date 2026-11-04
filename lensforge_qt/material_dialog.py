@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import math
 
 import numpy as np
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
@@ -16,25 +15,7 @@ from PySide6.QtWidgets import (QAbstractItemView, QComboBox, QDialog, QDialogBut
 from lensforge.materials import ConstantIndex, ModelGlass, _squash
 
 from . import edits as E
-
-
-def catalog_rows(library):
-    """(spec, catalog, name, nd, vd) for every refracting catalog glass."""
-    names = {}
-    rows = []
-    for cname, cat in library.catalogs.items():
-        for g in cat:
-            try:
-                nd, vd = float(g.nd), float(g.vd)
-            except Exception:  # noqa: BLE001 - glass outside its data range
-                continue
-            if nd <= 1.0 or not math.isfinite(vd):
-                continue
-            names[g.name.upper()] = names.get(g.name.upper(), 0) + 1
-            rows.append([None, cname, g.name, nd, vd])
-    for r in rows:  # plain name when unique, CATALOG:NAME otherwise
-        r[0] = r[2] if names[r[2].upper()] == 1 else f"{r[1]}:{r[2]}"
-    return [tuple(r) for r in rows]
+from .edits import catalog_rows  # noqa: F401 - part of this module's API
 
 
 class MaterialDialog(QDialog):

@@ -15,10 +15,14 @@ from PySide6.QtGui import QAction, QColor, QFont, QKeySequence
 from PySide6.QtWidgets import (QAbstractItemView, QComboBox, QCompleter, QHeaderView, QInputDialog, QLabel,
                                QLineEdit, QMenu, QStyledItemDelegate, QTableView, QToolBar, QVBoxLayout, QWidget)
 
-import lensforge as lf
 from lensforge import optimize as opt
 from lensforge.compose import remove_mc_rows
 from lensforge.multiconfig import MC_OPERANDS, format_value
+
+from .edits import drop_row_variables as _drop_row_variables
+from .edits import multiconfig
+from .edits import shift_mc_configs as _shift_mc_configs
+from .edits import shift_mc_variables as _shift_mc_variables
 
 FIXED = ["Type", "Ref", "Param"]
 C_TYPE, C_REF, C_PARAM = range(3)
@@ -28,14 +32,6 @@ VAR_BG = QColor(222, 235, 255)
 ERROR_BG = QColor(255, 222, 222)
 REF_HELP = {"surface": "surface number (0 = object)", "field": "field number, counting from 0",
             "wave": "wavelength number, counting from 0", None: "no reference"}
-
-
-def multiconfig(system, create=False):
-    """The lens's table; with ``create`` a one-configuration table is made if there is none."""
-    mc = getattr(system, "multiconfig", None)
-    if mc is None and create:
-        mc = lf.MultiConfig.create(system, 1)
-    return mc
 
 
 class MultiConfigModel(QAbstractTableModel):
@@ -410,29 +406,3 @@ def switch_config(doc, k) -> bool:
     if mc is None or not 1 <= k <= mc.n_configs or k == mc.current:
         return False
     return doc.modify(f"Switch to {mc.name(k)}", lambda s: s.set_config(k))
-
-
-def _drop_row_variables(system, row):
-    vs = opt.variables(system)
-    vs[:] = [v for v in vs if not (isinstance(v, opt.MCVariable) and v.row == row)]
-
-
-def _shift_mc_variables(system, row, delta):
-    """Cell variables of rows at or after ``row`` move down (a row was inserted there)."""
-    for v in opt.variables(system):
-        if isinstance(v, opt.MCVariable) and v.row >= row:
-            v.row += delta
-
-
-def _shift_mc_configs(system, k, delta):
-    """Keep cell variables on their configuration when configuration ``k`` is inserted (+1) or deleted (-1)."""
-    vs = opt.variables(system)
-    keep = []
-    for v in vs:
-        if isinstance(v, opt.MCVariable):
-            if delta < 0 and v.config == k:
-                continue
-            if v.config >= k + (1 if delta < 0 else 0):
-                v.config += delta
-        keep.append(v)
-    vs[:] = keep

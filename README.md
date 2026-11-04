@@ -2,7 +2,7 @@
 
 A sequential optical design toolkit in the spirit of Zemax OpticStudio, written in
 pure Python + NumPy so the same core runs as a standalone program, inside a web
-tool (server-side, or in the browser via Pyodide), and from user scripts.
+tool (in the browser via Pyodide, see [Web application](#web-application-browser)), and from user scripts.
 
 Status: **v0.3**: lens data model, materials, paraxial optics, the real ray
 tracer, a full analysis layer, and optimisation + tolerancing (merit function
@@ -91,6 +91,48 @@ its icon in `lensforge_qt/icons.py` (24 x 24 SVG). The Qt tests fail for a comma
 for help or icons left behind by a removed command, for two commands sharing an icon, and for clashing
 shortcuts, so the help cannot fall behind the menus. A new merit function operand must be filed in a group
 in `OPERAND_GROUPS` (`lensforge_qt/mfe_help.py`); its reference entry is generated from the code.
+
+## Web application (browser)
+
+`lensforge_web` is the same program in a web page, laid out like the Qt window: the menu bar with the same
+menus, items, help and icons; the Lens Data Editor in the centre; analysis windows docked on the right (tabbed,
+floatable, with the same settings bars); the Merit Function Editor, Multi-Configuration Editor and Python Shell
+docked at the bottom; the optional toolbar (View > Show Toolbar / Customize Toolbar); System Explorer, Input Rays,
+material picker, Insert Lens, Inspect Lens File, Optimization (with Stop), Tolerancing, the Non-Sequential Editor,
+Help Contents, What's This? and Keyboard Shortcuts.
+
+**How it runs.** The `lensforge` core runs *in the browser* with [Pyodide](https://pyodide.org) (CPython compiled
+to WebAssembly, with NumPy and matplotlib) inside a Web Worker, so the page never freezes during a long
+computation. There is no server-side code: the site is static files, the same Python engine as the desktop
+app produces the numbers and the plots, and lens data never leaves the computer. The first visit downloads
+Python (about 15 MB from the jsDelivr CDN); later visits start from the browser cache in a few seconds.
+
+**Where lens files go.** Designs are kept in the browser's own storage (IndexedDB, per web address), not
+cookies, which hold only 4 KB. File > Save / Save As / Open use that storage; Open also lists the bundled
+example lenses. File > Import from Disk and File > Export to Disk (or the Export button in the Open dialog)
+move `.lens.json` (and imported `.zmx`) files to and from ordinary files; dropping a file on the page opens it.
+The open lens, unsaved edits included, is kept too, so a reload or a closed tab comes back where it was. Loaded
+AGF catalogs are stored and reloaded at start. Clearing the browser's site data deletes all of this, so export
+designs you want to keep.
+
+**Differences from the desktop app.** No File > Exit. Shortcuts the browser keeps for itself use Alt:
+New (Alt+N), Wavefront Map (Alt+W), Tolerancing (Alt+Shift+T), Non-Sequential Editor (Alt+Shift+N), Delete
+Surfaces (Alt+Shift+Del), Surface Properties (Alt+Shift+P), Inspect Lens File (Alt+Shift+O). On a Mac, Cmd works
+wherever Ctrl is shown. Stop interrupts a running optimisation or tolerance run only when the page is
+cross-origin isolated (the local server sends the headers; on GitHub Pages a small service worker adds them).
+
+```bash
+python -m lensforge_web                       # build into web-dist/ and open http://127.0.0.1:8000/
+python -m lensforge_web --pyodide ~/pyodide   # use a local copy of the Pyodide release (offline)
+python -c "from lensforge_web import build; build('site')"   # static site to host anywhere
+```
+
+The workflow `.github/workflows/pages.yml` publishes the site to GitHub Pages on every push to `main`
+(repository Settings > Pages > Source: GitHub Actions). The web front end reuses the Qt app's Qt-free modules
+(`lensforge_qt/help_text.py`, `icon_svgs.py`, `commands.py`, `edits.py`, `opt_runner.py`, `ns_table.py`,
+`analyses.py`); `lensforge_web/session.py` is the Python side the page calls, `lensforge_web/static/` the page.
+`tests/test_web_app.py` checks that every web menu command has help and its own icon, that the menus match the
+Qt window, and the session the page calls.
 
 ## Analyses
 
