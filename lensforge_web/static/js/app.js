@@ -202,7 +202,7 @@ function contextHelp() {
 
 // ================================================================== menu bar
 const menubar = () => document.getElementById("menubar");
-let openTop = null;
+let openTop = null, openedAt = 0;
 
 function menuItems(items) {
   const C = App.menus.commands;
@@ -250,6 +250,7 @@ function buildMenubar() {
   for (const top of App.menus.tree) {
     const t = el("div", { class: "menu-top", role: "menuitem", tabindex: "-1" }, top.label);
     const open = () => {
+      openedAt = Date.now();
       closePopups();
       bar.querySelectorAll(".menu-top.open").forEach((x) => x.classList.remove("open"));
       t.classList.add("open");
@@ -258,15 +259,26 @@ function buildMenubar() {
       const items = top.label === "Examples" ? [...menuItems(top.items), null, ...exampleItems()] : menuItems(top.items);
       popupMenu(items, r.left, r.bottom, { onhover: (it) => status(it.title || "", 0) });
     };
-    t.addEventListener("pointerdown", (e) => {
-      e.preventDefault();
-      if (openTop === t && popupsOpen()) { closeMenus(); return; }
+    const toggle = () => {
+      if (openTop === t && popupsOpen()) { if (Date.now() - openedAt > 400) closeMenus(); return; }
       open();
+    };
+    // A mouse opens the menu on press, as on the desktop. A finger opens it on tap (click), so a swipe
+    // along a narrow menu bar scrolls it instead of opening menus; iPad Safari also sends the tap's
+    // mouseenter first, which can already have opened it (hence openedAt).
+    t.addEventListener("pointerdown", (e) => {
+      if (e.pointerType === "touch") return;
+      e.preventDefault();
+      toggle();
     });
+    t.addEventListener("click", () => { if (lastPointer === "touch") toggle(); });
     t.addEventListener("mouseenter", () => { if (openTop && openTop !== t && popupsOpen()) open(); });
     bar.append(t);
   }
 }
+
+let lastPointer = "mouse";  // Safari's click events carry no pointerType
+document.addEventListener("pointerdown", (e) => { lastPointer = e.pointerType; }, true);
 
 function closeMenus() {
   closePopups();
@@ -517,7 +529,10 @@ async function boot() {
   setupDrop();
   window.addEventListener("pagehide", () => { clearTimeout(sessionTimer); saveSession(); });
   document.getElementById("splash").classList.add("gone");
-  document.getElementById("lde").focus();
+  document.getElementById("lde").focus({ preventScroll: true });
+  // Safari (iPad) scrolls the page to show a focused element, which pushed the menu bar off the top: the
+  // window itself never scrolls here (everything scrolls inside its own panel).
+  window.addEventListener("scroll", () => { if (window.scrollX || window.scrollY) window.scrollTo(0, 0); });
   if (!engine.canStop()) console.info("LensForge: the page is not cross-origin isolated, so Stop cannot interrupt a running optimisation");
   window.LensForge = { App, cmd, run, call, engine, store };  // for the browser console and the tests
 }

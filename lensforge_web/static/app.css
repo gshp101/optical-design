@@ -21,21 +21,28 @@
   color-scheme: light;
 }
 * { box-sizing: border-box; }
-html, body { height: 100%; margin: 0; }
+html, body { height: 100%; margin: 0; overscroll-behavior: none; }
 body { font: 13px/1.35 var(--ui); color: var(--text); background: var(--bg); overflow: hidden; }
 button, input, select, textarea { font: inherit; color: inherit; }
 [hidden] { display: none !important; }
 
-#app { display: flex; flex-direction: column; height: 100vh; }
+/* Pinned to the viewport, so touch browsers (iPad Safari) cannot scroll or rubber-band the menu bar off the
+   top of the screen, e.g. after the on-screen keyboard opened for a cell edit. */
+#app { display: flex; flex-direction: column; position: fixed; inset: 0; }
 
 /* ---------------------------------------------------------------- menu bar */
-#menubar { display: flex; background: var(--panel); border-bottom: 1px solid var(--border); user-select: none;
-  padding: 0 2px; flex: none; }
-.menu-top { padding: 4px 10px; cursor: default; border-radius: 3px; margin: 1px 0; }
+#menubar { display: flex; background: var(--panel); border-bottom: 1px solid var(--border);
+  -webkit-user-select: none; user-select: none; padding: 0 2px; flex: none; overflow-x: auto; scrollbar-width: none;
+  touch-action: manipulation; -webkit-tap-highlight-color: transparent; position: relative; z-index: 10; }
+#menubar::-webkit-scrollbar { display: none; }
+.menu-top { padding: 4px 10px; cursor: default; border-radius: 3px; margin: 1px 0; flex: none; white-space: nowrap;
+  -webkit-touch-callout: none; }
 .menu-top.open, .menu-top:hover { background: var(--menu-hover); }
 .menu-popup { position: fixed; z-index: 1000; background: var(--panel); border: 1px solid var(--border);
   box-shadow: 0 4px 14px rgba(0,0,0,.18); padding: 3px 0; min-width: 220px; max-height: calc(100vh - 20px);
-  overflow-y: auto; user-select: none; }
+  max-height: calc(100dvh - 20px); overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain;
+  -webkit-user-select: none; user-select: none; touch-action: manipulation; -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none; }
 .menu-item { display: flex; align-items: center; gap: 8px; padding: 3px 14px 3px 6px; cursor: default;
   white-space: nowrap; position: relative; }
 .menu-item:hover, .menu-item.active { background: var(--menu-hover); }
@@ -48,6 +55,11 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .menu-item .mi-sc { color: var(--muted); margin-left: 24px; font-size: 12px; }
 .menu-item .mi-arrow { color: var(--muted); margin-left: 12px; }
 .menu-sep { height: 1px; background: var(--border-soft); margin: 3px 6px; }
+/* Finger-sized menus on touch screens (iPad, tablets). */
+@media (pointer: coarse) {
+  .menu-top { padding: 9px 14px; }
+  .menu-item { padding: 9px 16px 9px 8px; }
+}
 
 /* ---------------------------------------------------------------- toolbar */
 #toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 1px; padding: 2px 4px; background: var(--panel);
