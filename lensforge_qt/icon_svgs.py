@@ -159,6 +159,14 @@ ICONS = {
     "Tools > Variables and Solves > Remove All Variables": letter(10, 17, "V", ORANGE, 14) + cross(17, 15),
     "Tools > Variables and Solves > Remove All Solves": letter(10, 17, "S", PURPLE, 14) + cross(17, 15),
 
+    # ------------------------------------------------------------------ Examples
+    # an open book with a lens on its right-hand page
+    "Examples > Browse Examples": ('<path d="M12 6.5C9.5 4.8 6.5 4.5 2.5 5v14c4-.5 7 0 9.5 1.5z" fill="#fff"/>'
+                                   '<path d="M12 6.5c2.5-1.7 5.5-2 9.5-1.5v14c-4-.5-7 0-9.5 1.5z" fill="#fff"/>'
+                                   '<path d="M12 6.5v14"/><path d="M5 9h4M5 12h4M5 15h3" stroke-width="1.1"/>'
+                                   f'<path d="M16.8 8c1.4 2 1.4 6 0 8c-1.4-2-1.4-6 0-8z" fill="{GLASS}"/>'
+                                   f'<path d="M14 10.5h1.8l2 1.5M14 13.5h1.8l2-1.5" stroke="{RED}" stroke-width="1"/>'),
+
     # ------------------------------------------------------------------ View
     "View > Show Toolbar": ('<rect x="3" y="4" width="18" height="16" rx="1" fill="#fff"/>'
                             f'<rect x="3" y="4" width="18" height="5" fill="{GLASS}"/>'

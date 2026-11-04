@@ -83,6 +83,8 @@ def menu_tree() -> List[dict]:
             _sub("Variables and Solves", [_item("Make All Curvatures Variable"), _item("Make All Air Spaces Variable"),
                                           _item("Remove All Variables"), _item("Remove All Solves")]),
         ]),
+        # the lens entries (examples/index.json) are added by the page, like Open Recent's
+        _sub("Examples", [_item("Browse Examples", dialog=True)]),
         _sub("View", [_item("Show Toolbar", checkable=True), _item("Customize Toolbar", dialog=True), SEP,
                       _item("Undo History")]),
         _sub("Help", [_item("Help Contents", "F1"), _item("What's This?", "Shift+F1"), SEP,
@@ -175,6 +177,18 @@ WEB_HELP: Dict[str, Tuple[str, str]] = {
         "refracting faces when Split rays is on (ghosts and stray light), and shows the rays and the "
         "irradiance on a detector. Scenes are saved in this browser's storage and can be downloaded or "
         "loaded from .ns.json files (scripting: lensforge.nonseq)."),
+    "Examples > Browse Examples": (
+        "Open one of the example lenses that come with LensForge.",
+        "The Examples menu lists every lens file of the examples folder, grouped by subfolder: the lenses "
+        "written by the example scripts (Cooke triplet, scripted singlet, grating demo, spot size merit, "
+        "hyperspectral imager), the approximate Arducam LK004 lens kit models, and the prescriptions from "
+        "Warren Smith's <i>Modern Lens Design</i> by chapter (Modern Lens Design (Smith) &gt; Chapter 7 - "
+        "Eyepieces and Magnifiers &gt; Figure 7.1 ...). The examples are part of this web site, so they load "
+        "without a server or an internet search. Pick a lens to open it; hovering an entry shows its file. "
+        "Browse Examples... opens the Open dialog on its Examples tab, with a filter box and a short "
+        "description of the selected lens. An example opens as an unsaved copy named after the file: "
+        "File &gt; Save keeps it in this browser's storage and the example itself never changes. You are "
+        "asked to save changes to the current lens first."),
     "Help > What's This?": (
         "Click any button or menu command to see what it does.",
         "Turns the pointer into a question mark; the next button, menu command or editor you click shows its "

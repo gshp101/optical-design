@@ -142,3 +142,8 @@ def test_build_writes_a_complete_site(tmp_path):
     assert "example.invalid" in open(os.path.join(out, "config.js")).read()
     examples = json.load(open(os.path.join(out, "examples/index.json")))
     assert examples and all(os.path.exists(os.path.join(out, "examples", x["path"])) for x in examples)
+    # the Examples menu is built from the index: folders nest the menus, in the desktop app's order
+    from lensforge_qt.commands import example_index
+    assert examples == example_index()
+    assert any(x["folders"][:1] == ["Modern Lens Design (Smith)"] and len(x["folders"]) == 2 for x in examples)
+    assert "Examples > Browse Examples" in menus.menu_data()["commands"]

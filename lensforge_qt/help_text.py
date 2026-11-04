@@ -308,6 +308,20 @@ HELP = {
         "Remove every solve.",
         "Removes all solves (marginal ray height, angle, pick-ups ...); the values stay as they are."),
 
+    # ------------------------------------------------------------------ Examples
+    "Examples > Browse Examples": (
+        "Open one of the example lenses shipped with LensForge.",
+        "The Examples menu lists every lens file in the examples folder, grouped by subfolder: the "
+        "lenses written by the example scripts (Cooke triplet, scripted singlet, grating demo, spot size "
+        "merit, hyperspectral imager), the approximate Arducam LK004 lens kit models, and the prescriptions "
+        "from Warren Smith's <i>Modern Lens Design</i> by chapter (Modern Lens Design (Smith) &gt; Chapter 7 "
+        "- Eyepieces and Magnifiers &gt; Figure 7.1 ...). Pick a lens to open it; hovering an entry shows "
+        "its file. Browse Examples... opens the Open dialog in the examples folder instead, to search or "
+        "preview the files. An example opens as an untitled copy, so File &gt; Save asks for a new file "
+        "name and the example itself is never changed. You are asked to save changes to the current lens "
+        "first. The menu is built from the folder when the program starts, so lens files added there "
+        "appear the next time."),
+
     # ------------------------------------------------------------------ View
     "View > Show Toolbar": (
         "Show or hide the toolbar.",
@@ -507,6 +521,8 @@ input rays, sample lenses.</li>
 analysis that is already open brings its window to the front.</li>
 <li><b>Tools</b>: optimisation, tolerancing, merit function and the Python shell. The <b>Merit Function
 Editor</b> pages below the Overview explain merit functions in detail, with a worked example.</li>
+<li><b>Examples</b>: every example lens shipped with the program, by folder (script output,
+Arducam lens kit, Smith's <i>Modern Lens Design</i> by chapter); each opens as an untitled copy.</li>
 <li><b>View</b>: the toolbar (View &gt; Customize Toolbar puts any command on it).</li>
 </ul>
 <p>Pick a command on the left to read about it, or type in the filter box. Hovering a toolbar button

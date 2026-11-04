@@ -537,6 +537,49 @@ def test_samples_menu_and_title(win):
     assert "lensforge" in win.windowTitle()
 
 
+def test_example_index_lists_every_example_lens():
+    from lensforge_qt.commands import EXAMPLES, example_index, example_tree
+    ix = example_index(EXAMPLES)
+    on_disk = set()
+    for dirpath, _, files in os.walk(EXAMPLES):
+        for f in files:
+            if f.endswith(".lens.json"):
+                on_disk.add(os.path.relpath(os.path.join(dirpath, f), EXAMPLES).replace(os.sep, "/"))
+    assert {x["path"] for x in ix} == on_disk
+    top = [x["name"] for x in ix if not x["folders"]]
+    assert "cooke_triplet" in top and "grating_demo" in top  # examples/output is listed at the top level
+    tree = example_tree(ix)
+    smith = tree["folders"]["Modern Lens Design (Smith)"]["folders"]
+    chapters = list(smith)
+    assert chapters.index("Chapter 9 - Reverse Telephoto Lenses") < chapters.index("Chapter 10 - Telephoto Lenses")
+    figs = [x["name"] for x in smith["Chapter 7 - Eyepieces and Magnifiers"]["files"]]
+    assert figs.index("Figure 7.2") < figs.index("Figure 7.10")
+
+
+def test_examples_menu_opens_a_copy(win):
+    from lensforge_qt.commands import EXAMPLES
+    from lensforge_qt.toolbar_dialog import plain
+    menus = {plain(a.text()): a.menu() for a in win.menuBar().actions()}
+    m = menus["Examples"]
+    assert win.toolbar_lookup["Examples > Browse Examples"] in m.actions()
+    subs = {plain(a.text()): a.menu() for a in m.actions() if a.menu()}
+    smith = subs["Modern Lens Design (Smith)"]
+    ch7 = next(a.menu() for a in smith.actions() if plain(a.text()).startswith("Chapter 7 "))
+    fig = next(a for a in ch7.actions() if plain(a.text()) == "Figure 7.1")
+    assert "Figure 7.1.lens.json" in fig.statusTip()
+    # generated entries stay off the toolbar list (they have no per-command help or icon)
+    assert not any(iid.startswith("Examples > Modern") for iid in win.toolbar_lookup)
+    path = os.path.join(EXAMPLES, "ModernLensDesignSmith", "Chapter 7 - Eyepieces and Magnifiers", "Figure 7.1.lens.json")
+    before = open(path, encoding="utf-8").read()
+    fig.trigger()
+    assert win.doc.system.num_surfaces > 3
+    assert win.doc.path is None and win.doc.display_name == "Figure 7.1"  # Save asks for a new file
+    assert path not in win._recent()
+    assert open(path, encoding="utf-8").read() == before
+    win.doc.reset(lf.samples.singlet())
+    assert win.doc.display_name != "Figure 7.1"
+
+
 # ---------------------------------------------------------------------------
 # Menus, input rays, material picker, gratings
 # ---------------------------------------------------------------------------

@@ -28,6 +28,7 @@ from .help_text import lookup as help_lookup
 from .toolbar_dialog import BUTTON_STYLES, SEPARATOR, ToolbarDialog, menu_items
 from .commands import DEFAULT_TOOLBAR, EXAMPLES, SHORT_LABELS  # noqa: F401 - DEFAULT_TOOLBAR is used by tests
 from .commands import sample_list as _sample_list
+from .commands import example_index, example_tree
 
 FILE_FILTER = "Lens files (*.json *.zmx);;lensforge JSON (*.json);;Zemax ZMX (*.zmx);;All files (*)"
 
@@ -115,6 +116,7 @@ class MainWindow(QMainWindow):
         self.a_agf = A("Load Glass Catalog (AGF)...", self.load_agf)
         self.a_forget_agf = A("Forget Loaded Glass Catalogs", self.forget_agf_catalogs)
         self.a_export = A("Export Prescription...", self.export_prescription)
+        self.a_browse_examples = A("&Browse Examples...", self.browse_examples)
         self.a_quit = A("E&xit", self.close, QKeySequence.Quit)
         self.a_undo = self.doc.undo_stack.createUndoAction(self, "&Undo")
         self.a_undo.setShortcut(QKeySequence.Undo)
@@ -225,6 +227,9 @@ class MainWindow(QMainWindow):
         for a in (self.a_vary_curv, self.a_vary_thick, self.a_clear_vars, self.a_clear_solves):
             vm.addAction(a)
 
+        self.examples_menu = mb.addMenu("E&xamples")
+        self._fill_examples()
+
         m = mb.addMenu("&View")
         m.addAction(self.a_toolbar)
         m.addAction(self.a_customize_tb)
@@ -237,6 +242,41 @@ class MainWindow(QMainWindow):
         m.addSeparator()
         m.addAction(self.a_keys)
         m.addAction(self.a_about)
+
+    def _fill_examples(self):
+        """Examples menu: Browse Examples, then every lens under examples/ grouped by folder.
+
+        The lens entries are generated from the folder, so they are marked ``lf_dynamic`` and left out
+        of the toolbar list and the per-command help checks (like Open Recent); the menu's help is that
+        of Examples > Browse Examples.
+        """
+        m = self.examples_menu
+        m.clear()
+        m.setToolTipsVisible(True)
+        m.addAction(self.a_browse_examples)
+        tree = example_tree(example_index(EXAMPLES))
+        if tree["files"] or tree["folders"]:
+            m.addSeparator()
+        else:
+            a = m.addAction("(no example lenses found)")
+            a.setEnabled(False)
+            a.setProperty("lf_dynamic", True)
+
+        def fill(menu, node):
+            for x in node["files"]:
+                a = menu.addAction(x["name"].replace("&", "&&"))
+                a.setProperty("lf_dynamic", True)
+                tip = f"Open a copy of the example examples/{x['path']}"
+                a.setStatusTip(tip)
+                a.setToolTip(f"<b>{x['name']}</b><br>examples/{x['path']}<br>Opens a copy: Save As keeps your changes.")
+                a.triggered.connect(lambda _=False, p=x["path"]: self.open_example(p))
+            for label, sub in node["folders"].items():
+                sm = menu.addMenu(label.replace("&", "&&"))
+                sm.setToolTipsVisible(True)
+                sm.menuAction().setProperty("lf_dynamic", True)
+                fill(sm, sub)
+
+        fill(m, tree)
 
     def _make_toolbar(self):
         tb = self.toolbar = self.addToolBar("Main")
@@ -400,14 +440,33 @@ class MainWindow(QMainWindow):
         if path:
             self.open_file(path)
 
-    def open_file(self, path) -> bool:
+    def browse_examples(self):
+        """Examples > Browse Examples: the Open dialog, in the examples folder."""
+        if not self.maybe_save():
+            return
+        path, _ = QFileDialog.getOpenFileName(self, "Open example lens", EXAMPLES, FILE_FILTER)
+        if path:
+            inside = os.path.abspath(path).startswith(os.path.abspath(EXAMPLES) + os.sep)
+            self.open_file(path, copy=inside)
+
+    def open_example(self, rel: str) -> bool:
+        """Open a copy of examples/<rel> (Examples menu): the lens has no file, so Save asks for one."""
+        if not self.maybe_save():
+            return False
+        return self.open_file(os.path.join(EXAMPLES, *rel.split("/")), copy=True)
+
+    def open_file(self, path, copy: bool = False) -> bool:
+        """Open ``path``; ``copy`` opens it as an unsaved lens (examples), so Save never overwrites it."""
         try:
-            self.doc.open(path)
+            self.doc.open(path, copy=copy)
         except Exception as e:  # noqa: BLE001
             QMessageBox.critical(self, "Open", f"Could not open {path}:\n{type(e).__name__}: {e}\n\n"
                                  f"The lens on screen is still {self.doc.display_name}.")
             return False
-        self._add_recent(path)
+        if copy:
+            self.statusBar().showMessage(f"Opened a copy of {os.path.basename(path)}; File > Save As keeps it", 8000)
+        else:
+            self._add_recent(path)
         if self.doc.system.notes.startswith("ZMX import ignored"):
             self.statusBar().showMessage(self.doc.system.notes, 10000)
         missing = self.doc.system.missing_materials_message()
