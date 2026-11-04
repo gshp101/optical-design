@@ -207,18 +207,23 @@ export function popupMenu(items, x, y, { level = 0, onhover } = {}) {
       el("span", { class: "mi-label" }, it.label),
       it.items ? el("span", { class: "mi-arrow" }, "▸") : (it.shortcut ? el("span", { class: "mi-sc" }, it.shortcut) : null));
     if (it.cmd) row.dataset.cmd = it.cmd;
-    row.addEventListener("mouseenter", () => {
+    let sub = null;  // this row's open submenu
+    const enter = () => {
       pop.querySelectorAll(".menu-item.active").forEach((r) => r.classList.remove("active"));
       row.classList.add("active");
       if (onhover) onhover(it);
       if (it.items) {
+        if (sub && openPopups[level + 1] === sub) return;
         const r = row.getBoundingClientRect();
-        popupMenu(it.items, r.right - 2, r.top - 4, { level: level + 1, onhover });
+        sub = popupMenu(it.items, r.right - 2, r.top - 4, { level: level + 1, onhover });
       } else closePopups(level + 1);
-    });
+    };
+    row.addEventListener("mouseenter", enter);
     row.addEventListener("click", (e) => {
       e.stopPropagation();
-      if (it.disabled || it.items) return;
+      if (it.disabled) return;
+      // touch screens have no hover: a tap on a submenu row opens the submenu
+      if (it.items) { enter(); return; }
       if (document.body.classList.contains("whats-this") && it.cmd) { closePopups(); window.dispatchEvent(new CustomEvent("lf-whatsthis", { detail: it.cmd })); return; }
       closePopups();
       window.dispatchEvent(new Event("lf-menus-closed"));
@@ -228,6 +233,11 @@ export function popupMenu(items, x, y, { level = 0, onhover } = {}) {
   }
   document.body.append(pop);
   const r = pop.getBoundingClientRect();
+  // a submenu with no room on the right opens to the left of its parent (narrow screens, tablets)
+  if (level > 0 && x + r.width > window.innerWidth - 4) {
+    const parent = openPopups[level - 1];
+    if (parent) x = parent.getBoundingClientRect().left - r.width + 2;
+  }
   pop.style.left = Math.max(0, Math.min(x, window.innerWidth - r.width - 4)) + "px";
   pop.style.top = Math.max(0, Math.min(y, window.innerHeight - r.height - 4)) + "px";
   openPopups.push(pop);
