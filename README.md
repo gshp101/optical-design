@@ -101,6 +101,12 @@ docked at the bottom; the optional toolbar (View > Show Toolbar / Customize Tool
 material picker, Insert Lens, Inspect Lens File, Optimization (with Stop), Tolerancing, the Non-Sequential Editor,
 Help Contents, What's This? and Keyboard Shortcuts.
 
+**Editors in their own tabs.** The Merit Function and Multi-Configuration Editors, the Python Shell, analysis
+windows, Optimization, Tolerancing, the Non-Sequential Editor and Help can move into a browser tab of their own
+(the &#8599; Open in New Tab button in their title bar), e.g. to put them on a second screen. The main tab keeps
+running them, so both tabs show every change at once; closing the pop-out tab puts the editor back. The Type
+column of both editors is a searchable menu of every operand with a one-line description.
+
 **How it runs.** The `lensforge` core runs *in the browser* with [Pyodide](https://pyodide.org) (CPython compiled
 to WebAssembly, with NumPy and matplotlib) inside a Web Worker, so the page never freezes during a long
 computation. There is no server-side code: the site is static files, the same Python engine as the desktop

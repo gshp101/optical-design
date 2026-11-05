@@ -2,10 +2,93 @@
 // as lensforge_qt/mfe.py, mce.py, script_console.py and the Qt undo view.
 import { App, run, call, status, statusError, onState, docks, cmd } from "./core.js";
 import * as engine from "./engine.js";
-import { el, esc, btn, select, numInput, check, dialog, message, prompt, popupMenu, iconImg } from "./ui.js";
+import { el, esc, btn, select, numInput, check, dialog, message, prompt, popupMenu, iconImg, later, popupBlocked } from "./ui.js";
+
+// ================================================================== a searchable menu for a Type cell
+/** The list under a Type cell being edited: every operand with its description, grouped; typing filters it
+ *  (name first, then description). groups: [{group, items: [[name, description]]}]; onpick(name). */
+class OperandMenu {
+  constructor(input, td, groups, onpick) {
+    Object.assign(this, { input, td, groups, onpick });
+    this.filtered = false;
+    this.hi = -1;
+    this.busy = false;     // a finger or the mouse is on the list (the input's blur must not commit then)
+    this.list = el("div", { class: "combo-list", role: "listbox", "aria-label": "Operands" });
+    this.list.addEventListener("pointerdown", (e) => {
+      this.busy = true;
+      if (e.pointerType === "mouse") e.preventDefault();   // keep the focus (and the typing) in the cell
+    });
+    this.list.addEventListener("click", (e) => {
+      const row = e.target.closest(".combo-item");
+      if (row) this.onpick(row.dataset.name);
+      else this.input.focus({ preventScroll: true });
+      this.busy = false;
+    });
+    input.addEventListener("input", () => { this.filtered = true; this.fill(); });
+    input.ownerDocument.body.append(this.list);
+    this.fill();
+  }
+
+  /** The rows to show: all of them grouped, or (after typing) the matches, best first. */
+  entries() {
+    const all = this.groups.flatMap((g) => g.items.map(([k, d]) => ({ k, d, g: g.group })));
+    const q = this.input.value.trim().toUpperCase();
+    if (!this.filtered || !q) return { rows: all, grouped: true };
+    const rank = ({ k, d }) => (k.startsWith(q) ? 0 : k.includes(q) ? 1 : d.toUpperCase().includes(q) ? 2 : 3);
+    return { rows: all.filter((x) => rank(x) < 3).sort((a, b) => rank(a) - rank(b)), grouped: false };
+  }
+
+  fill() {
+    const { rows, grouped } = this.entries();
+    this.rows = rows;
+    const cur = this.input.value.trim().toUpperCase();
+    this.hi = grouped ? rows.findIndex((x) => x.k === cur) : rows.length ? 0 : -1;
+    const out = [];
+    let g = null;
+    rows.forEach((x, i) => {
+      if (grouped && x.g !== g) { g = x.g; out.push(el("div", { class: "combo-group" }, g)); }
+      out.push(el("div", { class: "combo-item" + (i === this.hi ? " hi" : ""), role: "option", "data-name": x.k, "data-i": i, title: `${x.k}: ${x.d}` },
+        el("b", {}, x.k), el("span", {}, x.d)));
+    });
+    if (!rows.length) out.push(el("div", { class: "combo-none" }, "No operand matches; Enter keeps what you typed"));
+    this.list.replaceChildren(...out);
+    this.place();
+    this.list.querySelector(".combo-item.hi")?.scrollIntoView({ block: grouped ? "center" : "nearest" });
+  }
+
+  place() {
+    const v = this.td.ownerDocument.defaultView;
+    const r = this.td.getBoundingClientRect();
+    const vh = v.visualViewport ? v.visualViewport.height : v.innerHeight;   // the on-screen keyboard shrinks it
+    const w = Math.min(520, v.innerWidth - 8);
+    const below = vh - r.bottom - 6, above = r.top - 6;
+    const up = below < 200 && above > below;
+    const h = Math.max(120, Math.min(340, up ? above : below));
+    Object.assign(this.list.style, { left: Math.max(4, Math.min(r.left, v.innerWidth - w - 4)) + "px", width: w + "px", maxHeight: h + "px",
+      top: up ? "" : r.bottom + 1 + "px", bottom: up ? v.innerHeight - r.top + 1 + "px" : "" });
+  }
+
+  /** Arrow keys move the highlight; Enter / Tab take it. Returns true if the key was used. */
+  key(e) {
+    if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+      if (!this.rows.length) return true;
+      this.hi = Math.max(0, Math.min(this.rows.length - 1, this.hi + (e.key === "ArrowDown" ? 1 : -1)));
+      if (e.key === "ArrowUp" && this.hi < 0) this.hi = 0;
+      this.list.querySelectorAll(".combo-item").forEach((d) => d.classList.toggle("hi", +d.dataset.i === this.hi));
+      this.list.querySelector(".combo-item.hi")?.scrollIntoView({ block: "nearest" });
+      return true;
+    }
+    return false;
+  }
+
+  /** What Enter / Tab put in the cell: the highlighted operand, or the typed text if nothing matches. */
+  choice() { return this.hi >= 0 && this.rows[this.hi] ? this.rows[this.hi].k : this.input.value; }
+  close() { this.list.remove(); }
+}
 
 // ================================================================== a small spreadsheet widget
-/** cols: [{title, width, tip, align}]; getRows() -> [{head, cells: [{t, e, cls, tip, editable, options, wide}]}];
+/** cols: [{title, width, tip, align}]; getRows() -> [{head, cells: [{t, e, cls, tip, editable, menu, wide}]}];
+ *  menu: [{group, items: [[name, description]]}] makes the cell a Type cell with a searchable operand list;
  *  onEdit(row, col, text); onContext(row, col, event, sheet) */
 class Sheet {
   constructor({ cols, getRows, onEdit, onContext, scope, headTip }) {
@@ -40,6 +123,7 @@ class Sheet {
   setCurrent(row, col) { this.cur = { row, col }; this.sel = null; this.anchor = { row, col }; this.render(); }
 
   render() {
+    if (this.editing) return;   // redrawn when the edit ends (a redraw would drop the cell being typed in)
     const rows = this.rows();
     if (this.cur.row >= rows.length) this.cur.row = Math.max(0, rows.length - 1);
     const head = el("tr", {}, el("th", { style: { width: "36px" } }, ""), ...this.cols.map((c, i) =>
@@ -55,6 +139,7 @@ class Sheet {
         if (this.cur.row === i && this.cur.col === k) cls.push("cur");
         const s = this.sel;
         const inSel = s && i >= s.r0 && i <= s.r1 && k >= s.c0 && k <= s.c1;
+        if (c.menu && c.editable) cls.push("combo");
         const td = el("td", { class: cls.join(" "), "data-r": i, "data-c": k, title: c.tip || "" }, c.t ?? "");
         if (inSel) td.style.boxShadow = "inset 0 0 0 999px rgba(61,132,198,.16)";
         tr.append(td);
@@ -73,6 +158,15 @@ class Sheet {
     if (!td || (this.editing && this.editing.td.contains(e.target))) return;
     if (this.editing) this.commit();
     const row = +td.dataset.r, col = +td.dataset.c;
+    // a Type cell opens its operand menu on a tap of its arrow, or of the cell when it is already selected
+    if (td.classList.contains("combo") && !e.shiftKey && e.button === 0) {
+      const onArrow = e.clientX > td.getBoundingClientRect().right - 20;
+      if (onArrow || (this.cur.row === row && this.cur.col === col && !this.sel)) {
+        e.preventDefault();
+        this.edit(row, col, undefined, e.pointerType === "touch");
+        return;
+      }
+    }
     if (e.shiftKey && this.anchor) {
       this.sel = { r0: Math.min(this.anchor.row, row), r1: Math.max(this.anchor.row, row), c0: Math.min(this.anchor.col, col), c1: Math.max(this.anchor.col, col) };
       this.cur = { row, col };
@@ -106,7 +200,11 @@ class Sheet {
     if (e.key.length === 1 && plainKey && !e.isComposing) { e.preventDefault(); this.edit(this.cur.row, this.cur.col, e.key); }
   }
 
-  edit(row, col, initial) {
+  edit(row, col, initial, touch = false) {
+    if (this.editing) {   // e.g. the double-click that follows a tap on a Type cell, which already opened it
+      if (this.editing.row === row && this.editing.col === col) return;
+      this.commit();
+    }
     const r = this.rows()[row];
     if (!r) return;
     const c = r.cells[col];
@@ -115,34 +213,49 @@ class Sheet {
     const td = this.element.querySelector(`td[data-r="${row}"][data-c="${col}"]`);
     td.classList.add("editing");
     td.textContent = "";
-    let input;
-    if (c.options) {
-      input = el("input", { type: "text", value: initial ?? c.e ?? c.t, list: this.listId(c.options) });
-    } else input = el("input", { type: "text", value: initial ?? c.e ?? c.t, spellcheck: false, autocomplete: "off" });
+    const input = el("input", { type: "text", value: initial ?? c.e ?? c.t, spellcheck: false, autocomplete: "off" });
+    // opened by a finger: no on-screen keyboard over the list (a hardware keyboard still types and filters)
+    if (c.menu && touch) input.setAttribute("inputmode", "none");
     td.append(input);
-    this.editing = { td, input, row, col, original: c.e ?? c.t };
+    this.editing = { td, input, row, col, original: c.e ?? c.t, menu: null };
+    const menu = c.menu ? new OperandMenu(input, td, c.menu, (name) => { input.value = name; this.commit(); this.element.focus({ preventScroll: true }); }) : null;
+    this.editing.menu = menu;
+    if (menu && initial !== undefined) { menu.filtered = true; menu.fill(); }
     input.addEventListener("keydown", (e) => {
+      if (menu && menu.key(e)) { e.preventDefault(); return; }
       if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); this.cancel(); this.element.focus(); }
-      else if (e.key === "Enter") { e.preventDefault(); this.commit(); this.move(1, 0); this.element.focus(); }
-      else if (e.key === "Tab") { e.preventDefault(); this.commit(); this.move(0, e.shiftKey ? -1 : 1); this.element.focus(); }
+      else if (e.key === "Enter") { e.preventDefault(); if (menu) input.value = menu.choice(); this.commit(); this.move(1, 0); this.element.focus(); }
+      else if (e.key === "Tab") { e.preventDefault(); if (menu && menu.filtered) input.value = menu.choice(); this.commit(); this.move(0, e.shiftKey ? -1 : 1); this.element.focus(); }
     });
-    input.addEventListener("blur", () => setTimeout(() => { if (this.editing && this.editing.input === input) this.commit(); }, 100));
-    input.focus();
+    input.addEventListener("blur", () => later(input, () => {
+      if (!this.editing || this.editing.input !== input) return;
+      if (menu && menu.busy) return;   // a tap on the list: its click picks (or refocuses)
+      this.commit();
+    }, 100));
+    if (menu) {
+      // a press outside the cell and its list ends the edit (the list kept it open while being scrolled)
+      const outside = (e) => {
+        if (!this.editing || this.editing.input !== input) { input.ownerDocument.removeEventListener("pointerdown", outside, true); return; }
+        if (menu.list.contains(e.target) || e.target === input) return;
+        menu.busy = false;
+        input.ownerDocument.removeEventListener("pointerdown", outside, true);
+        this.commit();
+      };
+      input.ownerDocument.addEventListener("pointerdown", outside, true);
+    }
+    input.focus({ preventScroll: true });
     if (initial === undefined) input.select();
   }
 
-  listId(options) {
-    const id = "dl-" + options.join("").length + "-" + options.length + "-" + (options[0] || "");
-    if (!document.getElementById(id)) document.body.append(el("datalist", { id }, ...options.map((o) => el("option", { value: o }))));
-    return id;
-  }
+  endMenu(e) { if (e && e.menu) { e.menu.close(); e.menu = null; } }
 
-  cancel() { this.editing = null; this.render(); }
+  cancel() { this.endMenu(this.editing); this.editing = null; this.render(); }
 
   commit() {
     if (!this.editing) return;
     const e = this.editing;
     this.editing = null;
+    this.endMenu(e);
     const v = e.input.value;
     this.render();
     if (String(v) !== String(e.original)) this.onEdit(e.row, e.col, v);
@@ -151,6 +264,24 @@ class Sheet {
 
 function toolbarButton(label, tip, fn, shortcut) {
   return el("button", { type: "button", title: shortcut ? `${label} (${shortcut})\n${tip}` : `${label}\n${tip}`, onclick: fn }, label);
+}
+
+/** "Open in New Tab" / "Return to Main Tab": moves the editor's dock panel to its own browser tab and back. */
+function popButton(getPanel) {
+  const tipOut = "Move this editor into its own browser tab (or window), e.g. to keep it beside the lens on a second " +
+    "screen. It stays connected to this page: every change shows in both at once. Closing the tab puts it back.";
+  const b = toolbarButton("↗ Open in New Tab", tipOut, () => {
+    const p = getPanel();
+    if (!p) return;
+    if (p.floating && p.floating.popout) p.area.dock(p);
+    else p.area.popOut(p);
+  });
+  b.classList.add("pop-toggle");
+  const set = (on) => {
+    b.textContent = on ? "↙ Return to Main Tab" : "↗ Open in New Tab";
+    b.title = on ? "Return to Main Tab\nPut this editor back into the main LensForge tab and close its own tab." : "Open in New Tab\n" + tipOut;
+  };
+  return { element: b, set };
 }
 
 // ================================================================== Merit Function Editor
@@ -182,11 +313,14 @@ export function showMFE() {
       toolbarButton("Operands...", "List every operand with its description and insert one.", () => operandList()),
       toolbarButton("Clear", "Remove every row (undoable).", () => run("mfe_clear")), el("span", { class: "sep" }),
       toolbarButton("Help", "Merit Function Editor help: columns, weights, ray coordinates, every operand and a worked example (F1).", () => cmd("__help:" + App.help.root)));
+    const pop = popButton(() => mfe.panel);
+    bar.append(el("span", { class: "grow" }), pop.element);
     const element = el("div", { class: "pane" }, bar, sheet.element, label);
-    mfe = { sheet, label, element, panel: null };
+    mfe = { sheet, label, element, panel: null, pop };
     onState(() => { if (mfe.panel && mfe.panel.area.has("mfe")) mfe.sheet.render(); });
   }
-  if (!docks.bottom.has("mfe")) mfe.panel = docks.bottom.add({ id: "mfe", title: "Merit Function Editor", element: mfe.element, helpId: App.help.root, onshow: () => mfe.sheet.render() });
+  if (!docks.bottom.has("mfe")) mfe.panel = docks.bottom.add({ id: "mfe", title: "Merit Function Editor", element: mfe.element, helpId: App.help.root,
+    onshow: () => mfe.sheet.render(), onpop: (on) => mfe.pop.set(on) });
   else docks.bottom.show(mfe.panel);
   mfe.sheet.render();
   showMerit();
@@ -200,7 +334,7 @@ function mfeRows() {
     const dim = r.w === 0 ? " weight0" : "";
     const v = vals[i] || ["", ""];
     return { cells: [
-      { t: r.type, editable: true, cls: base + dim, tip: r.tip, options: App.operandNames || [] },
+      { t: r.type, editable: true, cls: base + dim, tip: r.tip, menu: App.operandMenu || [] },
       { t: r.params, editable: true, cls: base + dim, tip: r.tip },
       { t: r.bound, editable: true, cls: base + dim, tip: "=, > or <" },
       { t: r.target, e: r.target_e, editable: true, cls: base + dim },
@@ -338,11 +472,14 @@ export function showMCE() {
       toolbarButton("Make Current", "Show the selected configuration in the Lens Data Editor and the analyses (or double-click its header).", () => mceMakeCurrent()),
       toolbarButton("Toggle Variable", "Make the selected cells optimisation variables, or fixed again.", () => mceToggleVar(), "Ctrl+Shift+V"), el("span", { class: "sep" }),
       toolbarButton("Help", "How multi-configuration works: operands, switching, analyses and optimisation.", () => cmd("__help:Tools > Multi-Configuration Editor")));
+    const pop = popButton(() => mce.panel);
+    bar.append(el("span", { class: "grow" }), pop.element);
     const element = el("div", { class: "pane" }, bar, sheet.element, label);
-    mce = { sheet, label, element, panel: null };
+    mce = { sheet, label, element, panel: null, pop };
     onState(() => { if (docks.bottom.has("mce")) renderMCE(); });
   }
-  if (!docks.bottom.has("mce")) mce.panel = docks.bottom.add({ id: "mce", title: "Multi-Configuration Editor", element: mce.element, helpId: "Tools > Multi-Configuration Editor", onshow: () => renderMCE() });
+  if (!docks.bottom.has("mce")) mce.panel = docks.bottom.add({ id: "mce", title: "Multi-Configuration Editor", element: mce.element, helpId: "Tools > Multi-Configuration Editor",
+    onshow: () => renderMCE(), onpop: (on) => mce.pop.set(on) });
   else docks.bottom.show(mce.panel);
   renderMCE();
 }
@@ -366,7 +503,7 @@ function renderMCE() {
 function mceRows() {
   const m = App.state.mce;
   return m.rows.map((r) => ({ cells: [
-    { t: r.type, editable: true, cls: r.error ? "mcerr" : "", tip: r.tip + (r.error ? "\n⚠ " + r.error : ""), options: m.operands },
+    { t: r.type, editable: true, cls: r.error ? "mcerr" : "", tip: r.tip + (r.error ? "\n⚠ " + r.error : ""), menu: m.operand_menu },
     { t: r.ref, editable: r.has_ref, cls: r.has_ref ? "" : "na", tip: r.ref_tip },
     { t: r.param, editable: r.has_param, cls: r.has_param ? "" : "na", tip: r.tip },
     ...r.cells.map((c, k) => ({ t: c.t + (c.var ? "  V" : ""), e: c.t, editable: !r.fixed, cls: c.var ? "mcvar" : (k + 1 === m.current ? "current-config" : ""),
@@ -416,13 +553,15 @@ export async function showShell() {
       }
     });
     editor.addEventListener("focusin", () => { App.focusScope = "shell"; });
+    const pop = popButton(() => shell.panel);
     const element = el("div", { class: "pane" }, editor, output,
-      el("div", { class: "editor-bar" }, el("span", { class: "muted", title: "Names defined for the script" }, "lens, lf, opt, np"), el("span", { class: "grow" }),
+      el("div", { class: "editor-bar" }, el("span", { class: "muted", title: "Names defined for the script" }, "lens, lf, opt, np"), el("span", { class: "grow" }), pop.element,
         el("button", { type: "button", onclick: () => { output.textContent = ""; } }, "Clear Output"),
         el("button", { type: "button", onclick: runIt, title: "Run the script against the open lens (Ctrl+Enter)" }, "Run (Ctrl+Enter)")));
-    shell = { element, editor, output, run: runIt, panel: null };
+    shell = { element, editor, output, run: runIt, panel: null, pop };
   }
-  if (!docks.bottom.has("script")) shell.panel = docks.bottom.add({ id: "script", title: "Python Shell", element: shell.element, helpId: "Tools > Python Shell" });
+  if (!docks.bottom.has("script")) shell.panel = docks.bottom.add({ id: "script", title: "Python Shell", element: shell.element, helpId: "Tools > Python Shell",
+    onpop: (on) => shell.pop.set(on) });
   else docks.bottom.show(shell.panel);
   shell.editor.focus();
 }

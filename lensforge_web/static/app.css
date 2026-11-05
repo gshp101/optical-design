@@ -289,3 +289,36 @@ table.sheet td.editing input, table.sheet td.editing select { width: 100%; heigh
 #splash-progress { height: 100%; width: 3%; background: linear-gradient(90deg, #e2541c, #ffb23a); transition: width .3s; }
 .splash-note { font-size: 12px; color: #b9a99a; }
 #splash.failed #splash-msg { color: #ff8a7a; white-space: normal; }
+
+/* ---------------------------------------------------------------- Type cells: the operand menu */
+table.sheet td.combo { padding-right: 18px; }
+table.sheet td.combo::after { content: "▾"; position: absolute; right: 0; top: 0; width: 18px; height: 100%;
+  display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: 11px; }
+table.sheet td.combo:hover::after { background: var(--menu-hover); color: var(--text); }
+table.sheet td.combo.editing::after { display: none; }
+.combo-list { position: fixed; z-index: 1100; background: var(--panel); border: 1px solid var(--border);
+  box-shadow: 0 4px 14px rgba(0,0,0,.2); overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain;
+  user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent; padding: 2px 0; }
+.combo-group { padding: 5px 8px 2px; font-size: 11px; font-weight: 600; color: var(--muted); text-transform: none;
+  border-top: 1px solid var(--border-soft); position: sticky; top: -2px; background: #f5f7f9; }
+.combo-group:first-child { border-top: none; }
+.combo-item { display: flex; gap: 8px; padding: 3px 8px; cursor: default; white-space: nowrap; }
+.combo-item b { font-family: var(--mono); font-weight: 600; flex: none; width: 3.6em; }
+.combo-item span { overflow: hidden; text-overflow: ellipsis; color: #39434d; }
+.combo-item:hover { background: #eef4fa; }
+.combo-item.hi { background: var(--select); }
+.combo-none { padding: 6px 8px; color: var(--muted); font-style: italic; }
+@media (pointer: coarse) { .combo-item { padding: 7px 10px; } table.sheet td.combo { padding-right: 24px; }
+  table.sheet td.combo::after { width: 24px; } }
+
+/* ---------------------------------------------------------------- an editor in its own tab (popout.html) */
+.win-extra { display: contents; }
+.editor-bar button.pop-toggle { color: var(--accent); }
+#popout-app { display: flex; flex-direction: column; position: fixed; inset: 0; }
+#popout-root { flex: 1; min-height: 0; display: flex; flex-direction: column; background: var(--panel); }
+#popout-root > .pane { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.popout-bar { display: flex; align-items: center; gap: 6px; padding: 3px 6px 3px 10px; background: #e4e8ec;
+  border-bottom: 1px solid var(--border); flex: none; min-height: 28px; user-select: none; }
+.popout-title { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.popout-msg { padding: 24px; max-width: 640px; }
+.win-pop > .win-body { flex: 1; min-height: 0; }

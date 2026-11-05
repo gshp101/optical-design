@@ -199,11 +199,51 @@ WEB_HELP: Dict[str, Tuple[str, str]] = {
 }
 
 
+#: the editors and windows that can move into their own browser tab (Open in New Tab)
+POPOUT_HELP = (
+    "<p><b>Open in New Tab.</b> The &#8599; button in the title bar (and Open in New Tab in the editor's own "
+    "button bar, where it has one) moves it into its own browser tab, which you can drag out into a window "
+    "of its own, e.g. on a second screen. It stays connected to the main LensForge tab: both show every "
+    "change at once, its keyboard shortcuts keep working, and its dialogs, menus and error messages appear "
+    "in its tab. &#8601; Return to Main Tab, or closing the tab, puts it back. Reloading or closing the main "
+    "tab closes its pop-out tabs. If nothing opens, allow pop-ups for this site.</p>")
+POPOUT_COMMANDS = ("Tools > Merit Function Editor", "Tools > Multi-Configuration Editor", "Tools > Python Shell",
+                   "Tools > Optimization", "Tools > Tolerancing", "Tools > Non-Sequential > Non-Sequential Editor",
+                   "Edit > Undo History", "View > Undo History", "Help > Help Contents")
+
+ANALYSIS_WINDOW_COMMANDS = ("Analysis > Tab All Analysis Windows", "Analysis > Close All Analysis Windows")
+
+#: the operand menu of the Type column (Merit Function and Multi-Configuration Editors)
+OPERAND_MENU_HELP = {
+    "Tools > Merit Function Editor": (
+        "<p><b>Choosing an operand.</b> The Type column is a menu: click the &#9662; arrow of a Type cell, or the "
+        "cell again once it is selected (a tap on an iPad), to list every operand with a one-line description, "
+        "grouped as in the operand reference. Typing (or pressing a letter key on a Type cell) filters the list "
+        "by name and description, e.g. <i>spot</i> or <i>MTF</i>; the arrow keys move through it, Enter or a "
+        "click picks one and Esc closes it. Operands... in the editor's button bar lists them in a dialog "
+        "instead.</p>"),
+    "Tools > Multi-Configuration Editor": (
+        "<p><b>Choosing an operand.</b> The Type column is a menu: click the &#9662; arrow of a Type cell, or the "
+        "cell again once it is selected (a tap on an iPad), to list the operands grouped by what Ref refers to "
+        "(surface, field, wavelength, none). Typing filters the list, the arrow keys move through it, Enter or "
+        "a click picks one.</p>"),
+}
+
+
 def lookup(item_id: str) -> Optional[Tuple[str, str]]:
     """(summary, details) of a web command."""
-    if item_id in WEB_HELP:
-        return WEB_HELP[item_id]
-    return qt_lookup(item_id)
+    h = WEB_HELP[item_id] if item_id in WEB_HELP else qt_lookup(item_id)
+    if h is None:
+        return None
+    summary, details = h
+    details += OPERAND_MENU_HELP.get(item_id, "")
+    if item_id in POPOUT_COMMANDS or (item_id.startswith("Analysis > ") and item_id not in ANALYSIS_WINDOW_COMMANDS):
+        details += POPOUT_HELP
+    elif item_id == "Analysis > Tab All Analysis Windows":
+        details += " Analysis windows in their own browser tabs (Open in New Tab) come back into the main tab too."
+    elif item_id == "Analysis > Close All Analysis Windows":
+        details += " Analysis windows in their own browser tabs (Open in New Tab) are closed too."
+    return summary, details
 
 
 # ---------------------------------------------------------------------------

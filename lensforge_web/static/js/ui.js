@@ -79,11 +79,46 @@ export function tabs(pages, active = 0, onchange) {
 // ------------------------------------------------------------------ windows
 let zTop = 10;
 const modalStack = [];
+const openWindows = new Set();
+
+// ------------------------------------------------------------------ documents (the page and its pop-out tabs)
+// An editor moved to its own browser tab (popOut) is still run by this page: its elements, listeners and
+// state stay here and only the drawing moves. Windows and popup menus open in the document the user last
+// touched ("host"), so a context menu or dialog of a popped-out editor appears in its tab.
+const documents = new Set([document]);
+const newDocumentHooks = [];
+let hostDoc = document;
+export function host() {
+  if (!documents.has(hostDoc) || !hostDoc.defaultView || hostDoc.defaultView.closed) hostDoc = document;
+  return hostDoc;
+}
+export const allDocuments = () => [...documents];
+/** fn(doc) runs for every pop-out tab's document when it opens (the page's own document is not included). */
+export function onNewDocument(fn) { newDocumentHooks.push(fn); }
+/** setTimeout in the window an element is shown in: a hidden tab's timers are throttled by the browser. */
+export function later(node, fn, ms) {
+  const v = (node && node.ownerDocument && node.ownerDocument.defaultView) || window;
+  return v.setTimeout(fn, ms);
+}
+function trackDocument(doc) {
+  documents.add(doc);
+  for (const type of ["pointerdown", "keydown", "focusin"]) doc.addEventListener(type, () => { hostDoc = doc; }, true);
+  doc.addEventListener("pointerdown", closePopupsOutside);
+  for (const fn of newDocumentHooks) { try { fn(doc); } catch (e) { console.error(e); } }
+}
+function untrackDocument(doc) {
+  documents.delete(doc);
+  if (hostDoc === doc) hostDoc = document;
+  // windows, dialogs and menus that were open in the closed tab go with it (an orphaned modal would block the keyboard)
+  for (const w of [...openWindows]) if (w.element.ownerDocument === doc) w.close();
+  openPopups = openPopups.filter((p) => p.ownerDocument !== doc);
+}
 
 function placeWindow(w, width, height) {
-  const vw = window.innerWidth, vh = window.innerHeight;
+  const d = w.ownerDocument, v = d.defaultView;
+  const vw = v.innerWidth, vh = v.innerHeight;
   const W = Math.min(width, vw - 20), H = Math.min(height, vh - 20);
-  const n = document.querySelectorAll("#floating-layer .window").length;
+  const n = d.querySelectorAll("#floating-layer .window").length;
   w.style.width = W + "px";
   if (height) w.style.height = H + "px";
   w.style.left = Math.max(10, (vw - W) / 2 + (n % 6) * 24) + "px";
@@ -95,10 +130,11 @@ function makeDraggable(w, handle) {
     if (e.target.closest("button")) return;
     const r = w.getBoundingClientRect();
     const dx = e.clientX - r.left, dy = e.clientY - r.top;
+    const v = w.ownerDocument.defaultView;
     handle.setPointerCapture(e.pointerId);
     const move = (ev) => {
-      w.style.left = Math.max(-r.width + 80, Math.min(window.innerWidth - 80, ev.clientX - dx)) + "px";
-      w.style.top = Math.max(0, Math.min(window.innerHeight - 30, ev.clientY - dy)) + "px";
+      w.style.left = Math.max(-r.width + 80, Math.min(v.innerWidth - 80, ev.clientX - dx)) + "px";
+      w.style.top = Math.max(0, Math.min(v.innerHeight - 30, ev.clientY - dy)) + "px";
     };
     const up = () => { handle.removeEventListener("pointermove", move); handle.removeEventListener("pointerup", up); };
     handle.addEventListener("pointermove", move);
@@ -106,15 +142,18 @@ function makeDraggable(w, handle) {
   });
 }
 
-/** A window. opts: {title, width, height, modal, resizable, buttons: el, onclose, className, flush, help}
- *  returns {element, body, close(), setTitle(), raise()} */
+/** A window. opts: {title, width, height, modal, resizable, buttons: el, onclose, className, flush, help,
+ *  popout: name (adds a button that moves the window's contents to its own browser tab)}
+ *  returns {element, body, close(), setTitle(), raise(), popOut(), popped} */
 export function openWindow(opts) {
-  const layer = document.getElementById(opts.modal ? "modal-layer" : "floating-layer");
+  const layer = host().getElementById(opts.modal ? "modal-layer" : "floating-layer");
   const titleText = el("span", { class: "wt-text" }, opts.title || "");
   const close = el("button", { type: "button", title: "Close", "aria-label": "Close" }, "×");
   const title = el("div", { class: "win-title" }, opts.icon ? iconImg(opts.icon, 16) : null, titleText);
   if (opts.help) title.append(el("button", { type: "button", title: "Help on this window (F1)", onclick: opts.help }, "?"));
   if (opts.extraTitle) title.append(opts.extraTitle);
+  const popBtn = opts.popout ? el("button", { type: "button", class: "pop-btn", title: POPOUT_TIP, "aria-label": "Open in New Tab" }, POPOUT_GLYPH) : null;
+  if (popBtn) title.append(popBtn);
   title.append(close);
   const body = el("div", { class: "win-body" + (opts.flush ? " flush" : "") });
   const w = el("div", { class: "window" + (opts.modal || opts.dialog ? " dialog" : "") + (opts.resizable ? " resizable" : "") + (opts.className ? " " + opts.className : ""),
@@ -123,13 +162,33 @@ export function openWindow(opts) {
   layer.append(w);
   placeWindow(w, opts.width || 520, opts.height);
   makeDraggable(w, title);
-  const win = { element: w, body, title: titleText, closed: false };
-  win.raise = () => { w.style.zIndex = ++zTop; };
-  win.setTitle = (t) => { titleText.textContent = t; w.setAttribute("aria-label", t); };
+  const win = { element: w, body, title: titleText, closed: false, popped: null };
+  win.raise = () => { if (win.popped) win.popped.raise(); else w.style.zIndex = ++zTop; };
+  win.setTitle = (t) => { titleText.textContent = t; w.setAttribute("aria-label", t); if (win.popped) win.popped.setTitle(t); };
+  win.popOut = () => {
+    if (win.popped || win.closed) { win.raise(); return win.popped; }
+    const box = el("div", { class: "pane win-pop" }, body, opts.buttons || null);
+    const h = popOut(box, { name: opts.popout, title: titleText.textContent, help: opts.help,
+      onreturn: () => {
+        if (win.popped !== h) return;
+        win.popped = null;
+        w.append(body);
+        if (opts.buttons) w.append(opts.buttons);
+        w.hidden = false;
+        win.raise();
+      } });
+    if (!h) { w.append(body); if (opts.buttons) w.append(opts.buttons); return null; }
+    win.popped = h;
+    w.hidden = true;
+    return h;
+  };
+  if (popBtn) popBtn.addEventListener("click", () => { if (!win.popOut()) popupBlocked(); });
   win.close = (result) => {
     if (win.closed) return;
     if (opts.beforeclose && opts.beforeclose() === false) return;
     win.closed = true;
+    openWindows.delete(win);
+    if (win.popped) { const h = win.popped; win.popped = null; h.close(); }
     w.remove();
     if (opts.modal) {
       modalStack.splice(modalStack.indexOf(win), 1);
@@ -143,6 +202,7 @@ export function openWindow(opts) {
     if (e.key === "Escape" && !e.defaultPrevented) { e.preventDefault(); e.stopPropagation(); win.close(); }
   });
   if (opts.modal) { modalStack.push(win); layer.classList.add("active"); }
+  openWindows.add(win);
   win.raise();
   return win;
 }
@@ -231,26 +291,105 @@ export function popupMenu(items, x, y, { level = 0, onhover } = {}) {
     });
     pop.append(row);
   }
-  document.body.append(pop);
+  const d = level > 0 && openPopups[level - 1] ? openPopups[level - 1].ownerDocument : host();
+  const v = d.defaultView;
+  d.body.append(pop);
   const r = pop.getBoundingClientRect();
   // a submenu with no room on the right opens to the left of its parent (narrow screens, tablets)
-  if (level > 0 && x + r.width > window.innerWidth - 4) {
+  if (level > 0 && x + r.width > v.innerWidth - 4) {
     const parent = openPopups[level - 1];
     if (parent) x = parent.getBoundingClientRect().left - r.width + 2;
   }
-  pop.style.left = Math.max(0, Math.min(x, window.innerWidth - r.width - 4)) + "px";
-  pop.style.top = Math.max(0, Math.min(y, window.innerHeight - r.height - 4)) + "px";
+  pop.style.left = Math.max(0, Math.min(x, v.innerWidth - r.width - 4)) + "px";
+  pop.style.top = Math.max(0, Math.min(y, v.innerHeight - r.height - 4)) + "px";
   openPopups.push(pop);
   return pop;
 }
 export const popupsOpen = () => openPopups.length > 0;
 
-document.addEventListener("pointerdown", (e) => {
+function closePopupsOutside(e) {
   if (openPopups.length && !e.target.closest(".menu-popup") && !e.target.closest(".menu-top")) {
     closePopups();
     window.dispatchEvent(new Event("lf-menus-closed"));
   }
-});
+}
+document.addEventListener("pointerdown", closePopupsOutside);
+for (const type of ["pointerdown", "keydown", "focusin"]) document.addEventListener(type, () => { hostDoc = document; }, true);
+
+// ------------------------------------------------------------------ pop-out tabs
+export const POPOUT_GLYPH = "↗";
+export const POPOUT_TIP = "Open in New Tab\nMove this editor into its own browser tab (or window), e.g. on a second screen. " +
+  "It stays connected to this page and shows every change at once; closing the tab, or Return to Main Tab, puts it back.";
+const popouts = new Map();     // name -> handle
+const pending = new Map();     // name -> attach(win), until popout.html has loaded
+let popSerial = 0;
+
+/** Tell the user the browser refused to open the tab (pop-up blocker). */
+export function popupBlocked() {
+  message("New tab blocked", "The browser did not open a new tab. Allow pop-ups for this site (in Safari on iPad: " +
+    "Settings &gt; Apps &gt; Safari &gt; Block Pop-ups off) and try again.");
+}
+
+/** Move `element` into a new browser tab (popout.html). opts: {name, title, help(), onreturn(), onresize()}.
+ *  Must be called from a click (browsers only open tabs for a user action). Returns a handle
+ *  {popout: true, window, raise(), close(), setTitle(t)} or null if the browser blocked the tab. */
+export function popOut(element, { name, title, help, onreturn, onresize }) {
+  if (popouts.has(name)) popouts.get(name).close();
+  const tab = window.open(`popout.html?${++popSerial}#${encodeURIComponent(name)}`, "lensforge-" + name);
+  if (!tab) return null;
+  element.hidden = true;
+  let doc = null, ro = null, returned = false, titleEl = null;
+  const h = { popout: true, window: tab, name };
+  h.setTitle = (t) => { title = t; if (doc) { doc.title = `${t} - LensForge`; titleEl.textContent = t; } };
+  h.raise = () => { try { tab.focus(); } catch (e) { /* closed */ } };
+  const giveBack = () => {
+    if (returned) return;
+    returned = true;
+    pending.delete(name);
+    if (popouts.get(name) === h) popouts.delete(name);
+    if (ro) ro.disconnect();
+    if (doc) untrackDocument(doc);
+    element.hidden = false;
+    if (onreturn) onreturn();
+  };
+  h.close = () => { giveBack(); try { if (!tab.closed) tab.close(); } catch (e) { /* gone */ } };
+  pending.set(name, (win) => {
+    if (returned || win !== tab) return false;
+    pending.delete(name);
+    doc = win.document;
+    titleEl = el("span", { class: "popout-title" }, title);
+    const back = el("button", { type: "button", class: "btn small", title: "Return to Main Tab\nPut this editor back into the main LensForge tab and close this one.",
+      onclick: () => h.close() }, "↙ Return to Main Tab");
+    const bar = el("div", { class: "popout-bar" }, titleEl, el("span", { class: "grow" }),
+      help ? el("button", { type: "button", class: "btn small", title: "Help on this editor (F1)", onclick: () => help() }, "? Help") : null, back);
+    const root = doc.getElementById("popout-root");
+    root.replaceChildren(bar, element);
+    element.hidden = false;
+    h.setTitle(title);
+    trackDocument(doc);
+    if (onresize) { ro = new win.ResizeObserver(() => onresize()); ro.observe(element); }
+    win.addEventListener("pagehide", giveBack);
+    return true;
+  });
+  popouts.set(name, h);
+  // the tab never loaded (closed at once, or blocked after all): put the editor back
+  setTimeout(() => { if (!doc) giveBack(); }, 20000);
+  const poll = setInterval(() => { if (returned) clearInterval(poll); else if (tab.closed) { clearInterval(poll); giveBack(); } }, 1000);
+  return h;
+}
+
+/** Called by popout.html when it has loaded (window.opener.LensForgePopout.ready(window)). */
+window.LensForgePopout = {
+  ready(win) {
+    let name = "";
+    try { name = decodeURIComponent(win.location.hash.slice(1)); } catch (e) { /* bad hash */ }
+    const attach = pending.get(name);
+    if (attach && attach(win)) return true;
+    return false;
+  },
+};
+// closing or reloading the main page closes its pop-out tabs (they cannot work without it)
+window.addEventListener("pagehide", () => { for (const h of [...popouts.values()]) h.close(); });
 
 // ------------------------------------------------------------------ files
 export function download(name, text, type = "application/json") {

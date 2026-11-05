@@ -32,7 +32,7 @@ export async function optimization() {
   const info = await run("opt_info");
   if (!info) return;
   const buttons = el("div", { class: "win-buttons" });
-  const w = optWin = openWindow({ title: "Optimization", width: 660, height: 600, resizable: true, buttons, help: () => cmd("__help:Tools > Optimization") });
+  const w = optWin = openWindow({ title: "Optimization", popout: "optimization", width: 660, height: 600, resizable: true, buttons, help: () => cmd("__help:Tools > Optimization") });
   const algorithm = select(info.algorithms, "dls");
   const cycles = numInput(50, { min: 1, max: 10000, step: 1 });
   cycles.title = "Most cycles of the local optimiser (damped least squares or orthogonal descent); Hammer and global search use up to 20 / 30 per local run";
@@ -120,7 +120,7 @@ export async function tolerancing() {
   if (tolWin && !tolWin.closed) { tolWin.raise(); return; }
   const setup = await run("tolerance_setup");
   if (!setup) return;
-  const w = tolWin = openWindow({ title: "Tolerancing", width: 980, height: 700, resizable: true, help: () => cmd("__help:Tools > Tolerancing") });
+  const w = tolWin = openWindow({ title: "Tolerancing", popout: "tolerancing", width: 980, height: 700, resizable: true, help: () => cmd("__help:Tools > Tolerancing") });
   const wiz = {};
   const wizGrid = el("div", { style: { display: "grid", gridTemplateColumns: "repeat(4, max-content minmax(70px, 1fr))", gap: "4px 8px", alignItems: "center" } });
   for (const [name, label, val, dec] of setup.wizard) {
@@ -192,7 +192,7 @@ export async function tolerancing() {
 let nsWin = null;
 export async function nsEditor() {
   if (nsWin && !nsWin.closed) { nsWin.raise(); return nsWin; }
-  const w = nsWin = openWindow({ title: "Non-Sequential Editor", width: 1200, height: 820, resizable: true, flush: true,
+  const w = nsWin = openWindow({ title: "Non-Sequential Editor", popout: "nonseq", width: 1200, height: 820, resizable: true, flush: true,
     help: () => cmd("__help:Tools > Non-Sequential > Non-Sequential Editor") });
   let st = await run("ns_state");
   let tab = "objects", sel = { objects: -1, sources: -1 };
@@ -297,7 +297,7 @@ export async function nsEditor() {
 let helpWin = null;
 export function helpBrowser(itemId) {
   if (helpWin && !helpWin.closed) { helpWin.raise(); if (itemId) helpWin.showItem(itemId); return helpWin; }
-  const w = helpWin = openWindow({ title: "LensForge Help", width: 980, height: 680, resizable: true });
+  const w = helpWin = openWindow({ title: "LensForge Help", popout: "help", width: 980, height: 680, resizable: true });
   const filter = el("input", { type: "text", placeholder: "Filter: type a word to find commands and pages" });
   const tree = el("div", { class: "tree", style: { width: "330px", flex: "none" } });
   const page = el("div", { class: "help-page", style: { flex: "1" } });

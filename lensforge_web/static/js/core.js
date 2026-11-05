@@ -1,6 +1,6 @@
 // The application object shared by every module: lens state, commands, status bar and dock areas.
 import * as engine from "./engine.js";
-import { el, openWindow, dragSplitter } from "./ui.js";
+import { el, openWindow, dragSplitter, popOut, popupBlocked, allDocuments, POPOUT_GLYPH, POPOUT_TIP } from "./ui.js";
 
 export const App = {
   state: null,            // Session.state() from Python
@@ -14,17 +14,20 @@ export const App = {
 
 // ------------------------------------------------------------------ status bar
 let statusTimer = null;
+// the main tab's status line, and the one of every pop-out tab (so an editor there shows its errors too)
+const statusLines = () => allDocuments().map((d) => d.getElementById("status-msg")).filter(Boolean);
 export function status(msg, ms = 5000) {
-  const s = document.getElementById("status-msg");
-  s.textContent = msg || "";
-  s.title = msg || "";
-  s.classList.remove("error-text");
+  for (const s of statusLines()) {
+    s.textContent = msg || "";
+    s.title = msg || "";
+    s.classList.remove("error-text");
+  }
   clearTimeout(statusTimer);
-  if (ms && msg) statusTimer = setTimeout(() => { s.textContent = ""; }, ms);
+  if (ms && msg) statusTimer = setTimeout(() => { for (const s of statusLines()) s.textContent = ""; }, ms);
 }
 export function statusError(msg, ms = 8000) {
   status(msg, ms);
-  document.getElementById("status-msg").classList.add("error-text");
+  for (const s of statusLines()) s.classList.add("error-text");
 }
 
 // ------------------------------------------------------------------ talking to Python
@@ -94,7 +97,11 @@ export class DockArea {
   has(id) { return this.panels.find((p) => p.id === id) || null; }
 
   show(panel) {
-    if (panel.floating) { panel.floating.raise(); return; }
+    if (panel.floating) {
+      panel.floating.raise();
+      if (panel.floating.popout) status(`${panel.title} is open in its own browser tab`);
+      return;
+    }
     this.active = panel;
     this.render();
     if (panel.onshow) panel.onshow();
@@ -104,7 +111,12 @@ export class DockArea {
     const i = this.panels.indexOf(panel);
     if (i < 0) return;
     this.panels.splice(i, 1);
-    if (panel.floating) { const f = panel.floating; panel.floating = null; f.close(); }
+    if (panel.floating) {
+      const f = panel.floating;
+      panel.floating = null;
+      f.close();
+      if (f.popout && panel.onpop) panel.onpop(false);
+    }
     if (this.active === panel) this.active = this.docked()[Math.max(0, i - 1)] || null;
     this.render();
     if (panel.onclose) panel.onclose();
@@ -117,7 +129,9 @@ export class DockArea {
     const r = panel.element.getBoundingClientRect();
     const w = openWindow({ title: panel.title, width: Math.max(420, r.width), height: Math.max(300, r.height + 30),
       flush: true, resizable: true,
-      extraTitle: el("button", { type: "button", title: "Dock (put it back in the window)", onclick: () => this.dock(panel) }, "⧉"),
+      extraTitle: el("span", { class: "win-extra" },
+        el("button", { type: "button", title: "Dock (put it back in the window)", onclick: () => this.dock(panel) }, "⧉"),
+        panel.popout !== false ? el("button", { type: "button", class: "pop-btn", title: POPOUT_TIP, "aria-label": "Open in New Tab", onclick: () => this.popOut(panel) }, POPOUT_GLYPH) : null),
       onclose: () => { if (panel.floating) { panel.floating = null; this.remove(panel); } } });
     w.body.append(panel.element);
     panel.floating = w;
@@ -127,6 +141,31 @@ export class DockArea {
     if (panel.onshow) panel.onshow();
   }
 
+  /** Move the panel into its own browser tab (Open in New Tab); closing that tab docks it again. */
+  popOut(panel) {
+    if (panel.floating && panel.floating.popout) { panel.floating.raise(); return panel.floating; }
+    if (panel.floating) { const f = panel.floating; panel.floating = null; f.close(); }
+    const h = popOut(panel.element, { name: panel.id, title: panel.title,
+      help: panel.helpId ? () => cmd("__help:" + panel.helpId) : null,
+      onresize: () => panel.onresize && panel.onresize(),
+      onreturn: () => {
+        if (panel.floating !== h) return;
+        panel.floating = null;
+        if (!this.panels.includes(panel)) return;
+        this.active = panel;
+        this.render();
+        if (panel.onshow) panel.onshow();
+        if (panel.onpop) panel.onpop(false);
+      } });
+    if (!h) { this.render(); popupBlocked(); return null; }
+    panel.floating = h;
+    if (this.active === panel) this.active = this.docked()[0] || null;
+    this.render();
+    if (panel.onpop) panel.onpop(true);
+    return h;
+  }
+
+  /** Back into the dock from a floating window or a pop-out tab. */
   dock(panel) {
     if (!panel.floating) return;
     const w = panel.floating;
@@ -135,6 +174,7 @@ export class DockArea {
     this.active = panel;
     this.render();
     if (panel.onshow) panel.onshow();
+    if (w.popout && panel.onpop) panel.onpop(false);
   }
 
   setTitle(panel, title) {
@@ -154,6 +194,7 @@ export class DockArea {
     this.titleBar.replaceChildren(el("span", { class: "dt-text", title: a.title }, a.title));
     if (a.helpId) this.titleBar.append(el("button", { type: "button", title: "Help", onclick: () => cmd("__help:" + a.helpId) }, "?"));
     if (a.floatable !== false) this.titleBar.append(el("button", { type: "button", title: "Float (own window)", onclick: () => this.float(a) }, "⧉"));
+    if (a.popout !== false) this.titleBar.append(el("button", { type: "button", class: "pop-btn", title: POPOUT_TIP, "aria-label": "Open in New Tab", onclick: () => this.popOut(a) }, POPOUT_GLYPH));
     if (a.closable !== false) this.titleBar.append(el("button", { type: "button", title: "Close", onclick: () => this.remove(a) }, "×"));
     if (refill) {
       for (const p of docked) {

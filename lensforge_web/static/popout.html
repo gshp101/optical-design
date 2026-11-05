@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LensForge</title>
+<link rel="icon" type="image/svg+xml" href="app-icon.svg">
+<link rel="stylesheet" href="app.css">
+</head>
+<body class="popout">
+<!-- An editor popped out of the main LensForge tab (Open in New Tab). The main tab draws into this page
+     and runs everything; this page only holds the editor while it is shown here. -->
+<div id="popout-app">
+  <div id="popout-root"><p class="popout-msg">Connecting to LensForge...</p></div>
+  <footer id="statusbar"><span id="status-msg"></span></footer>
+</div>
+<div id="floating-layer"></div>
+<div id="modal-layer"></div>
+<script>
+  (function () {
+    var ok = false;
+    try { ok = !!(window.opener && window.opener.LensForgePopout && window.opener.LensForgePopout.ready(window)); } catch (e) { ok = false; }
+    if (ok) return;
+    var root = document.getElementById("popout-root");
+    root.innerHTML = '<div class="popout-msg"><p><b>This tab is no longer connected to LensForge.</b></p>' +
+      '<p>It showed an editor popped out of the main LensForge tab. The editor went back to that tab ' +
+      '(the main tab was closed or reloaded, or this tab was reloaded).</p>' +
+      '<p>Close this tab, and use the Open in New Tab button (&#8599;) in the main tab to pop the editor out again.</p>' +
+      '<p><button type="button" class="btn" onclick="window.close()">Close Tab</button></p></div>';
+  })();
+  // the window never scrolls itself (iPad Safari scrolls to a focused cell otherwise)
+  window.addEventListener("scroll", function () { if (window.scrollX || window.scrollY) window.scrollTo(0, 0); });
+</script>
+</body>
+</html>

@@ -137,7 +137,7 @@ def test_build_writes_a_complete_site(tmp_path):
     from lensforge_web.build import build
     out = build(str(tmp_path / "site"), "https://example.invalid/pyodide/")
     for f in ("index.html", "app.css", "worker.js", "sw.js", "config.js", "app-icon.svg", "py/lensforge.zip",
-              "examples/index.json", "js/app.js", "js/core.js", "js/engine.js", "js/storage.js"):
+              "examples/index.json", "js/app.js", "js/core.js", "js/engine.js", "js/storage.js", "popout.html"):
         assert os.path.exists(os.path.join(out, f)), f
     assert "example.invalid" in open(os.path.join(out, "config.js")).read()
     examples = json.load(open(os.path.join(out, "examples/index.json")))
@@ -147,3 +147,22 @@ def test_build_writes_a_complete_site(tmp_path):
     assert examples == example_index()
     assert any(x["folders"][:1] == ["Modern Lens Design (Smith)"] and len(x["folders"]) == 2 for x in examples)
     assert "Examples > Browse Examples" in menus.menu_data()["commands"]
+
+
+def test_operand_menus_list_every_operand_once():
+    from lensforge.multiconfig import MC_OPERANDS
+    from lensforge.optimize import OPERANDS
+    s = Session()
+    names = [k for g in s.operand_menu() for k, _ in g["items"]]
+    assert sorted(names) == sorted(OPERANDS)
+    assert all(d for g in s.operand_menu() for _, d in g["items"])
+    mc = [k for g in s.state()["mce"]["operand_menu"] for k, _ in g["items"]]
+    assert sorted(mc) == sorted(MC_OPERANDS)
+
+
+def test_popout_help_and_page():
+    for iid in menus.POPOUT_COMMANDS:
+        assert "Open in New Tab" in menus.lookup(iid)[1], iid
+    assert "Type column is a menu" in menus.lookup("Tools > Merit Function Editor")[1]
+    page = open(os.path.join(os.path.dirname(menus.__file__), "static", "popout.html")).read()
+    assert "LensForgePopout" in page
