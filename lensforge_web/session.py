@@ -184,6 +184,11 @@ class Session:
         overview = OVERVIEW.replace("lensforge help", "LensForge help").replace(
             "Hovering a toolbar button", "Lens files are kept in this browser's storage (File &gt; Open, File &gt; "
             "Export to Disk). Hovering a toolbar button")
+        overview += ("<p><b>Editors in their own tabs.</b> The Merit Function Editor, the Multi-Configuration Editor, "
+                     "the Python Shell, the analysis windows, Optimization, Tolerancing, the Non-Sequential Editor and "
+                     "this help can each move into a browser tab of their own with the &#8599; (Open in New Tab) "
+                     "button in their title bar, e.g. to put them on a second screen. They stay connected to the "
+                     "main tab and update together with it; closing the tab puts the editor back.</p>")
         return {"overview": overview, "topics": topics, "root": mfe_help.ROOT}
 
     def about(self) -> dict:
@@ -885,6 +890,28 @@ class Session:
     def operand_names(self):
         return sorted(opt.OPERANDS)
 
+    def operand_menu(self):
+        """The Type cell's menu in the Merit Function Editor: [{group, items: [[name, description]]}],
+        grouped as in the operand reference (help), every operand once."""
+        seen, out = set(), []
+        for title, names in mfe_help.OPERAND_GROUPS.items():
+            items = [[k, opt.OPERAND_INFO.get(k, "")] for k in names if k in opt.OPERANDS and k not in seen]
+            seen.update(k for k, _ in items)
+            if items:
+                out.append({"group": title, "items": items})
+        rest = [[k, opt.OPERAND_INFO.get(k, "")] for k in sorted(opt.OPERANDS) if k not in seen]
+        if rest:
+            out.append({"group": "Other", "items": rest})
+        return out
+
+    @staticmethod
+    def mce_operand_menu():
+        """The Type cell's menu in the Multi-Configuration Editor, grouped by what Ref refers to."""
+        groups = [("surface", "Surface data (Ref = surface number)"), ("field", "Fields (Ref = field number)"),
+                  ("wave", "Wavelengths (Ref = wavelength number)"), (None, "System (no Ref)")]
+        return [{"group": title, "items": [[k, d] for k, (kind, d) in MC_OPERANDS.items() if kind == want]}
+                for want, title in groups]
+
     def mfe_insert_operand(self, r, t):
         self._modify(f"Insert {t}", lambda s: self._mf(s, True).insert(r, t, weight=1.0))
         return r
@@ -916,7 +943,8 @@ class Session:
         mc = getattr(s, "multiconfig", None)
         if mc is None:
             return {"n": 0, "rows": [], "label": "Single configuration. Insert an operand or add a configuration "
-                    "to start a multi-configuration lens.", "operands": sorted(MC_OPERANDS)}
+                    "to start a multi-configuration lens.", "operands": sorted(MC_OPERANDS),
+                    "operand_menu": self.mce_operand_menu()}
         errs = mc.errors(s)
         rows = []
         for i, r in enumerate(mc.rows):
@@ -937,7 +965,7 @@ class Session:
             txt += f" {bad} row{'s' if bad > 1 else ''} cannot be applied (red)."
         return {"n": mc.n_configs, "current": mc.current, "names": list(mc.names),
                 "labels": [mc.name(k) for k in mc.configs], "rows": rows, "label": txt, "bad": bad,
-                "operands": sorted(MC_OPERANDS)}
+                "operands": sorted(MC_OPERANDS), "operand_menu": self.mce_operand_menu()}
 
     def mce_set(self, i, c, text):
         text = str(text).strip()
@@ -1370,7 +1398,7 @@ READ_ONLY = {"state", "menus", "help_data", "about", "samples", "lens_text", "su
              "session_dump", "prescription", "describe_deletion", "context_menu", "can_vary", "solve_form",
              "surface_properties", "material_search", "catalog_rows", "material_dialog", "material_preview",
              "squash", "system_settings", "input_rays", "pupil_pattern", "analysis_specs", "run_analysis",
-             "mfe_evaluate", "operands", "operand_names", "wizard_info", "script_example", "opt_info",
+             "mfe_evaluate", "operands", "operand_names", "operand_menu", "wizard_info", "script_example", "opt_info",
              "history_plot", "tolerance_setup", "default_tolerances", "insert_preview", "inspect", "ns_state",
              "ns_text", "ns_plot"}
 

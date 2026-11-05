@@ -8,7 +8,7 @@ import * as D from "./dialogs.js";
 import { openAnalysis, closeAll, tabAll, windows } from "./analysis.js";
 import { showMFE, showMCE, showShell, showUndoHistory, localShortcut } from "./editors.js";
 import { optimization, tolerancing, nsEditor, helpBrowser, customizeToolbar } from "./tools.js";
-import { el, esc, iconImg, message, confirmBox, popupMenu, closePopups, popupsOpen, topModal, download, pickFile, readText } from "./ui.js";
+import { el, esc, iconImg, message, confirmBox, popupMenu, closePopups, popupsOpen, topModal, download, pickFile, readText, onNewDocument } from "./ui.js";
 
 const IS_MAC = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
 const plain = (html) => { const d = document.createElement("div"); d.innerHTML = html || ""; return d.textContent; };
@@ -507,9 +507,9 @@ async function boot() {
     return;
   }
   splash("Starting the user interface...", 0.95);
-  const [menus, specs, help, about, operandNames] = await Promise.all([
-    call("menus"), call("analysis_specs"), call("help_data"), call("about"), call("operand_names")]);
-  Object.assign(App, { menus, specs, help, operandNames, info: { ...info, ...about } });
+  const [menus, specs, help, about, operandNames, operandMenu] = await Promise.all([
+    call("menus"), call("analysis_specs"), call("help_data"), call("about"), call("operand_names"), call("operand_menu")]);
+  Object.assign(App, { menus, specs, help, operandNames, operandMenu, info: { ...info, ...about } });
   D.examplesIndex().then((ex) => { App.examples = ex; });  // the Examples menu's entries
   await reloadCatalogs();
   lde.init();
@@ -526,6 +526,11 @@ async function boot() {
   document.addEventListener("keydown", onKey);
   // editors claim the keyboard scope in their own focusin handlers, which run after this capture one
   document.addEventListener("focusin", () => { App.focusScope = null; }, true);
+  // an editor in its own tab (Open in New Tab) keeps the menu shortcuts and its own (Ins, Shift+Del, F1 ...)
+  onNewDocument((doc) => {
+    doc.addEventListener("keydown", onKey);
+    doc.addEventListener("focusin", () => { App.focusScope = null; }, true);
+  });
   setupDrop();
   window.addEventListener("pagehide", () => { clearTimeout(sessionTimer); saveSession(); });
   document.getElementById("splash").classList.add("gone");
