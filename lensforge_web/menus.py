@@ -242,7 +242,11 @@ def lookup(item_id: str) -> Optional[Tuple[str, str]]:
     elif item_id == "Analysis > Tab All Analysis Windows":
         details += " Analysis windows in their own browser tabs (Open in New Tab) come back into the main tab too."
     elif item_id == "Analysis > Close All Analysis Windows":
-        details += " Analysis windows in their own browser tabs (Open in New Tab) are closed too."
+        details += (" Analysis windows in their own browser tabs (Open in New Tab) are closed too. Right-click an "
+                    "analysis tab (or the analysis dock's title bar) for Close, Close Other Analysis Windows and "
+                    "Close All Analysis Windows. Each analysis opens once: choosing it again from the Analysis "
+                    "menu or the toolbar shows the window already open; a closed window opens fresh, with its "
+                    "default settings.")
     return summary, details
 
 

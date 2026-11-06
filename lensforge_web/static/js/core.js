@@ -117,6 +117,9 @@ export class DockArea {
       f.close();
       if (f.popout && panel.onpop) panel.onpop(false);
     }
+    // take its contents off the page: a closed panel left in the dock body stays visible under the next
+    // panel opened there (a reopened analysis showed the old plot with the new one stacked below it)
+    panel.element.remove();
     if (this.active === panel) this.active = this.docked()[Math.max(0, i - 1)] || null;
     this.render();
     if (panel.onclose) panel.onclose();
@@ -188,15 +191,24 @@ export class DockArea {
     const visible = docked.length > 0;
     this.root.hidden = !visible;
     if (this.splitter) this.splitter.hidden = !visible;
-    if (!visible) { this.active = null; return; }
+    if (!visible) {
+      this.active = null;
+      this.titleBar.replaceChildren();
+      this.tabBar.replaceChildren();
+      for (const c of [...this.body.children]) c.remove();
+      return;
+    }
     if (!this.active || this.active.floating || !docked.includes(this.active)) this.active = docked[0];
     const a = this.active;
     this.titleBar.replaceChildren(el("span", { class: "dt-text", title: a.title }, a.title));
+    this.titleBar.oncontextmenu = a.contextMenu ? (e) => { e.preventDefault(); a.contextMenu(e); } : null;
     if (a.helpId) this.titleBar.append(el("button", { type: "button", title: "Help", onclick: () => cmd("__help:" + a.helpId) }, "?"));
     if (a.floatable !== false) this.titleBar.append(el("button", { type: "button", title: "Float (own window)", onclick: () => this.float(a) }, "⧉"));
     if (a.popout !== false) this.titleBar.append(el("button", { type: "button", class: "pop-btn", title: POPOUT_TIP, "aria-label": "Open in New Tab", onclick: () => this.popOut(a) }, POPOUT_GLYPH));
     if (a.closable !== false) this.titleBar.append(el("button", { type: "button", title: "Close", onclick: () => this.remove(a) }, "×"));
     if (refill) {
+      // only the docked panels' contents belong in the body (anything else is left over from a closed panel)
+      for (const c of [...this.body.children]) if (!docked.some((p) => p.element === c)) c.remove();
       for (const p of docked) {
         if (p.element.parentNode !== this.body) this.body.append(p.element);
         p.element.hidden = p !== a;
@@ -204,7 +216,7 @@ export class DockArea {
     }
     this.tabBar.hidden = docked.length < 2;
     this.tabBar.replaceChildren(...docked.map((p) => el("div", { class: "dock-tab" + (p === a ? " active" : ""), title: p.title,
-      onclick: () => this.show(p) }, el("span", {}, p.title),
+      onclick: () => this.show(p), oncontextmenu: p.contextMenu ? (e) => { e.preventDefault(); p.contextMenu(e); } : null }, el("span", {}, p.title),
       p.closable !== false ? el("button", { type: "button", title: "Close", onclick: (e) => { e.stopPropagation(); this.remove(p); } }, "×") : null)));
   }
 
