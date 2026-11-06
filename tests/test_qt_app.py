@@ -548,6 +548,7 @@ def test_example_index_lists_every_example_lens():
     assert {x["path"] for x in ix} == on_disk
     top = [x["name"] for x in ix if not x["folders"]]
     assert "cooke_triplet" in top and "grating_demo" in top  # examples/output is listed at the top level
+    assert "hyperspectral_parax" in top and "hyperspectral2" not in top
     tree = example_tree(ix)
     smith = tree["folders"]["Modern Lens Design (Smith)"]["folders"]
     chapters = list(smith)
