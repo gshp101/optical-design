@@ -405,9 +405,32 @@ register(AnalysisSpec("zernike_text", "Zernike Coefficients (text)", "Wavefront"
 # ---------------------------------------------------------------------------
 
 
-def _psf_compute(system, field=0, wave=-1, method="fft", pupil_n=64, log=False):
+#: diffraction sampling shared by the PSF, MTF and diffraction-energy windows
+PUPIL_N = Setting("pupil_n", "Pupil sampling", "choice", 64,
+                  [("32 x 32", 32), ("64 x 64", 64), ("128 x 128", 128), ("256 x 256", 256), ("512 x 512", 512)])
+IMAGE_N = Setting("image_n", "Image sampling (FFT padding)", "choice", 0,
+                  [("Auto (2 x pupil)", 0), ("64 x 64", 64), ("128 x 128", 128), ("256 x 256", 256),
+                   ("512 x 512", 512), ("1024 x 1024", 1024), ("2048 x 2048", 2048)])
+PIXEL = Setting("pixel_um", "PSF pixel size (um, 0 = Nyquist)", "float", 0.0, minimum=0, maximum=1e4)
+
+
+def _sampling_kw(system, method, pupil_n=64, image_n=0, pixel_um=0.0):
+    """Keyword arguments for the core PSF / MTF functions from the window's sampling settings.
+    Geometric methods use the pupil sampling as their ray grid; "Auto" image sampling keeps
+    the core default (2 x pupil for FFT, 64 for Huygens)."""
+    if method == "geometric":
+        return {"grid": int(pupil_n)}
+    kw = {"pupil_n": int(pupil_n)}
+    if image_n:
+        kw["image_n"] = int(image_n)
+    if pixel_um:
+        kw["dx"] = float(pixel_um) * system.wavelength_scale
+    return kw
+
+
+def _psf_compute(system, field=0, wave=-1, method="fft", pupil_n=64, image_n=0, pixel_um=0.0, log=False):
     fn = lf.fft_psf if method == "fft" else lf.huygens_psf
-    return fn(system, field, _waves(system, wave), pupil_n=pupil_n)
+    return fn(system, field, _waves(system, wave), **_sampling_kw(system, method, pupil_n, image_n, pixel_um))
 
 
 def _psf_plot(fig, r, opts, system):
@@ -421,8 +444,7 @@ def _psf_plot(fig, r, opts, system):
 register(AnalysisSpec("psf", "PSF", "PSF & MTF", _psf_compute, _psf_plot,
                       [FIELD, WAVE_ALL, Setting("method", "Method", "choice", "fft",
                                                 [("FFT", "fft"), ("Huygens", "huygens")]),
-                       Setting("pupil_n", "Pupil sampling", "choice", 64, [("32", 32), ("64", 64), ("128", 128)]),
-                       Setting("log", "Log scale", "bool", False)], shortcut="Ctrl+P"))
+                       PUPIL_N, IMAGE_N, PIXEL, Setting("log", "Log scale", "bool", False)], shortcut="Ctrl+P"))
 
 
 def _psf_x_plot(fig, r, opts, system):
@@ -439,13 +461,16 @@ def _psf_x_plot(fig, r, opts, system):
 
 register(AnalysisSpec("psf_cross", "PSF Cross Section", "PSF & MTF", _psf_compute, _psf_x_plot,
                       [FIELD, WAVE_ALL, Setting("method", "Method", "choice", "fft",
-                                                [("FFT", "fft"), ("Huygens", "huygens")])]))
+                                                [("FFT", "fft"), ("Huygens", "huygens")]),
+                       PUPIL_N, IMAGE_N, PIXEL]))
 
 
-def _mtf_compute(system, field=-1, wave=-1, method="fft", max_freq=0.0):
+def _mtf_compute(system, field=-1, wave=-1, method="fft", max_freq=0.0, pupil_n=64, image_n=0):
     out = []
     for f in _fields(system, field):
-        kw = {"max_freq": max_freq} if max_freq else {}
+        kw = _sampling_kw(system, method, pupil_n, image_n)
+        if max_freq:
+            kw["max_freq"] = max_freq
         out.append((f, lf.mtf(system, f, _waves(system, wave), method=method, **kw)))
     return out
 
@@ -472,12 +497,14 @@ register(AnalysisSpec("mtf", "MTF", "PSF & MTF", _mtf_compute, _mtf_plot,
                       [FIELD_ALL, WAVE_ALL, Setting("method", "Method", "choice", "fft",
                                                     [("FFT", "fft"), ("Huygens", "huygens"),
                                                      ("Geometric", "geometric")]),
-                       Setting("max_freq", "Max frequency (0 = auto)", "float", 0.0, minimum=0, maximum=1e5)],
+                       Setting("max_freq", "Max frequency (0 = auto)", "float", 0.0, minimum=0, maximum=1e5),
+                       PUPIL_N, IMAGE_N],
                       shortcut="Ctrl+M"))
 
 
-def _tfm_compute(system, frequency=50.0, field=-1, wave=-1, steps=21, method="fft"):
-    return [(f, lf.through_focus_mtf(system, frequency, f, _waves(system, wave), steps=steps, method=method))
+def _tfm_compute(system, frequency=50.0, field=-1, wave=-1, steps=21, method="fft", pupil_n=64, image_n=0):
+    kw = _sampling_kw(system, method, pupil_n, image_n)
+    return [(f, lf.through_focus_mtf(system, frequency, f, _waves(system, wave), steps=steps, method=method, **kw))
             for f in _fields(system, field)]
 
 
@@ -497,12 +524,14 @@ def _tfm_plot(fig, res, opts, system):
 register(AnalysisSpec("through_focus_mtf", "Through Focus MTF", "PSF & MTF", _tfm_compute, _tfm_plot,
                       [Setting("frequency", "Frequency (cycles/mm)", "float", 50.0, minimum=0.01, maximum=1e5),
                        FIELD_ALL, WAVE_ALL, Setting("steps", "Steps", "int", 21, minimum=3, maximum=101),
-                       Setting("method", "Method", "choice", "fft", [("FFT", "fft"), ("Geometric", "geometric")])]))
+                       Setting("method", "Method", "choice", "fft", [("FFT", "fft"), ("Geometric", "geometric")]),
+                       PUPIL_N, IMAGE_N]))
 
 
-def _mvf_compute(system, f1=10.0, f2=30.0, f3=50.0, wave=-1, method="fft"):
+def _mvf_compute(system, f1=10.0, f2=30.0, f3=50.0, wave=-1, method="fft", pupil_n=64, image_n=0):
     freqs = [f for f in (f1, f2, f3) if f > 0]
-    return lf.mtf_vs_field(system, freqs, _waves(system, wave), method=method)
+    return lf.mtf_vs_field(system, freqs, _waves(system, wave), method=method,
+                           **_sampling_kw(system, method, pupil_n, image_n))
 
 
 register(AnalysisSpec("mtf_vs_field", "MTF vs Field", "PSF & MTF", _mvf_compute,
@@ -510,16 +539,19 @@ register(AnalysisSpec("mtf_vs_field", "MTF vs Field", "PSF & MTF", _mvf_compute,
                       [Setting("f1", "Frequency 1", "float", 10.0, minimum=0, maximum=1e5),
                        Setting("f2", "Frequency 2", "float", 30.0, minimum=0, maximum=1e5),
                        Setting("f3", "Frequency 3", "float", 50.0, minimum=0, maximum=1e5), WAVE_ALL,
-                       Setting("method", "Method", "choice", "fft", [("FFT", "fft"), ("Geometric", "geometric")])]))
+                       Setting("method", "Method", "choice", "fft", [("FFT", "fft"), ("Geometric", "geometric")]),
+                       PUPIL_N, IMAGE_N]))
 
 
-def _ee_compute(system, field=-1, wave=-1, method="diffraction", kind="encircled"):
+def _ee_compute(system, field=-1, wave=-1, method="diffraction", kind="encircled", pupil_n=64, image_n=0):
     out = []
     for f in _fields(system, field):
         if method == "diffraction":
-            out.append((f, lf.diffraction_energy(system, f, _waves(system, wave), kind=kind)))
+            out.append((f, lf.diffraction_energy(system, f, _waves(system, wave), kind=kind,
+                                                 **_sampling_kw(system, "fft", pupil_n, image_n))))
         else:
-            out.append((f, lf.geometric_energy(system, f, _waves(system, wave), kind=kind)))
+            out.append((f, lf.geometric_energy(system, f, _waves(system, wave), kind=kind,
+                                               **_sampling_kw(system, "geometric", pupil_n))))
     return out
 
 
@@ -542,7 +574,7 @@ register(AnalysisSpec("encircled_energy", "Encircled Energy", "PSF & MTF", _ee_c
                                                     [("Diffraction", "diffraction"), ("Geometric", "geometric")]),
                        Setting("kind", "Type", "choice", "encircled",
                                [("Encircled", "encircled"), ("Ensquared", "ensquared"), ("X line", "x"),
-                                ("Y line", "y")])]))
+                                ("Y line", "y")]), PUPIL_N, IMAGE_N]))
 
 # ---------------------------------------------------------------------------
 # Aberrations
