@@ -3,7 +3,7 @@
 import { App, run, status, onState, docks, cmd } from "./core.js";
 import * as engine from "./engine.js";
 const { PRIORITY } = engine;
-import { el, btn, check, download, downloadDataURL, copyText } from "./ui.js";
+import { el, btn, check, download, downloadDataURL, copyText, popupMenu } from "./ui.js";
 
 export const windows = [];
 let ids = 0;
@@ -20,6 +20,20 @@ export function openAnalysis(key, { settings, newWindow = false } = {}) {
 }
 
 export function closeAll() { for (const w of windows.slice()) w.close(); }
+export function closeOthers(keep) { for (const w of windows.slice()) if (w !== keep) w.close(); }
+
+/** Right-click menu of an analysis tab (or the dock's title bar). */
+function tabMenu(w, e) {
+  const icon = (id) => (App.menus.commands[id] || {}).icon;
+  const many = windows.length > 1;
+  popupMenu([
+    { label: "Close", action: () => w.close() },
+    { label: "Close Other Analysis Windows", disabled: !many, action: () => closeOthers(w) },
+    { label: "Close All Analysis Windows", icon: icon("Analysis > Close All Analysis Windows"), action: closeAll },
+    null,
+    { label: "Tab All Analysis Windows", icon: icon("Analysis > Tab All Analysis Windows"), action: tabAll },
+  ], e.clientX, e.clientY);
+}
 export function tabAll() { for (const w of windows) if (w.panel.floating) docks.right.dock(w.panel); }
 
 onState((s, old) => {
@@ -70,7 +84,7 @@ class AnalysisWindow {
     this.panel = docks.right.add({ id: this.id, title: this.spec.title, element: this.element, helpId: this.spec.id,
       onshow: () => { if (this.stale || this.sizeChanged()) this.request(); },
       onclose: () => { const i = windows.indexOf(this); if (i >= 0) windows.splice(i, 1); },
-      onresize: () => this.resized() }, { show: false });
+      onresize: () => this.resized(), contextMenu: (e) => tabMenu(this, e) }, { show: false });
     // re-render when the plot area changes size for any reason (window resize, splitters, a bottom
     // dock opening, floating): the PNG is drawn for the exact size it is shown at
     new ResizeObserver(() => this.resized()).observe(this.body);
