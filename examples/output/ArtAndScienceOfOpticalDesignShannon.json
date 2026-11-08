@@ -1,0 +1,190 @@
+{
+  "format": "lensforge-1",
+  "name": "New lens",
+  "units": "mm",
+  "aperture": {
+    "type": "EPD",
+    "value": 25.0
+  },
+  "fields": {
+    "type": "ANGLE",
+    "values": [
+      {
+        "x": 0.0,
+        "y": 0.0,
+        "weight": 1.0,
+        "vdx": 0.0,
+        "vdy": 0.0,
+        "vcx": 0.0,
+        "vcy": 0.0
+      },
+      {
+        "x": 0.0,
+        "y": 14.7,
+        "weight": 1.0,
+        "vdx": 0.0,
+        "vdy": 0.0,
+        "vcx": 0.0,
+        "vcy": 0.0
+      },
+      {
+        "x": 0.0,
+        "y": 21.0,
+        "weight": 1.0,
+        "vdx": 0.0,
+        "vdy": 0.0,
+        "vcx": 0.0,
+        "vcy": 0.0
+      }
+    ]
+  },
+  "wavelengths": {
+    "values": [
+      {
+        "value": 0.5875618,
+        "weight": 1.0
+      },
+      {
+        "value": 0.6563,
+        "weight": 1.0
+      },
+      {
+        "value": 0.4861,
+        "weight": 1.0
+      }
+    ],
+    "primary": 0
+  },
+  "ray_aiming": "paraxial",
+  "notes": "",
+  "surfaces": [
+    {
+      "type": "STANDARD",
+      "curvature": 0.0,
+      "conic": 0.0,
+      "thickness": "inf",
+      "material": null,
+      "comment": "OBJECT"
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.03144809350650331,
+      "conic": 0.0,
+      "thickness": 4.009367,
+      "material": "LAF2"
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.012230479970509866,
+      "conic": 0.0,
+      "thickness": 0.5,
+      "material": null
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.05261659706367818,
+      "conic": 0.0,
+      "thickness": 7.206837,
+      "material": "LAF2"
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.011062206326077559,
+      "conic": 0.0,
+      "thickness": 1.303044,
+      "material": "SF3"
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.08055817145840097,
+      "conic": 0.0,
+      "thickness": 7.0,
+      "material": null
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.0,
+      "conic": 0.0,
+      "thickness": 7.0,
+      "material": null,
+      "stop": true
+    },
+    {
+      "type": "STANDARD",
+      "curvature": -0.06450738932144677,
+      "conic": 0.0,
+      "thickness": 1.303044,
+      "material": "N-SF64"
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.010932211542666234,
+      "conic": 0.0,
+      "thickness": 5.242247,
+      "material": "LAF2"
+    },
+    {
+      "type": "STANDARD",
+      "curvature": -0.04669940294813331,
+      "conic": 0.0,
+      "thickness": 0.5,
+      "material": null
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.008616864064660947,
+      "conic": 0.0,
+      "thickness": 4.8,
+      "material": "LAF2"
+    },
+    {
+      "type": "STANDARD",
+      "curvature": -0.022740534593583443,
+      "conic": 0.0,
+      "thickness": 27.881910151299206,
+      "material": null
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.0,
+      "conic": 0.0,
+      "thickness": 0.0,
+      "material": null,
+      "comment": "IMAGE"
+    }
+  ],
+  "optimization": {
+    "variables": [
+      {
+        "surface": 11,
+        "param": "thickness"
+      }
+    ],
+    "merit_function": {
+      "rows": [
+        {
+          "type": "RSCE",
+          "target": 0.0,
+          "weight": 1.0,
+          "bound": "=",
+          "params": {},
+          "comment": ""
+        }
+      ]
+    }
+  },
+  "ui": {
+    "input_rays": {
+      "layout_rays": 7,
+      "layout_plane": "y",
+      "layout_fields": "all",
+      "layout_waves": "all",
+      "spot_pattern": "square",
+      "spot_rings": 30,
+      "spot_reference": "chief",
+      "fan_points": 70,
+      "footprint_rays": 78,
+      "user_rays": []
+    }
+  }
+}
