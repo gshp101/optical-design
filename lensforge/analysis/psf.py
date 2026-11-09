@@ -42,6 +42,35 @@ def _default_spacing(pfs):
     return lam / (4.0 * na)  # Nyquist for the incoherent PSF at the shortest wavelength
 
 
+_SLACK = 1 << 16  # bytes of padding after each BLAS operand
+
+
+def _padded(a):
+    """C-contiguous copy of ``a`` followed by unused padding in the same allocation."""
+    a = np.asarray(a)
+    extra = -(-_SLACK // a.itemsize)
+    buf = np.empty(a.size + extra, a.dtype)
+    out = buf[:a.size].reshape(a.shape)
+    out[...] = a
+    return out
+
+
+def _matmul(a, b, block: int = 256):
+    """``a @ b`` for large complex matrices, in row and column blocks of at most ``block``.
+
+    Apple's Accelerate BLAS (NumPy's default on macOS) was seen to segfault in complex
+    matmul at 2048 x 1024 operands by reading just past the end of an operand.  Small,
+    contiguous blocks with padding behind them keep every call well inside its memory,
+    and the result is the same.
+    """
+    out = np.empty((a.shape[0], b.shape[1]), np.result_type(a, b))
+    for j in range(0, b.shape[1], block):
+        bj = _padded(b[:, j:j + block])
+        for i in range(0, a.shape[0], block):
+            out[i:i + block, j:j + block] = _padded(a[i:i + block]) @ bj
+    return out
+
+
 def _mft(pf, xs, ys, field):
     """|U|^2 normalised to fraction of energy per unit area, on the grid xs, ys."""
     lam = pf.wavelength_lens_units
@@ -50,7 +79,7 @@ def _mft(pf, xs, ys, field):
     Ex = np.exp(-2j * math.pi * np.outer(xs, p) * pf.na_x / lam)
     Ey = np.exp(-2j * math.pi * np.outer(ys, p) * pf.na_y / lam)
     dO = abs(pf.na_x * pf.na_y) * dp * dp
-    U = Ey @ field @ Ex.T * dO
+    U = _matmul(_matmul(Ey, field), Ex.T) * dO
     E = lam**2 * np.sum(np.abs(field) ** 2) * dO
     return np.abs(U) ** 2 / E
 

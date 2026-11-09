@@ -52,3 +52,12 @@ def test_huygens_refuses_hour_long_runs_and_large_pupils_fit_in_memory():
     r = lf.huygens_psf(s, 0, [s.primary], pupil_n=256, image_n=8)
     grown_mb = (resource.getrusage(resource.RUSAGE_SELF).ru_maxrss - before) / 1024
     assert r["psf"].shape == (8, 8) and grown_mb < 600
+
+
+def test_blocked_matmul_matches_numpy():
+    from lensforge.analysis.psf import _matmul
+    rng = np.random.default_rng(1)
+    a = rng.normal(size=(300, 520)) + 1j * rng.normal(size=(300, 520))
+    b = rng.normal(size=(520, 700)) + 1j * rng.normal(size=(520, 700))
+    assert np.allclose(_matmul(a, b), a @ b)
+    assert np.allclose(_matmul(a, b.T.T, block=64), a @ b)
