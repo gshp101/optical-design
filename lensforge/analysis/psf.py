@@ -137,12 +137,20 @@ def huygens_psf(system, field=0, wavelengths=None, pupil_n: int = 48, image_n: i
         dO = abs(pf.na_x * pf.na_y) * (2.0 / pf.n) ** 2
         U = np.zeros(X.size, complex)
         U0 = np.zeros(X.size, complex)
-        for a in range(0, X.size, 512):
-            g = G[a:a + 512]
-            d = np.linalg.norm(g[:, None, :] - S[None, :, :], axis=2)
-            obl = np.einsum("gkj,kj->gk", g[:, None, :] - S[None, :, :], Dk) / d
-            U[a:a + 512] = (obl * np.exp(1j * k0 * (L[None, :] + n_img * (d - r0[None, :])))).sum(1)
-            U0[a:a + 512] = (obl * np.exp(1j * k0 * n_img * (d - r0[None, :]))).sum(1)
+        # image points per block: keep each (block x rays) temporary near 32 MB, so large
+        # pupil grids cost time rather than memory
+        step = max(1, min(512, 4_000_000 // max(1, S.shape[0])))
+        for a in range(0, X.size, step):
+            g = G[a:a + step]
+            vx = g[:, 0, None] - S[None, :, 0]
+            vy = g[:, 1, None] - S[None, :, 1]
+            vz = g[:, 2, None] - S[None, :, 2]
+            d = np.sqrt(vx * vx + vy * vy + vz * vz)
+            obl = (vx * Dk[:, 0] + vy * Dk[:, 1] + vz * Dk[:, 2]) / d
+            del vx, vy, vz
+            ph = n_img * (d - r0[None, :])
+            U[a:a + step] = (obl * np.exp(1j * k0 * (L[None, :] + ph))).sum(1)
+            U0[a:a + step] = (obl * np.exp(1j * k0 * ph)).sum(1)
         E = lam**2 * ok.sum() * dO
         psf += w * np.abs(U * dO) ** 2 / E * dx * dx
         perfect += w * np.abs(U0 * dO) ** 2 / E * dx * dx
