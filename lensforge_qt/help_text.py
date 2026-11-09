@@ -352,6 +352,14 @@ HELP = {
 }
 
 #: analysis registry key -> (summary, details)
+#: sampling paragraph shared by the diffraction analyses (PSF, MTF, encircled energy)
+_SAMPLING = (' Pupil sampling is the grid across the exit pupil: more points follow strong aberrations more '
+             'accurately and push the edge of the PSF window further out. Image sampling is the size of the '
+             'padded FFT image grid (Auto = 2 x pupil). The PSF pixel stays at Nyquist, so a larger image '
+             'grid makes the PSF window wider and the MTF frequency step finer (step = cutoff / (image grid /'
+             ' 2)); the pupil grid is raised automatically when the wider window needs it. Large grids are '
+             'slow, Huygens most of all.')
+
 ANALYSIS_HELP = {
     "ghost_focus": ("Table of every two-bounce ghost: where it focuses, how big and how bright it is.",
                     "The Ghost Focus Generator. For every pair of refracting surfaces i > j it follows the light "
@@ -414,18 +422,23 @@ ANALYSIS_HELP = {
     "zernike_text": ("Zernike fit of the wavefront (table).",
                      "Lists the Zernike coefficients with their names, P-V and RMS."),
     "psf": ("Point spread function image.",
-            "FFT or Huygens PSF of one field, on a linear or log scale."),
+            "FFT or Huygens PSF of one field, on a linear or log scale." + _SAMPLING +
+            " PSF pixel size (in um) samples the PSF more finely than Nyquist; 0 keeps Nyquist."),
     "psf_cross": ("Cross sections through the PSF.",
-                  "X and Y cross-sections through the point spread function."),
+                  "X and Y cross-sections through the point spread function." + _SAMPLING +
+                  " PSF pixel size (in um) samples the PSF more finely than Nyquist; 0 keeps Nyquist."),
     "mtf": ("Modulation transfer function.",
             "Tangential and sagittal MTF against spatial frequency for each field, with the diffraction limit "
-            "(FFT, Huygens or geometric)."),
+            "(FFT, Huygens or geometric)." + _SAMPLING +
+            " For the geometric method the pupil sampling is the ray grid. Input Rays does not affect the MTF."),
     "through_focus_mtf": ("MTF through focus at one frequency.",
-                          "MTF at a chosen spatial frequency against defocus, to find the best focus and depth."),
+                          "MTF at a chosen spatial frequency against defocus, to find the best focus and depth."
+                          + _SAMPLING),
     "mtf_vs_field": ("MTF against field.",
-                     "Tangential and sagittal MTF at chosen frequencies across the field."),
+                     "Tangential and sagittal MTF at chosen frequencies across the field." + _SAMPLING),
     "encircled_energy": ("Fraction of energy inside a radius.",
-                         "Encircled, ensquared or line energy against distance for each field, from diffraction or geometric rays."),
+                         "Encircled, ensquared or line energy against distance for each field, from diffraction or geometric rays."
+                         + _SAMPLING + " For the geometric method the pupil sampling is the ray grid."),
     "field_curvature": ("Field curvature and distortion.",
                         "Tangential and sagittal focus shift against field, and percentage distortion "
                         "(F-tan(theta) or F-theta)."),
