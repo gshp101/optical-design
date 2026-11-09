@@ -428,9 +428,26 @@ def _sampling_kw(system, method, pupil_n=64, image_n=0, pixel_um=0.0):
     return kw
 
 
+#: Huygens work (rays x image points x wavelengths x fields) the windows accept; about five minutes
+HUYGENS_LIMIT = 2e9
+
+
+def _check_huygens(kw, n_waves, n_fields=1):
+    """Refuse a Huygens run that would take far too long (it sums every ray at every image point)."""
+    pupil_n, image_n = kw["pupil_n"], kw.get("image_n", 64)
+    work = 0.785 * pupil_n ** 2 * image_n ** 2 * n_waves * n_fields
+    if work > HUYGENS_LIMIT:
+        raise ValueError(f"Huygens with {pupil_n} x {pupil_n} pupil and {image_n} x {image_n} image sampling "
+                         f"would take roughly {work / HUYGENS_LIMIT * 5:.0f} minutes. Use the FFT method for "
+                         "fine sampling, or lower the pupil or image sampling.")
+
+
 def _psf_compute(system, field=0, wave=-1, method="fft", pupil_n=64, image_n=0, pixel_um=0.0, log=False):
     fn = lf.fft_psf if method == "fft" else lf.huygens_psf
-    return fn(system, field, _waves(system, wave), **_sampling_kw(system, method, pupil_n, image_n, pixel_um))
+    kw = _sampling_kw(system, method, pupil_n, image_n, pixel_um)
+    if method == "huygens":
+        _check_huygens(kw, len(_waves(system, wave) or system.wavelengths))
+    return fn(system, field, _waves(system, wave), **kw)
 
 
 def _psf_plot(fig, r, opts, system):
@@ -467,6 +484,9 @@ register(AnalysisSpec("psf_cross", "PSF Cross Section", "PSF & MTF", _psf_comput
 
 def _mtf_compute(system, field=-1, wave=-1, method="fft", max_freq=0.0, pupil_n=64, image_n=0):
     out = []
+    if method == "huygens":
+        _check_huygens(_sampling_kw(system, method, pupil_n, image_n),
+                       len(_waves(system, wave) or system.wavelengths), len(_fields(system, field)))
     for f in _fields(system, field):
         kw = _sampling_kw(system, method, pupil_n, image_n)
         if max_freq:

@@ -45,7 +45,7 @@ def cross(x, y, c=RED, r=3.0):
 
 
 def letter(x, y, t, c=INK, size=9, weight="bold"):
-    return (f'<text x="{x}" y="{y}" font-family="DejaVu Sans, Arial, sans-serif" font-size="{size}" '
+    return (f'<text x="{x}" y="{y}" font-family="Arial" font-size="{size}" '
             f'font-weight="{weight}" fill="{c}" stroke="none" text-anchor="middle">{t}</text>')
 
 

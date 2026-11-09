@@ -358,7 +358,8 @@ _SAMPLING = (' Pupil sampling is the grid across the exit pupil: more points fol
              'padded FFT image grid (Auto = 2 x pupil). The PSF pixel stays at Nyquist, so a larger image '
              'grid makes the PSF window wider and the MTF frequency step finer (step = cutoff / (image grid /'
              ' 2)); the pupil grid is raised automatically when the wider window needs it. Large grids are '
-             'slow, Huygens most of all.')
+             'slow, Huygens most of all: a Huygens run that would take more than about five minutes is '
+             'refused with a message; use the FFT method for fine sampling.')
 
 ANALYSIS_HELP = {
     "ghost_focus": ("Table of every two-bounce ghost: where it focuses, how big and how bright it is.",
