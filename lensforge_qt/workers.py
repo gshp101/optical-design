@@ -70,6 +70,10 @@ class _Relay(QObject):
             self.on_progress(tag, payload)
 
 
+#: stack size of the worker threads (bytes)
+STACK_SIZE = 64 * 1024 * 1024
+
+
 def submit(fn, on_done, on_failed=None, on_progress=None, tag=None) -> Job:
     """Run ``fn(progress)`` in the thread pool; callbacks run in the GUI thread."""
     job = Job(fn, tag)
@@ -81,7 +85,11 @@ def submit(fn, on_done, on_failed=None, on_progress=None, tag=None) -> Job:
     if SYNC:
         job.run()
     else:
-        QThreadPool.globalInstance().start(job)
+        pool = QThreadPool.globalInstance()
+        if pool.stackSize() < STACK_SIZE:
+            # macOS gives pool threads 512 KB stacks; NumPy / BLAS on big analyses can need more
+            pool.setStackSize(STACK_SIZE)
+        pool.start(job)
     return job
 
 
