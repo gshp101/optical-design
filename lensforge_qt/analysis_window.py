@@ -13,6 +13,7 @@ from PySide6.QtWidgets import (QCheckBox, QComboBox, QDockWidget, QDoubleSpinBox
 
 from . import workers
 from .analyses import REGISTRY
+from .flow_layout import FlowLayout, group
 from .fonts import fixed_font
 
 _ids = itertools.count(1)
@@ -23,25 +24,33 @@ MISSING_HINT = ("Choose a replacement in the Material column of the Lens Data Ed
 
 
 class SettingsBar(QWidget):
-    """One widget per analysis setting; emits :attr:`changed`."""
+    """One widget per analysis setting; emits :attr:`changed`.
+
+    The controls flow onto further rows when the window is narrow (see :class:`FlowLayout`), so
+    the bar never sets a large minimum width on its dock window."""
 
     changed = Signal()
 
-    def __init__(self, spec, doc, values=None, parent=None):
+    def __init__(self, spec, doc, values=None, parent=None, leading=()):
         super().__init__(parent)
         self.spec, self.doc = spec, doc
         self.widgets = {}
-        lay = QHBoxLayout(self)
-        lay.setContentsMargins(4, 2, 4, 2)
+        self.flow = FlowLayout(self, margin=2, hspacing=8, vspacing=2)
+        for w in leading:  # window controls shown before the settings (the Config chooser)
+            self.flow.addWidget(w)
+        sp = self.sizePolicy()
+        sp.setHeightForWidth(True)
+        self.setSizePolicy(sp)
         values = values or {}
         for st in spec.settings:
             w = self._make(st, values.get(st.name, st.default))
             self.widgets[st.name] = (st, w)
-            if st.kind != "bool":
-                lay.addWidget(QLabel(st.label))
-            lay.addWidget(w)
-        lay.addStretch(1)
+            self.flow.addWidget(w if st.kind == "bool" else group(QLabel(st.label), w))
         doc.changed.connect(self.sync_choices)
+
+    def add_control(self, w):
+        """Add a window control (Input Rays, Auto, Update) after the settings."""
+        self.flow.addWidget(w)
 
     def _make(self, st, value):
         if st.kind in ("field", "field_all", "wave", "wave_all", "config_all"):
@@ -145,33 +154,32 @@ class AnalysisWindow(QDockWidget):
         lay = QVBoxLayout(body)
         lay.setContentsMargins(0, 0, 0, 0)
         lay.setSpacing(0)
-        top = QHBoxLayout()
-        top.setContentsMargins(2, 2, 2, 2)
         # which configuration of a multi-configuration lens to show ("Current" follows the editor)
         self.config_label = QLabel("Config")
         self.config = QComboBox()
         self.config.setToolTip("Configuration to analyse: Current follows the configuration shown in the Lens Data "
                                "Editor; a number keeps this window on that configuration")
-        self._fill_configs((values or {}).get("config", 0))
-        self.config.currentIndexChanged.connect(lambda _: self.request_update())
-        top.addWidget(self.config_label)
-        top.addWidget(self.config)
-        self.settings = SettingsBar(self.spec, doc, values)
+        self.config_box = group(self.config_label, self.config)
+        # one flowing bar for the Config chooser, the settings and the window's buttons: it wraps
+        # onto more rows in a narrow window instead of fixing a minimum width on the dock
+        self.settings = SettingsBar(self.spec, doc, values, leading=[self.config_box])
         self.settings.changed.connect(self.request_update)
-        top.addWidget(self.settings, 1)
+        self._fill_configs((values or {}).get("config", 0))  # (once config_box has its parent)
+        self.config.currentIndexChanged.connect(lambda _: self.request_update())
         self.auto = QCheckBox("Auto")
         self.auto.setChecked(True)
         self.auto.setToolTip("Recompute whenever the lens changes")
         upd = QPushButton("Update")
+        upd.setToolTip("Recompute this analysis now")
         upd.clicked.connect(self.request_update)
         if self.spec.uses_rays and on_rays is not None:
             rb = QPushButton("Input Rays...")
             rb.setToolTip("Ray sampling and user rays (File > Input Rays)")
             rb.clicked.connect(on_rays)
-            top.addWidget(rb)
-        top.addWidget(self.auto)
-        top.addWidget(upd)
-        lay.addLayout(top)
+            self.settings.add_control(rb)
+        self.settings.add_control(self.auto)
+        self.settings.add_control(upd)
+        lay.addWidget(self.settings)
 
         self.stack = QStackedWidget()
         if self.spec.plot is not None:
@@ -238,8 +246,7 @@ class AnalysisWindow(QDockWidget):
         self.config.blockSignals(False)
         # (the multi-configuration layout chooses its configurations in its own settings)
         many = mc is not None and mc.n_configs > 1 and self.spec.key != "mc_layout"
-        self.config.setVisible(many)
-        self.config_label.setVisible(many)
+        self.config_box.setVisible(many)
 
     def config_number(self):
         """The configuration this window shows (0: the current one)."""

@@ -74,13 +74,15 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .tb-sep { width: 1px; height: 24px; background: var(--border); margin: 0 4px; }
 
 /* ---------------------------------------------------------------- workspace and docks */
-#workspace { flex: 1; display: flex; min-height: 0; }
-#center { flex: 1; min-width: 200px; display: flex; flex-direction: column; min-height: 0; }
+/* The Lens Data Editor (#center) keeps a minimum size: when space runs out the docks shrink instead
+   (flex-shrink 1 down to their own minimum), so a dock dragged or opened too large never covers it. */
+#workspace { flex: 1; display: flex; min-height: 120px; }
+#center { flex: 1; min-width: 240px; display: flex; flex-direction: column; min-height: 0; }
 .dock { background: var(--bg); display: flex; flex-direction: column; min-width: 0; min-height: 0; }
-#left-dock { width: 240px; flex: none; }
-#right-dock { width: 48%; flex: none; }
-#bottom-dock { height: 34%; flex: none; }
-.splitter { background: var(--bg); flex: none; }
+#left-dock { width: 240px; flex: 0 1 auto; min-width: 120px; }
+#right-dock { width: 48%; flex: 0 1 auto; min-width: 160px; }
+#bottom-dock { height: 34%; flex: 0 1 auto; min-height: 80px; }
+.splitter { background: var(--bg); flex: none; touch-action: none; }
 .splitter.vertical { width: 5px; cursor: col-resize; }
 .splitter.horizontal { height: 5px; cursor: row-resize; }
 .splitter:hover { background: #c9d6e3; }

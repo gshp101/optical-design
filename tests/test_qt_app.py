@@ -16,7 +16,7 @@ import matplotlib  # noqa: E402
 matplotlib.use("QtAgg")
 
 from PySide6.QtCore import QSettings, Qt  # noqa: E402
-from PySide6.QtWidgets import QDialogButtonBox  # noqa: E402
+from PySide6.QtWidgets import QApplication, QDialogButtonBox  # noqa: E402
 
 import lensforge as lf  # noqa: E402
 from lensforge import optimize as opt  # noqa: E402
@@ -357,6 +357,30 @@ def test_open_analysis_reuses_existing_window(win):
     other = win.open_analysis("ray_fan", new=True)
     assert other is not fan and len(win.analysis_windows) == 3
     spot.close()
+
+
+def test_docked_analyses_resize_and_never_cover_the_lde(win):
+    """Every analysis window can be made narrow (its settings wrap instead of fixing a minimum width),
+    and docks stop where the Lens Data Editor reaches its minimum size."""
+    from lensforge_qt.main_window import LDE_MIN_WIDTH
+    win.resize(1400, 880)
+    win.show()
+    win.close_analyses()
+    for key in REGISTRY:
+        w = win.open_analysis(key, new=True)
+        assert w.minimumSizeHint().width() <= 400, (key, w.minimumSizeHint())
+    ws = win.analysis_windows
+    mtf = [w for w in ws if w.spec.key == "mtf"][0]
+    mtf.raise_()
+    win.resizeDocks([mtf], [300], Qt.Horizontal)
+    QApplication.processEvents()
+    assert mtf.width() <= 420
+    # the settings wrapped onto more rows and sit above the plot, not on top of it
+    assert mtf.settings.geometry().bottom() < mtf.stack.geometry().top()
+    win.resizeDocks([mtf], [5000], Qt.Horizontal)
+    QApplication.processEvents()
+    assert win.lde.width() >= LDE_MIN_WIDTH
+    win.close_analyses()
 
 
 def test_analysis_auto_update_and_settings(win):

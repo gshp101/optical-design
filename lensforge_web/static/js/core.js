@@ -80,7 +80,13 @@ export class DockArea {
       dragSplitter(this.splitter, () => (horizontal ? this.root.offsetHeight : this.root.offsetWidth), (start, dx, dy) => {
         if (horizontal) this.root.style.height = Math.max(80, start - dy) + "px";
         else this.root.style.width = Math.max(160, orientation === "right" ? start - dx : start + dx) + "px";
-      }, () => this.resized());
+      }, () => {
+        // keep the size the layout actually gave the dock (it stops where the Lens Data Editor reaches its
+        // minimum), so a drag past that limit does not leave a size the next drag must first undo
+        if (horizontal) this.root.style.height = this.root.offsetHeight + "px";
+        else this.root.style.width = this.root.offsetWidth + "px";
+        this.resized();
+      });
     }
   }
 
