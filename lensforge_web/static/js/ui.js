@@ -450,8 +450,14 @@ export function dragSplitter(splitter, onstart, onmove, onend) {
     const x0 = e.clientX, y0 = e.clientY;
     const s = onstart();
     const move = (ev) => onmove(s, ev.clientX - x0, ev.clientY - y0);
-    const up = () => { splitter.removeEventListener("pointermove", move); splitter.removeEventListener("pointerup", up); onend && onend(); };
+    // end the drag however the pointer goes away (released, cancelled by touch, capture lost), so a
+    // half-finished drag never leaves the splitter stuck listening
+    const up = () => {
+      splitter.removeEventListener("pointermove", move);
+      for (const t of ["pointerup", "pointercancel", "lostpointercapture"]) splitter.removeEventListener(t, up);
+      onend && onend();
+    };
     splitter.addEventListener("pointermove", move);
-    splitter.addEventListener("pointerup", up);
+    for (const t of ["pointerup", "pointercancel", "lostpointercapture"]) splitter.addEventListener(t, up);
   });
 }

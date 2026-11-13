@@ -517,7 +517,10 @@ def lookup(item_id: str) -> Optional[Tuple[str, str]]:
     if k is not None and k in ANALYSIS_HELP:
         summary, details = ANALYSIS_HELP[k]
         return summary, details + (" Opens in a dockable window that updates when the lens changes. If this "
-                                   "analysis is already open, its window is brought to the front instead.")
+                                   "analysis is already open, its window is brought to the front instead. "
+                                   "Drag the divider beside a docked window to resize it: in a narrow window "
+                                   "its settings wrap onto more rows, and the Lens Data Editor always keeps "
+                                   "a minimum size, so docked windows never cover it.")
     return None
 
 

@@ -30,6 +30,9 @@ from .commands import DEFAULT_TOOLBAR, EXAMPLES, SHORT_LABELS  # noqa: F401 - DE
 from .commands import sample_list as _sample_list
 from .commands import example_index, example_tree
 
+#: the Lens Data Editor never gets smaller than this: dock windows stop at it instead of covering it
+LDE_MIN_WIDTH, LDE_MIN_HEIGHT = 260, 120
+
 FILE_FILTER = "Lens files (*.json *.zmx);;lensforge JSON (*.json);;Zemax ZMX (*.zmx);;All files (*)"
 
 
@@ -49,6 +52,8 @@ class MainWindow(QMainWindow):
 
         self.lde = LensDataEditor(self.doc)
         self.setCentralWidget(self.lde)
+        # docks stop where the Lens Data Editor reaches this size, so they can never cover it
+        self.lde.setMinimumSize(LDE_MIN_WIDTH, LDE_MIN_HEIGHT)
         self.mfe = MeritFunctionEditor(self.doc)
         self.mfe.helpRequested.connect(self.help_contents)
         self.mfe_dock = self._dock("Merit Function Editor", self.mfe, Qt.BottomDockWidgetArea, "mfe")
