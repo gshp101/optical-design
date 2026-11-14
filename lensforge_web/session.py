@@ -126,6 +126,7 @@ class Session:
         self.ns_scene = lf.nonseq.NonSequentialSystem("Scene")
         self.ns_result = None
         self.ns_path = None
+        self._analysis_cache = {}    # window id -> (signature, result, system) for re-plotting only
         self.agf_names = []          # AGF catalogs loaded this session (name -> reloaded at start-up by the page)
         # hooks the worker replaces: progress reports to the page and the Stop button's flag
         self.report = lambda data: None
@@ -756,12 +757,17 @@ class Session:
         out = {}
         for k, spec in REGISTRY.items():
             out[k] = {"key": k, "title": spec.title, "group": spec.group, "text": spec.plot is None,
-                      "uses_rays": spec.uses_rays, "shortcut": spec.shortcut,
+                      "uses_rays": spec.uses_rays, "shortcut": spec.shortcut, "zoomable": spec.zoomable,
                       "id": f"Analysis > {spec.group} > {spec.title}",
                       "settings": [{"name": st.name, "label": st.label, "kind": st.kind, "default": st.default,
-                                    "choices": st.choices, "min": st.minimum, "max": st.maximum}
+                                    "choices": st.choices, "min": st.minimum, "max": st.maximum,
+                                    "plot_only": st.plot_only}
                                    for st in spec.settings]}
         return out
+
+    def forget_analysis(self, cache):
+        """Drop a closed analysis window's cached result."""
+        self._analysis_cache.pop(cache, None)
 
     def _analysis_system(self, config):
         s = self.doc.system
@@ -771,8 +777,15 @@ class Session:
             return s.config_copy(k)
         return s.copy()
 
-    def run_analysis(self, key, opts=None, config=0, width=600, height=400, dpr=1.0):
-        """Compute one analysis: {"png": base64} for a plot, {"text": ...} for a report, or {"error": ...}."""
+    def run_analysis(self, key, opts=None, config=0, width=600, height=400, dpr=1.0, view=None, cache=None,
+                     replot=False):
+        """Compute one analysis: {"png": base64} for a plot, {"text": ...} for a report, or {"error": ...}.
+
+        ``view`` = [x0, x1, y0, y1] zooms the first axes of a zoomable plot (PSF) to those limits, and
+        the reply then carries ``axes`` (its box as fractions of the image from the top left, and its
+        limits) so the page can map the mouse to plot coordinates.  With ``cache`` (the window's id)
+        and ``replot`` the last result of that window is drawn again without recomputing when only
+        plot settings (Zoom, Log scale) or the view changed."""
         spec = REGISTRY[key]
         missing = self.doc.system.missing_materials_message()
         if missing:  # cannot trace: say why instead of showing old results
@@ -785,17 +798,38 @@ class Session:
                 values[st.name] = int(v)
             elif st.kind == "float" and v is not None:
                 values[st.name] = float(v)
-        system = self._analysis_system(config)
-        try:
-            result = spec.compute(system, **values)
-        except Exception as e:  # noqa: BLE001
-            return {"error": f"{type(e).__name__}: {e}"}
+        args = spec.compute_values(values)
+        mc = getattr(self.doc.system, "multiconfig", None)
+        sig = json.dumps([key, args, int(config or 0), self.doc.revision, getattr(mc, "current", None)],
+                         sort_keys=True, default=str)
+        hit = self._analysis_cache.get(cache) if cache and replot else None
+        if hit is not None and hit[0] == sig:
+            result, system = hit[1], hit[2]
+        else:
+            system = self._analysis_system(config)
+            try:
+                result = spec.compute(system, **args)
+            except Exception as e:  # noqa: BLE001
+                self._analysis_cache.pop(cache, None)
+                return {"error": f"{type(e).__name__}: {e}"}
+            if cache and spec.plot is not None:
+                self._analysis_cache[cache] = (sig, result, system)
         if spec.plot is None:
             return {"text": result if isinstance(result, str) else str(result)}
         try:
             fig = _figure(width, height)
             spec.plot(fig, result, values, system)
-            return {"png": _png(fig, dpr)}
+            ax = fig.axes[0] if spec.zoomable and fig.axes else None
+            if ax is not None and view:
+                x0, x1, y0, y1 = (float(v) for v in view)
+                ax.set_xlim(x0, x1)
+                ax.set_ylim(y0, y1)
+            out = {"png": _png(fig, dpr)}
+            if ax is not None:  # drawn by savefig, so the box and limits are final
+                b = ax.get_position()
+                out["axes"] = {"box": [b.x0, 1 - b.y1, b.x1, 1 - b.y0],
+                               "xlim": [float(v) for v in ax.get_xlim()], "ylim": [float(v) for v in ax.get_ylim()]}
+            return out
         except Exception as e:  # noqa: BLE001
             return {"error": f"Plot failed: {type(e).__name__}: {e}"}
 
@@ -1398,6 +1432,7 @@ READ_ONLY = {"state", "menus", "help_data", "about", "samples", "lens_text", "su
              "session_dump", "prescription", "describe_deletion", "context_menu", "can_vary", "solve_form",
              "surface_properties", "material_search", "catalog_rows", "material_dialog", "material_preview",
              "squash", "system_settings", "input_rays", "pupil_pattern", "analysis_specs", "run_analysis",
+             "forget_analysis",
              "mfe_evaluate", "operands", "operand_names", "operand_menu", "wizard_info", "script_example", "opt_info",
              "history_plot", "tolerance_setup", "default_tolerances", "insert_preview", "inspect", "ns_state",
              "ns_text", "ns_plot"}

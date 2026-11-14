@@ -113,12 +113,52 @@ def wavefront(result, ax=None):
                  f"Wavefront (waves) RMS {result['rms']:.4f} PV {result['pv']:.4f}", cmap="RdBu_r")
 
 
-def psf(result, ax=None, log=False):
+def psf_zoom_limits(result, zoom=1):
+    """Plot limits ``(xlim, ylim)`` that zoom into the centre of a PSF result.
+
+    ``zoom`` is a magnification (1 = the whole PSF window, 4 = the central quarter of its width,
+    centred on the chief-ray reference) or ``"auto"``, which centres on the PSF centroid and spans
+    the larger of 3 x the 50% and 1.5 x the 90% encircled-energy radius, so the core and the first
+    rings fill the plot."""
+    x, y = np.asarray(result["x"], float), np.asarray(result["y"], float)
+    if zoom in (None, 0, 1, "full"):
+        return (float(x[0]), float(x[-1])), (float(y[0]), float(y[-1]))
+    if zoom == "auto":
+        P = np.maximum(np.asarray(result["psf"], float), 0)
+        if not P.sum() > 0:
+            return psf_zoom_limits(result, 1)
+        X, Y = np.meshgrid(x, y)
+        w = P / P.sum()
+        cx, cy = float((w * X).sum()), float((w * Y).sum())
+        r = np.hypot(X - cx, Y - cy).ravel()
+        order = np.argsort(r)
+        ee = np.cumsum(w.ravel()[order])
+        r50, r90 = (r[order][min(np.searchsorted(ee, q), len(r) - 1)] for q in (0.5, 0.9))
+        dx, dy = abs(x[1] - x[0]), abs(y[1] - y[0])
+        half = min(max(3 * r50, 1.5 * r90, 8 * max(dx, dy)), 0.5 * min(x[-1] - x[0], y[-1] - y[0]))
+        cx = min(max(cx, x[0] + half), x[-1] - half)  # keep the frame inside the PSF window
+        cy = min(max(cy, y[0] + half), y[-1] - half)
+        return (cx - half, cx + half), (cy - half, cy + half)
+    z = float(zoom)
+    if z <= 0:
+        raise ValueError("zoom must be positive or 'auto'")
+    cx, cy = 0.5 * (x[0] + x[-1]), 0.5 * (y[0] + y[-1])
+    hx, hy = 0.5 * (x[-1] - x[0]) / z, 0.5 * (y[-1] - y[0]) / z
+    return (float(cx - hx), float(cx + hx)), (float(cy - hy), float(cy + hy))
+
+
+def psf(result, ax=None, log=False, zoom=1):
+    """PSF image (normalised to the aberration-free peak).  ``zoom`` magnifies the centre of the
+    PSF window (2, 4, 8, ...) or frames the PSF itself with ``"auto"``; see :func:`psf_zoom_limits`."""
     Z = result["psf"] / result["perfect"].max()
     if log:
         Z = np.log10(np.maximum(Z, 1e-8))
-    return map2d(Z, result["x"], result["y"], ax, f"{result['method'].upper()} PSF, Strehl {result['strehl']:.4f}",
-                 cmap="inferno")
+    ax = map2d(Z, result["x"], result["y"], ax, f"{result['method'].upper()} PSF, Strehl {result['strehl']:.4f}",
+               cmap="inferno")
+    xl, yl = psf_zoom_limits(result, zoom)
+    ax.set_xlim(*xl)
+    ax.set_ylim(*yl)
+    return ax
 
 
 def mtf(result, ax=None, diffraction=True):

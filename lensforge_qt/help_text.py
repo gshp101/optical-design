@@ -353,6 +353,16 @@ HELP = {
 
 #: analysis registry key -> (summary, details)
 #: sampling paragraph shared by the diffraction analyses (PSF, MTF, encircled energy)
+_PSF_ZOOM = (' Zoom magnifies the middle of the PSF window (2x to 64x, centred on the chief ray), or Auto '
+             '(fit PSF) centres on the PSF and sizes the view from its encircled energy, so the core and the '
+             'first rings fill the plot. Zoom and Log scale only redraw the plot; they never recompute the PSF. You can also zoom '
+             'with the mouse: the wheel zooms about the cursor and dragging a box zooms to it (in the desktop '
+             'app use the magnifier button of the plot toolbar for the box; Home goes back). In the web app '
+             'drag directly on the plot, and double-click or Reset Zoom goes back to the Zoom setting. A mouse '
+             'zoom stays in place when the lens changes and the PSF is recomputed. From Python use '
+             'lensforge.plot.psf(result, zoom=4) or zoom="auto". Zooming shows the PSF pixels as they are; for a '
+             'finer image at high zoom set a smaller PSF pixel size.')
+
 _SAMPLING = (' Pupil sampling is the grid across the exit pupil: more points follow strong aberrations more '
              'accurately and push the edge of the PSF window further out. Image sampling is the size of the '
              'padded FFT image grid (Auto = 2 x pupil). The PSF pixel stays at Nyquist, so a larger image '
@@ -424,10 +434,10 @@ ANALYSIS_HELP = {
                      "Lists the Zernike coefficients with their names, P-V and RMS."),
     "psf": ("Point spread function image.",
             "FFT or Huygens PSF of one field, on a linear or log scale." + _SAMPLING +
-            " PSF pixel size (in um) samples the PSF more finely than Nyquist; 0 keeps Nyquist."),
+            " PSF pixel size (in um) samples the PSF more finely than Nyquist; 0 keeps Nyquist." + _PSF_ZOOM),
     "psf_cross": ("Cross sections through the PSF.",
                   "X and Y cross-sections through the point spread function." + _SAMPLING +
-                  " PSF pixel size (in um) samples the PSF more finely than Nyquist; 0 keeps Nyquist."),
+                  " PSF pixel size (in um) samples the PSF more finely than Nyquist; 0 keeps Nyquist." + _PSF_ZOOM),
     "mtf": ("Modulation transfer function.",
             "Tangential and sagittal MTF against spatial frequency for each field, with the diffraction limit "
             "(FFT, Huygens or geometric)." + _SAMPLING +

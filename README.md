@@ -143,7 +143,9 @@ Qt window, and the session the page calls.
 ## Analyses
 
 All in `lensforge.analysis` (also exported at top level as `lf.<name>`). Each returns a dict;
-plotting helpers with the same names are in `lensforge.plot`.
+plotting helpers with the same names are in `lensforge.plot`
+(`P.psf(r, zoom=8)` or `zoom="auto"` magnifies the PSF; the PSF windows have the same Zoom setting
+plus mouse-wheel and drag-box zoom).
 
 | Zemax analysis | lensforge |
 |---|---|
