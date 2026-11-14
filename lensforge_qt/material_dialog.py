@@ -16,8 +16,10 @@ from lensforge.materials import ConstantIndex, ModelGlass, _squash
 
 from . import edits as E
 from .edits import catalog_rows  # noqa: F401 - part of this module's API
+from .ownership import qt_owns_children
 
 
+@qt_owns_children
 class MaterialDialog(QDialog):
     """Choose the material after a surface.  :attr:`spec` holds the chosen spec
     ("" for air) after the dialog is accepted."""

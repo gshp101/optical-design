@@ -29,8 +29,10 @@ from . import workers
 from .opt_runner import (ALGORITHMS, COMPENSATORS, CRITERIA, DISTRIBUTIONS, TOL_COLUMNS,  # noqa: F401
                          StopRequested, WatchedMerit, run_optimization, watched_criterion)
 from .fonts import fixed_font
+from .ownership import qt_owns_children
 
 
+@qt_owns_children
 class OptimizationDialog(QDialog):
     def __init__(self, doc, parent=None):
         super().__init__(parent)
@@ -245,6 +247,7 @@ class OptimizationDialog(QDialog):
 # Tolerancing
 # ---------------------------------------------------------------------------
 
+@qt_owns_children
 class ToleranceDialog(QDialog):
     def __init__(self, doc, parent=None):
         super().__init__(parent)

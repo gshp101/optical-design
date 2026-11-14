@@ -17,8 +17,10 @@ import lensforge as lf
 
 from . import icons, workers
 from .fonts import fixed_font
+from .ownership import qt_owns_children
 
 
+@qt_owns_children
 class InspectLensWindow(QWidget):
     """Reads ``path`` and shows :func:`lensforge.system_report` for it (computed in a worker)."""
 

@@ -20,6 +20,7 @@ import lensforge as lf
 from lensforge import optimize as opt
 
 from .fonts import fixed_font
+from .ownership import qt_owns_children
 
 EXAMPLE = """# Python against the open lens: `lens`, `lf`, `opt`, `np` are defined.
 # Changes to `lens` become one undoable edit (Ctrl+Enter runs).
@@ -29,6 +30,7 @@ for i in range(len(lens.fields)):
 """
 
 
+@qt_owns_children
 class ScriptConsole(QWidget):
     def __init__(self, doc, parent=None):
         super().__init__(parent)

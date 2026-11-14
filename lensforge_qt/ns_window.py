@@ -21,7 +21,9 @@ from lensforge import nonseq as ns
 from . import icons, workers
 from .ns_table import (BUTTONS, OBJ_COLS, OBJECT_LABELS, POSE, SOURCE_LABELS, SRC_COLS,  # noqa: F401
                        _fmt, _num, apply_cell)
+from .ownership import qt_owns_children
 
+@qt_owns_children
 class NonSequentialWindow(QMainWindow):
     def __init__(self, main=None, scene=None):
         super().__init__(main)

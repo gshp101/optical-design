@@ -12,6 +12,7 @@ from lensforge import pupil_grid
 
 from . import edits as E
 from . import rays as R
+from .ownership import qt_owns_children
 
 USER_COLUMNS = ["Hx", "Hy", "Px", "Py", "Wavelength"]
 
@@ -62,6 +63,7 @@ class PupilPatternPreview(QWidget):
         p.end()
 
 
+@qt_owns_children
 class InputRaysDialog(QDialog):
     def __init__(self, doc, parent=None):
         super().__init__(parent)

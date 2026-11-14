@@ -14,10 +14,12 @@ from lensforge.compose import lens_surfaces
 
 from . import edits as E
 from .fonts import fixed_font
+from .ownership import qt_owns_children
 
 FILE_FILTER = "Lens files (*.json *.zmx);;lensforge JSON (*.json);;Zemax ZMX (*.zmx);;All files (*)"
 
 
+@qt_owns_children
 class InsertLensDialog(QDialog):
     """Pick a lens file, a surface range, where to insert, a scale factor and the order."""
 
