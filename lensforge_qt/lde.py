@@ -22,6 +22,7 @@ from lensforge import optimize as opt
 from lensforge import surfaces as S
 
 from . import edits as E
+from .ownership import qt_owns_children
 
 FIXED_COLUMNS = [("surf", "Surf"), ("type", "Surf:Type"), ("comment", "Comment"), ("radius", "Radius"),
                  ("thickness", "Thickness"), ("material", "Material"), ("semi_diameter", "Semi-Diameter"),
@@ -309,6 +310,7 @@ def _is_number(t):
         return False
 
 
+@qt_owns_children
 class MaterialEditor(QWidget):
     """Material cell editor: text with glass-name completion plus a "..." button
     that opens the material picker dialog."""
@@ -381,6 +383,7 @@ class MaterialEditor(QWidget):
             self.delegate.closeEditor.emit(self)
 
 
+@qt_owns_children
 class LensDataEditor(QWidget):
     """The Lens Data Editor widget (table plus context menu and key bindings)."""
 
@@ -645,6 +648,7 @@ class LensDataEditor(QWidget):
         m.exec(self.view.viewport().mapToGlobal(pos))
 
 
+@qt_owns_children
 class DeleteSurfacesDialog(QDialog):
     """Choose a contiguous range of surfaces to delete, with a preview of what goes."""
 
@@ -692,6 +696,7 @@ class DeleteSurfacesDialog(QDialog):
         self.bb.button(QDialogButtonBox.Ok).setEnabled(ok)
 
 
+@qt_owns_children
 class SolveDialog(QDialog):
     """Parameters of one solve (fields taken from the solve class)."""
 
@@ -759,6 +764,7 @@ APERTURE_KINDS = [("None", None, ()), ("Circular aperture", "CIRCULAR", ("r_max"
                   ("Elliptical aperture", "ELLIPTICAL", ("half_x", "half_y", "dx", "dy"))]
 
 
+@qt_owns_children
 class SurfacePropertiesDialog(QDialog):
     """Aperture, stop, comment and (XY polynomial) terms of one surface."""
 

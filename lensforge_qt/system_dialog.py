@@ -14,6 +14,7 @@ from PySide6.QtWidgets import (QAbstractItemView, QComboBox, QDialog, QDialogBut
 from lensforge.system import APERTURE_TYPES, FIELD_TYPES, Field, Wavelength
 
 from . import edits as E
+from .ownership import qt_owns_children
 
 APERTURE_LABELS = {"EPD": "Entrance Pupil Diameter", "IMAGE_FNUM": "Image Space F/#",
                    "OBJECT_NA": "Object Space NA", "STOP_SIZE": "Float By Stop Size",
@@ -50,6 +51,7 @@ def _num(t, r, c, default=0.0):
     return default if not txt else E.parse_number(txt, allow_inf=False)
 
 
+@qt_owns_children
 class SystemExplorer(QDialog):
     def __init__(self, doc, parent=None, tab: int = 0):
         super().__init__(parent)

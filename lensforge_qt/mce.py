@@ -23,6 +23,7 @@ from .edits import drop_row_variables as _drop_row_variables
 from .edits import multiconfig
 from .edits import shift_mc_configs as _shift_mc_configs
 from .edits import shift_mc_variables as _shift_mc_variables
+from .ownership import qt_owns_children
 
 FIXED = ["Type", "Ref", "Param"]
 C_TYPE, C_REF, C_PARAM = range(3)
@@ -209,6 +210,7 @@ class MultiConfigDelegate(QStyledItemDelegate):
         model.setData(index, editor.currentText() if isinstance(editor, QComboBox) else editor.text(), Qt.EditRole)
 
 
+@qt_owns_children
 class MultiConfigEditor(QWidget):
     statusMessage = Signal(str)
     helpRequested = Signal(str)  # a help id (menu path)

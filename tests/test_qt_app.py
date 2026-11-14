@@ -1434,3 +1434,54 @@ def test_ghost_analysis_windows(win):
     assert "6-4" in w.text.toPlainText()
     w = win.open_analysis("ghost_layout", {"i": 3, "j": 1})
     assert w.error is None and w.result["pair"] == (3, 1)
+
+
+# -- clean exit (no widget owned by both Qt and Python) ----------------------------------------------
+def test_no_child_widget_is_owned_by_python(win, tmp_path):
+    """A child widget PySide thinks Python owns is deleted twice at interpreter exit (crash on quit).
+
+    PySide loses ownership when a sub-layout is filled before it is added to a layout already on a
+    widget; :func:`lensforge_qt.ownership.qt_owns_children` gives those widgets back to Qt.
+    """
+    import shiboken6
+    from PySide6.QtCore import QObject
+
+    from lensforge_qt import (insert_lens_dialog, inspect_window, lde, material_dialog, mfe, rays_dialog,
+                              system_dialog, toolbar_dialog)
+    from lensforge_qt.ownership import python_owned_children
+
+    for k in REGISTRY:
+        win.open_analysis(k)
+    win.show_ns()
+    win.optimization()
+    win.tolerancing()
+    win.help_contents()
+    s = win.doc.system
+    extra = [system_dialog.SystemExplorer(win.doc, win),
+             material_dialog.MaterialDialog(s, None, parent=win),
+             toolbar_dialog.ToolbarDialog(win.toolbar_items, win.toolbar_ids(), win.toolbar_ids(), win),
+             inspect_window.InspectLensWindow(TRIPLET, win),
+             rays_dialog.InputRaysDialog(win.doc, win),
+             insert_lens_dialog.InsertLensDialog(win.doc, 1, "", win),
+             mfe.MeritWizard(s, win), mfe.OperandList(win),
+             lde.DeleteSurfacesDialog(s, 1, 1, win),
+             lde.SurfacePropertiesDialog(s, 1, win)]
+    bad = [f"{type(w).__name__} in {type(w.window()).__name__}" for w in python_owned_children(win)]
+    for d in extra:
+        bad += [f"{type(w).__name__} in {type(d).__name__}" for w in python_owned_children(d)]
+    assert not bad, bad
+    assert all(isinstance(d, QObject) and shiboken6.isValid(d) for d in extra)
+
+
+def test_app_quits_cleanly(tmp_path):
+    """Run the real entry point with analysis windows open, quit, and let Python finalise."""
+    import subprocess
+    import sys
+    code = ("import sys; from PySide6.QtCore import QTimer; from PySide6.QtWidgets import QApplication;"
+            "from lensforge_qt import app as A; a = QApplication(sys.argv[:1]);"
+            "QTimer.singleShot(1500, a.quit);"
+            "sys.exit(A.main(['--sample', 'triplet', '--analyses', 'layout,spot,mtf,psf,prescription,cardinal_points,system_report']))")
+    env = dict(os.environ, QT_QPA_PLATFORM="offscreen", HOME=str(tmp_path), MPLBACKEND="QtAgg")
+    r = subprocess.run([sys.executable, "-c", code], cwd=os.path.join(HERE, ".."), env=env,
+                       capture_output=True, text=True, timeout=300)
+    assert r.returncode == 0, (r.returncode, r.stderr[-2000:])

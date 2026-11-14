@@ -12,6 +12,7 @@ from PySide6.QtWidgets import (QDialog, QHBoxLayout, QLineEdit, QSplitter, QText
 from . import icons
 from . import mfe_help
 from .help_text import OVERVIEW, lookup
+from .ownership import qt_owns_children
 
 ID_ROLE = Qt.UserRole
 
@@ -52,6 +53,7 @@ def menu_html(name: str, entries) -> str:
     return f"<h2>{html.escape(name)} menu</h2><table cellspacing='4'>{rows}</table>"
 
 
+@qt_owns_children
 class HelpBrowser(QDialog):
     """Tree of menu commands (left), the selected command's help (right), with a filter."""
 

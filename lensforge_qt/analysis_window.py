@@ -15,6 +15,7 @@ from . import workers
 from .analyses import REGISTRY
 from .flow_layout import FlowLayout, group
 from .fonts import fixed_font
+from .ownership import qt_owns_children
 
 _ids = itertools.count(1)
 
@@ -154,6 +155,7 @@ class SettingsBar(QWidget):
         return out
 
 
+@qt_owns_children
 class AnalysisWindow(QDockWidget):
     """A dock holding one analysis (plot or text), recomputed when the lens changes."""
 

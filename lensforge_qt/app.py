@@ -47,7 +47,27 @@ def main(argv=None):
             if k.strip():
                 w.open_analysis(k.strip())
     w.show()
-    return app.exec()
+    rc = app.exec()
+    shutdown(app)
+    return rc
+
+
+def shutdown(app):
+    """Destroy the window tree while Python is still fully alive.
+
+    Otherwise PySide tears it down from an ``atexit`` hook during interpreter finalisation, deleting
+    the objects it believes Python owns one by one; any widget whose parent had already deleted it
+    was then deleted twice, which crashed the app on exit (SIGSEGV in ``~QObject``). Deleting each
+    top-level window here lets Qt delete its children once, in order, and PySide just forgets them.
+    """
+    import gc
+
+    import shiboken6
+
+    for top in app.topLevelWidgets():
+        if shiboken6.isValid(top) and top.parentWidget() is None:
+            shiboken6.delete(top)
+    gc.collect()
 
 
 if __name__ == "__main__":

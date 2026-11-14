@@ -10,6 +10,7 @@ from PySide6.QtCore import QItemSelectionModel, Qt
 from PySide6.QtWidgets import (QAbstractItemView, QComboBox, QDialog, QDialogButtonBox, QGridLayout, QLabel, QLineEdit,
                                QHBoxLayout, QListWidget, QListWidgetItem, QPushButton, QTreeWidget, QTreeWidgetItem,
                                QVBoxLayout)
+from .ownership import qt_owns_children
 
 SEPARATOR = "|"
 #: settings key -> Qt button style (Customize Toolbar's "Buttons show" choice)
@@ -53,6 +54,7 @@ def menu_items(menubar, skip=()) -> list[tuple[str, tuple[str, ...], object]]:
     return out
 
 
+@qt_owns_children
 class ToolbarDialog(QDialog):
     """Two lists: every menu command (left, grouped like the menus) and the toolbar's buttons (right)."""
 

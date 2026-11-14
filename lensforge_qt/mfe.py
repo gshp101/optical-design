@@ -23,6 +23,7 @@ from . import edits as E
 from . import mfe_help
 from . import workers
 from .fonts import fixed_font
+from .ownership import qt_owns_children
 
 COLUMNS = ["Type", "Parameters", "Bound", "Target", "Weight", "Value", "% Contrib", "Comment"]
 C_TYPE, C_PARAMS, C_BOUND, C_TARGET, C_WEIGHT, C_VALUE, C_CONTRIB, C_COMMENT = range(len(COLUMNS))
@@ -228,6 +229,7 @@ class MeritDelegate(QStyledItemDelegate):
         model.setData(index, editor.currentText() if isinstance(editor, QComboBox) else editor.text(), Qt.EditRole)
 
 
+@qt_owns_children
 class MeritFunctionEditor(QWidget):
     statusMessage = Signal(str)
     helpRequested = Signal(str)  # a help page key (mfe_help.ROOT)
@@ -346,6 +348,7 @@ class MeritFunctionEditor(QWidget):
             self.view.setCurrentIndex(self.model.index(r, C_PARAMS))
 
 
+@qt_owns_children
 class MeritWizard(QDialog):
     """Options of :func:`lensforge.optimize.default_merit` (the optimisation wizard)."""
 
@@ -420,6 +423,7 @@ class MeritWizard(QDialog):
         return kw, self.keep.isChecked()
 
 
+@qt_owns_children
 class OperandList(QDialog):
     """Searchable list of all operands with their descriptions."""
 
