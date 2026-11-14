@@ -18,6 +18,29 @@ from .fonts import fixed_font
 
 _ids = itertools.count(1)
 
+#: one mouse-wheel step zooms the plot by this factor (about the cursor)
+WHEEL_ZOOM = 1.25
+
+
+class PlotToolbar(NavigationToolbar2QT):
+    """The matplotlib toolbar; Home also forgets a mouse zoom that is kept across recomputes."""
+
+    def __init__(self, canvas, parent, on_home=None):
+        super().__init__(canvas, parent)
+        self._on_home = on_home
+
+    def home(self, *args):
+        if self._on_home is not None:
+            self._on_home()
+        super().home(*args)
+
+
+def zoom_axes(ax, x, y, factor):
+    """Zoom *ax* by *factor* (> 1 magnifies) keeping the data point (x, y) under the cursor."""
+    for get, set_, c in ((ax.get_xlim, ax.set_xlim, x), (ax.get_ylim, ax.set_ylim, y)):
+        a, b = get()
+        set_(c - (c - a) / factor, c + (b - c) / factor)
+
 #: how to fix a lens whose glass is missing (shown in analysis windows and the open warning)
 MISSING_HINT = ("Choose a replacement in the Material column of the Lens Data Editor (Ctrl+G), "
                 "or load a catalog that has it with File > Load Glass Catalog (AGF).")
@@ -145,6 +168,8 @@ class AnalysisWindow(QDockWidget):
         self.setAllowedAreas(Qt.AllDockWidgetAreas)
         self.result = None
         self.error = None
+        self._shown = None  # (opts, system) of the plot on screen, to re-plot plot-only changes
+        self.user_view = None  # (xlim, ylim) of a mouse zoom, kept when the plot is recomputed
         self._request = 0
         self._busy = False
         self._pending = False
@@ -163,7 +188,7 @@ class AnalysisWindow(QDockWidget):
         # one flowing bar for the Config chooser, the settings and the window's buttons: it wraps
         # onto more rows in a narrow window instead of fixing a minimum width on the dock
         self.settings = SettingsBar(self.spec, doc, values, leading=[self.config_box])
-        self.settings.changed.connect(self.request_update)
+        self.settings.changed.connect(self._settings_changed)
         self._fill_configs((values or {}).get("config", 0))  # (once config_box has its parent)
         self.config.currentIndexChanged.connect(lambda _: self.request_update())
         self.auto = QCheckBox("Auto")
@@ -189,9 +214,14 @@ class AnalysisWindow(QDockWidget):
             pl = QVBoxLayout(pw)
             pl.setContentsMargins(0, 0, 0, 0)
             pl.addWidget(self.canvas, 1)
-            self.toolbar = NavigationToolbar2QT(self.canvas, pw)
+            self.toolbar = PlotToolbar(self.canvas, pw, on_home=self.reset_zoom)
             self.toolbar.setIconSize(self.toolbar.iconSize() * 0.75)
             pl.addWidget(self.toolbar)
+            if self.spec.zoomable:
+                self.canvas.setToolTip("Mouse wheel: zoom about the cursor. Toolbar magnifier: drag a box to "
+                                       "zoom; Home: back to the Zoom setting")
+                self.canvas.mpl_connect("scroll_event", self._wheel)
+                self.canvas.mpl_connect("button_release_event", self._released)
             self.stack.addWidget(pw)
             self.text = None
         else:
@@ -301,7 +331,8 @@ class AnalysisWindow(QDockWidget):
         opts = self.settings.values()
         system = self._system_to_analyse()
         spec = self.spec
-        workers.submit(lambda _p: spec.compute(system, **opts), self._done, self._failed,
+        args = spec.compute_values(opts)
+        workers.submit(lambda _p: spec.compute(system, **args), self._done, self._failed,
                        tag=(self._request, opts, system))
 
     def _finish(self):
@@ -314,6 +345,8 @@ class AnalysisWindow(QDockWidget):
         try:
             if not self._pending:
                 _, opts, system = tag
+                now = self.settings.values()  # plot-only settings changed while this ran still apply
+                opts = {**opts, **{st.name: now[st.name] for st in self.spec.settings if st.plot_only}}
                 self.result, self.error = result, None
                 self.status.hide()
                 self._show(result, opts, system)
@@ -350,9 +383,55 @@ class AnalysisWindow(QDockWidget):
         if self.text is not None:
             self.text.setPlainText(result if isinstance(result, str) else str(result))
             return
+        self._shown = (opts, system)
         self.figure.clear()
         self.spec.plot(self.figure, result, opts, system)
+        self.toolbar.update()  # the old figure's zoom history no longer applies
+        if self.spec.zoomable and self.user_view is not None and self.figure.axes:
+            self.toolbar.push_current()  # Home returns to the view the Zoom setting gives
+            ax = self.figure.axes[0]
+            ax.set_xlim(*self.user_view[0])
+            ax.set_ylim(*self.user_view[1])
         self.canvas.draw_idle()
+
+    # -- zoom -----------------------------------------------------------------------
+    def _settings_changed(self):
+        """Re-plot at once when only plot settings (Zoom, Log scale) changed; recompute otherwise."""
+        new = self.settings.values()
+        if self.result is not None and self._shown is not None and not self._busy and \
+                self.spec.compute_values(new) == self.spec.compute_values(self._shown[0]):
+            if new.get("zoom") != self._shown[0].get("zoom"):
+                self.user_view = None  # a new Zoom choice replaces the mouse zoom
+            try:
+                self._show(self.result, new, self._shown[1])
+            except Exception as e:  # noqa: BLE001 - plotting problem, shown in the window
+                self._show_error(f"Plot failed: {type(e).__name__}: {e}")
+            return
+        if self._shown is not None and new.get("zoom") != self._shown[0].get("zoom"):
+            self.user_view = None
+        self.request_update()
+
+    def _keep_view(self):
+        if self.figure.axes:
+            ax = self.figure.axes[0]
+            self.user_view = (tuple(ax.get_xlim()), tuple(ax.get_ylim()))
+
+    def _wheel(self, ev):
+        ax = self.figure.axes[0] if self.figure.axes else None
+        if ax is None or ev.inaxes is not ax or ev.xdata is None:
+            return
+        self.toolbar.push_current()
+        zoom_axes(ax, ev.xdata, ev.ydata, WHEEL_ZOOM if ev.step > 0 else 1 / WHEEL_ZOOM)
+        self._keep_view()
+        self.canvas.draw_idle()
+
+    def _released(self, ev):
+        if str(self.toolbar.mode) in ("zoom rect", "pan/zoom"):  # the toolbar's box zoom or pan
+            self._keep_view()
+
+    def reset_zoom(self):
+        """Forget the mouse zoom: the plot shows the view its Zoom setting gives."""
+        self.user_view = None
 
     # -- misc -------------------------------------------------------------------
     def save_text(self):

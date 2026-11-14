@@ -52,6 +52,7 @@ class AnalysisWindow {
     this.stale = true;
     this.lastRevision = -1;
     this.result = null;
+    this.view = null;  // [x0, x1, y0, y1] of a mouse zoom (zoomable plots), kept across recomputes
 
     this.configLabel = el("label", {}, "Config");
     this.configSel = el("select", { title: "Configuration to analyse: Current follows the configuration shown in the Lens Data Editor; a number keeps this window on that configuration" });
@@ -62,7 +63,7 @@ class AnalysisWindow {
     for (const st of this.spec.settings) this.bar.append(this.makeSetting(st));
     if (this.spec.uses_rays) this.bar.append(btn("Input Rays...", () => cmd("File > Input Rays"), { small: true, title: "Ray sampling and user rays (File > Input Rays)" }));
     this.auto = check("Auto", true, (on) => { if (on && this.stale) this.request(); }, "Recompute whenever the lens changes");
-    this.bar.append(el("span", { class: "grow" }), this.auto, btn("Update", () => this.request(true), { small: true, title: "Recompute now" }));
+    this.bar.append(el("span", { class: "grow" }), this.auto, btn("Update", () => { this.fresh = true; this.request(true); }, { small: true, title: "Recompute now" }));
 
     this.body = el("div", { class: "an-body" });
     this.busyBadge = el("div", { class: "an-busy", hidden: true }, "computing...");
@@ -79,11 +80,12 @@ class AnalysisWindow {
       this.body.prepend(this.img);
       this.foot.append(btn("Save Image...", () => this.img.src && downloadDataURL(`${this.spec.key}.png`, this.img.src), { small: true, title: "Download the plot as a PNG image" }),
         btn("Open in New Tab", () => { if (this.img.src) { const w = window.open(); if (w) w.document.write(`<title>${this.spec.title}</title><img src="${this.img.src}" style="max-width:100%">`); } }, { small: true }));
+      if (this.spec.zoomable) this.setupZoom();
     }
     this.element = el("div", { class: "pane" }, this.bar, this.body, this.errorLine, this.foot);
     this.panel = docks.right.add({ id: this.id, title: this.spec.title, element: this.element, helpId: this.spec.id,
       onshow: () => { if (this.stale || this.sizeChanged()) this.request(); },
-      onclose: () => { const i = windows.indexOf(this); if (i >= 0) windows.splice(i, 1); },
+      onclose: () => { const i = windows.indexOf(this); if (i >= 0) windows.splice(i, 1); engine.callRaw("forget_analysis", { cache: this.id }, { priority: PRIORITY.background }); },
       onresize: () => this.resized(), contextMenu: (e) => tabMenu(this, e) }, { show: false });
     // re-render when the plot area changes size for any reason (window resize, splitters, a bottom
     // dock opening, floating): the PNG is drawn for the exact size it is shown at
@@ -93,6 +95,13 @@ class AnalysisWindow {
   }
 
   makeSetting(st) {
+    const w = this.makeWidget(st);
+    // a new Zoom choice replaces the mouse zoom (plot-only settings re-plot without recomputing)
+    if (st.name === "zoom") w.addEventListener("change", () => { this.view = null; }, { capture: true });
+    return w;
+  }
+
+  makeWidget(st) {
     const s = App.state;
     let w;
     if (["field", "field_all", "wave", "wave_all", "config_all"].includes(st.kind)) {
@@ -203,8 +212,13 @@ class AnalysisWindow {
     this.setTitle("  (computing...)");
     const [w, h] = this.size();
     const rev = App.state.revision;
+    // the session re-plots its cached result when only plot settings, the zoom or the size changed
+    // (it recomputes whenever the lens or a compute setting changed); Update always recomputes
+    const replot = !this.fresh;
+    this.fresh = false;
     const out = await engine.callRaw("run_analysis", { key: this.spec.key, opts: this.values, config: this.config,
-      width: w, height: h, dpr: Math.min(2, window.devicePixelRatio || 1) }, { priority: PRIORITY.background, key: "analysis:" + this.id });
+      width: w, height: h, dpr: Math.min(2, window.devicePixelRatio || 1), view: this.spec.zoomable ? this.view : null,
+      cache: this.id, replot }, { priority: PRIORITY.background, key: "analysis:" + this.id });
     this.busy = false;
     this.busyBadge.hidden = true;
     if (out.superseded) return;
@@ -222,6 +236,84 @@ class AnalysisWindow {
     this.updates = (this.updates || 0) + 1;
     // the plot area may have changed size while this ran (a dock opened): draw it again at the new size
     if (this.pending || this.sizeChanged() || rev !== App.state.revision && this.auto.input.checked) { this.pending = false; this.request(); }
+  }
+
+  // -- zoom (PSF plots): wheel about the cursor, drag a box, double-click or Reset Zoom to undo --------
+  setupZoom() {
+    const img = this.img;
+    img.draggable = false;
+    img.classList.add("zoomable");
+    img.title = "Mouse wheel: zoom about the cursor. Drag: zoom to a box. Double-click: back to the Zoom setting";
+    this.foot.prepend(btn("Reset Zoom", () => this.resetZoom(), { small: true, title: "Undo the mouse zoom: show the view the Zoom setting gives" }));
+    img.addEventListener("wheel", (e) => {
+      const p = this.toData(e.clientX, e.clientY);
+      if (!p) return;
+      e.preventDefault();
+      const f = e.deltaY < 0 ? 1.25 : 1 / 1.25;
+      const [x0, x1, y0, y1] = this.currentView();
+      this.setView([p[0] - (p[0] - x0) / f, p[0] + (x1 - p[0]) / f, p[1] - (p[1] - y0) / f, p[1] + (y1 - p[1]) / f]);
+    }, { passive: false });
+    img.addEventListener("dblclick", () => this.resetZoom());
+    img.addEventListener("pointerdown", (e) => {
+      if (e.button !== 0 || !this.toData(e.clientX, e.clientY)) return;
+      e.preventDefault();
+      const host = this.body.getBoundingClientRect();
+      const box = el("div", { class: "an-zoombox" });
+      this.body.append(box);
+      const start = [e.clientX, e.clientY];
+      const place = (x, y) => Object.assign(box.style, {
+        left: Math.min(x, start[0]) - host.left + "px", top: Math.min(y, start[1]) - host.top + "px",
+        width: Math.abs(x - start[0]) + "px", height: Math.abs(y - start[1]) + "px" });
+      place(...start);
+      img.setPointerCapture(e.pointerId);
+      const move = (m) => place(m.clientX, m.clientY);
+      const up = (u) => {
+        img.removeEventListener("pointermove", move);
+        img.removeEventListener("pointerup", up);
+        img.removeEventListener("pointercancel", up);
+        box.remove();
+        if (u.type !== "pointerup" || Math.abs(u.clientX - start[0]) < 6 || Math.abs(u.clientY - start[1]) < 6) return;
+        const a = this.toData(...start, true), b = this.toData(u.clientX, u.clientY, true);
+        this.setView([Math.min(a[0], b[0]), Math.max(a[0], b[0]), Math.min(a[1], b[1]), Math.max(a[1], b[1])]);
+      };
+      img.addEventListener("pointermove", move);
+      img.addEventListener("pointerup", up);
+      img.addEventListener("pointercancel", up);
+    });
+  }
+
+  /** Page point -> plot coordinates of the zoomable axes (null outside them unless clamp). */
+  toData(cx, cy, clamp = false) {
+    const a = this.result && this.result.axes;
+    const img = this.img;
+    if (!a || !img.naturalWidth) return null;
+    const r = img.getBoundingClientRect();  // object-fit: contain letterboxes the PNG
+    const k = Math.min(r.width / img.naturalWidth, r.height / img.naturalHeight);
+    const w = img.naturalWidth * k, h = img.naturalHeight * k;
+    let fx = (cx - r.left - (r.width - w) / 2) / w, fy = (cy - r.top - (r.height - h) / 2) / h;
+    const [bx0, by0, bx1, by1] = a.box;
+    if (clamp) { fx = Math.min(bx1, Math.max(bx0, fx)); fy = Math.min(by1, Math.max(by0, fy)); }
+    else if (fx < bx0 || fx > bx1 || fy < by0 || fy > by1) return null;
+    const u = (fx - bx0) / (bx1 - bx0), v = (fy - by0) / (by1 - by0);
+    return [a.xlim[0] + u * (a.xlim[1] - a.xlim[0]), a.ylim[1] - v * (a.ylim[1] - a.ylim[0])];
+  }
+
+  currentView() {
+    if (this.view) return this.view;
+    const a = this.result.axes;
+    return [...a.xlim, ...a.ylim];
+  }
+
+  setView(v) {
+    this.view = v;
+    clearTimeout(this.zoomTimer);
+    this.zoomTimer = setTimeout(() => this.request(true), 60);
+  }
+
+  resetZoom() {
+    if (!this.view) return;
+    this.view = null;
+    this.request(true);
   }
 
   showError(msg) {

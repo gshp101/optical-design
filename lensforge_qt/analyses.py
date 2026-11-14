@@ -31,6 +31,7 @@ class Setting:
     choices: Optional[list] = None  # (label, value) pairs for "choice"
     minimum: float = 0
     maximum: float = 1e6
+    plot_only: bool = False  # only changes the drawing: the window re-plots without recomputing
 
 
 @dataclass
@@ -43,6 +44,12 @@ class AnalysisSpec:
     settings: List[Setting] = dc_field(default_factory=list)
     shortcut: Optional[str] = None
     uses_rays: bool = False  # sampling comes from the Input Rays dialog
+    zoomable: bool = False  # mouse-wheel / drag-box zoom kept across recomputes (PSF plots)
+
+    def compute_values(self, values):
+        """The settings ``compute`` takes: everything except the plot-only ones (such as Zoom)."""
+        plot_only = {st.name for st in self.settings if st.plot_only}
+        return {k: v for k, v in values.items() if k not in plot_only}
 
 
 REGISTRY: dict = {}
@@ -442,7 +449,13 @@ def _check_huygens(kw, n_waves, n_fields=1):
                          "fine sampling, or lower the pupil or image sampling.")
 
 
-def _psf_compute(system, field=0, wave=-1, method="fft", pupil_n=64, image_n=0, pixel_um=0.0, log=False):
+#: magnification of the PSF plots (plot only: changing it never recomputes the PSF)
+ZOOM = Setting("zoom", "Zoom", "choice", 1,
+               [("Full window", 1), ("Auto (fit PSF)", "auto"), ("2x", 2), ("4x", 4), ("8x", 8), ("16x", 16),
+                ("32x", 32), ("64x", 64)], plot_only=True)
+
+
+def _psf_compute(system, field=0, wave=-1, method="fft", pupil_n=64, image_n=0, pixel_um=0.0):
     fn = lf.fft_psf if method == "fft" else lf.huygens_psf
     kw = _sampling_kw(system, method, pupil_n, image_n, pixel_um)
     if method == "huygens":
@@ -452,7 +465,7 @@ def _psf_compute(system, field=0, wave=-1, method="fft", pupil_n=64, image_n=0, 
 
 def _psf_plot(fig, r, opts, system):
     ax = fig.add_subplot(111)
-    P.psf(r, ax, log=bool(opts.get("log")))
+    P.psf(r, ax, log=bool(opts.get("log")), zoom=opts.get("zoom", 1))
     ax.set_xlabel(system.units)
     for w in r.get("warnings", []):
         _legend_note(fig, w)
@@ -461,7 +474,8 @@ def _psf_plot(fig, r, opts, system):
 register(AnalysisSpec("psf", "PSF", "PSF & MTF", _psf_compute, _psf_plot,
                       [FIELD, WAVE_ALL, Setting("method", "Method", "choice", "fft",
                                                 [("FFT", "fft"), ("Huygens", "huygens")]),
-                       PUPIL_N, IMAGE_N, PIXEL, Setting("log", "Log scale", "bool", False)], shortcut="Ctrl+P"))
+                       PUPIL_N, IMAGE_N, PIXEL, ZOOM, Setting("log", "Log scale", "bool", False, plot_only=True)],
+                      shortcut="Ctrl+P", zoomable=True))
 
 
 def _psf_x_plot(fig, r, opts, system):
@@ -473,13 +487,14 @@ def _psf_x_plot(fig, r, opts, system):
     ax.set_xlabel(system.units)
     ax.set_ylabel("relative irradiance (perfect peak = 1)")
     ax.set_title(f"PSF cross section, Strehl {r['strehl']:.4f}")
+    ax.set_xlim(*P.psf_zoom_limits(r, opts.get("zoom", 1))[0])
     ax.legend(fontsize=8)
 
 
 register(AnalysisSpec("psf_cross", "PSF Cross Section", "PSF & MTF", _psf_compute, _psf_x_plot,
                       [FIELD, WAVE_ALL, Setting("method", "Method", "choice", "fft",
                                                 [("FFT", "fft"), ("Huygens", "huygens")]),
-                       PUPIL_N, IMAGE_N, PIXEL]))
+                       PUPIL_N, IMAGE_N, PIXEL, ZOOM], zoomable=True))
 
 
 def _mtf_compute(system, field=-1, wave=-1, method="fft", max_freq=0.0, pupil_n=64, image_n=0):
