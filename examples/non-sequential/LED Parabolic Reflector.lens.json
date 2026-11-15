@@ -1,0 +1,129 @@
+{
+  "format": "lensforge-1",
+  "name": "LED reflector (non-sequential)",
+  "units": "mm",
+  "aperture": {
+    "type": "EPD",
+    "value": 10.0
+  },
+  "fields": {
+    "type": "ANGLE",
+    "values": [
+      {
+        "x": 0.0,
+        "y": 0.0,
+        "weight": 1.0,
+        "vdx": 0.0,
+        "vdy": 0.0,
+        "vcx": 0.0,
+        "vcy": 0.0
+      }
+    ]
+  },
+  "wavelengths": {
+    "values": [
+      {
+        "value": 0.5875618,
+        "weight": 1.0
+      }
+    ],
+    "primary": 0
+  },
+  "ray_aiming": "paraxial",
+  "notes": "A Lambertian LED (cosine exponent 1) at the focus of a parabolic mirror (radius 20, conic -1, focal length 10) faces the mirror; the reflected light leaves collimated. Light outside the mirror's rim escapes. The Detector Viewer in Angle space shows the collimated beam as a small spot around the axis.",
+  "surfaces": [
+    {
+      "type": "STANDARD",
+      "curvature": 0.0,
+      "conic": 0.0,
+      "thickness": "inf",
+      "material": null,
+      "comment": "OBJECT"
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.0,
+      "conic": 0.0,
+      "thickness": 0.0,
+      "material": null,
+      "stop": true
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.0,
+      "conic": 0.0,
+      "thickness": 0.0,
+      "material": null,
+      "comment": "IMAGE"
+    }
+  ],
+  "nonseq": {
+    "format": "lensforge-ns-1",
+    "name": "LED reflector",
+    "units": "mm",
+    "ambient": "AIR",
+    "notes": "A Lambertian LED (cosine exponent 1) at the focus of a parabolic mirror (radius 20, conic -1, focal length 10) faces the mirror; the reflected light leaves collimated. Light outside the mirror's rim escapes. The Detector Viewer in Angle space shows the collimated beam as a small spot around the axis.",
+    "trace_settings": {
+      "split": false,
+      "fresnel": true,
+      "min_relative_intensity": 1e-06,
+      "max_segments": 100,
+      "seed": 0,
+      "max_rays": 2000000
+    },
+    "objects": [
+      {
+        "type": "STANDARD_SURFACE",
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0,
+        "tilt_x": 0.0,
+        "tilt_y": 0.0,
+        "tilt_z": 0.0,
+        "material": "MIRROR",
+        "comment": "parabolic reflector",
+        "radius": 20.0,
+        "conic": -1.0,
+        "semi_diameter": 15.0,
+        "inner_radius": 0.0,
+        "reflectance": 1.0
+      },
+      {
+        "type": "DETECTOR",
+        "x": 0.0,
+        "y": 0.0,
+        "z": 80.0,
+        "tilt_x": 0.0,
+        "tilt_y": 0.0,
+        "tilt_z": 0.0,
+        "material": null,
+        "comment": "target",
+        "half_x": 18.0,
+        "half_y": 18.0,
+        "nx": 81,
+        "ny": 81,
+        "transparent": false
+      }
+    ],
+    "sources": [
+      {
+        "type": "SOURCE_POINT",
+        "x": 0.0,
+        "y": 0.0,
+        "z": 10.0,
+        "tilt_x": 180.0,
+        "tilt_y": 0.0,
+        "tilt_z": 0.0,
+        "comment": "LED",
+        "n_rays": 4000,
+        "power": 1.0,
+        "wavelengths": [
+          0.5875618
+        ],
+        "sampling": "random",
+        "cone_angle": 85.0,
+        "cos_exponent": 1.0
+      }
+    ]
+  }
+}

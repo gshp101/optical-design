@@ -1,0 +1,281 @@
+{
+  "format": "lensforge-1",
+  "name": "Cemented achromat",
+  "units": "mm",
+  "aperture": {
+    "type": "EPD",
+    "value": 20.0
+  },
+  "fields": {
+    "type": "ANGLE",
+    "values": [
+      {
+        "x": 0.0,
+        "y": 0.0,
+        "weight": 1.0,
+        "vdx": 0.0,
+        "vdy": 0.0,
+        "vcx": 0.0,
+        "vcy": 0.0
+      },
+      {
+        "x": 0.0,
+        "y": 1.0,
+        "weight": 1.0,
+        "vdx": 0.0,
+        "vdy": 0.0,
+        "vcx": 0.0,
+        "vcy": 0.0
+      },
+      {
+        "x": 0.0,
+        "y": 2.0,
+        "weight": 1.0,
+        "vdx": 0.0,
+        "vdy": 0.0,
+        "vcx": 0.0,
+        "vcy": 0.0
+      }
+    ]
+  },
+  "wavelengths": {
+    "values": [
+      {
+        "value": 0.4861327,
+        "weight": 1.0
+      },
+      {
+        "value": 0.5875618,
+        "weight": 1.0
+      },
+      {
+        "value": 0.6562725,
+        "weight": 1.0
+      }
+    ],
+    "primary": 1
+  },
+  "ray_aiming": "paraxial",
+  "notes": "Non-sequential example: the sample cemented achromat converted to a scene (Tools > Non-Sequential > Convert Lens to Non-Sequential) with ray splitting on. Open the Ray Path Analysis to see the two-reflection ghost paths, then set Path in the NS Layout to draw one; the Detector Viewer with Rays = Ghosts and Log scale shows the ghost halo.",
+  "surfaces": [
+    {
+      "type": "STANDARD",
+      "curvature": 0.0,
+      "conic": 0.0,
+      "thickness": "inf",
+      "material": null,
+      "comment": "OBJECT"
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.01593625498007968,
+      "conic": 0.0,
+      "thickness": 4.0,
+      "material": "N-BAF10",
+      "stop": true
+    },
+    {
+      "type": "STANDARD",
+      "curvature": -0.021877050973528767,
+      "conic": 0.0,
+      "thickness": 2.5,
+      "material": "N-SF6"
+    },
+    {
+      "type": "STANDARD",
+      "curvature": -0.007798487093503861,
+      "conic": 0.0,
+      "thickness": 69.58859646078858,
+      "material": null
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.0,
+      "conic": 0.0,
+      "thickness": 0.0,
+      "material": null,
+      "comment": "IMAGE"
+    }
+  ],
+  "nonseq": {
+    "format": "lensforge-ns-1",
+    "name": "Cemented achromat ghosts",
+    "units": "mm",
+    "ambient": "AIR",
+    "notes": "Non-sequential example: the sample cemented achromat converted to a scene (Tools > Non-Sequential > Convert Lens to Non-Sequential) with ray splitting on. Open the Ray Path Analysis to see the two-reflection ghost paths, then set Path in the NS Layout to draw one; the Detector Viewer with Rays = Ghosts and Log scale shows the ghost halo.",
+    "trace_settings": {
+      "split": true,
+      "fresnel": true,
+      "min_relative_intensity": 1e-06,
+      "max_segments": 100,
+      "seed": 0,
+      "max_rays": 2000000
+    },
+    "objects": [
+      {
+        "type": "STANDARD_LENS",
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0,
+        "tilt_x": -0.0,
+        "tilt_y": 0.0,
+        "tilt_z": -0.0,
+        "material": "N-BAF10",
+        "comment": "S1-S2",
+        "radius1": 62.75,
+        "conic1": 0.0,
+        "thickness": 4.0,
+        "radius2": -45.71,
+        "conic2": 0.0,
+        "semi_diameter": 10.028163248358878,
+        "surface1": {
+          "type": "STANDARD",
+          "curvature": 0.01593625498007968,
+          "conic": 0.0,
+          "thickness": 0.0,
+          "material": null,
+          "semi_diameter": 10.028163248358878
+        },
+        "surface2": {
+          "type": "STANDARD",
+          "curvature": -0.021877050973528767,
+          "conic": 0.0,
+          "thickness": 0.0,
+          "material": null,
+          "semi_diameter": 9.936371539575227
+        }
+      },
+      {
+        "type": "STANDARD_LENS",
+        "x": 0.0,
+        "y": 0.0,
+        "z": 4.0,
+        "tilt_x": -0.0,
+        "tilt_y": 0.0,
+        "tilt_z": -0.0,
+        "material": "N-SF6",
+        "comment": "S2-S3",
+        "radius1": -45.71,
+        "conic1": 0.0,
+        "thickness": 2.5,
+        "radius2": -128.23,
+        "conic2": 0.0,
+        "semi_diameter": 10.028163248358878,
+        "surface1": {
+          "type": "STANDARD",
+          "curvature": -0.021877050973528767,
+          "conic": 0.0,
+          "thickness": 0.0,
+          "material": null,
+          "semi_diameter": 9.936371539575227
+        },
+        "surface2": {
+          "type": "STANDARD",
+          "curvature": -0.007798487093503861,
+          "conic": 0.0,
+          "thickness": 0.0,
+          "material": null,
+          "semi_diameter": 9.860707699147927
+        }
+      },
+      {
+        "type": "ANNULUS",
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0,
+        "tilt_x": -0.0,
+        "tilt_y": 0.0,
+        "tilt_z": -0.0,
+        "material": "ABSORB",
+        "comment": "stop",
+        "inner_radius": 10.0,
+        "outer_radius": 30.0,
+        "reflectance": 1.0
+      },
+      {
+        "type": "DETECTOR",
+        "x": 0.0,
+        "y": 0.0,
+        "z": 76.08859646078858,
+        "tilt_x": -0.0,
+        "tilt_y": 0.0,
+        "tilt_z": -0.0,
+        "material": null,
+        "comment": "image",
+        "half_x": 3.2690344342598983,
+        "half_y": 3.2690344342598983,
+        "nx": 101,
+        "ny": 101,
+        "transparent": false
+      }
+    ],
+    "sources": [
+      {
+        "type": "SOURCE_ELLIPSE",
+        "x": 0.0,
+        "y": 0.0,
+        "z": -11.028163248358878,
+        "tilt_x": -0.0,
+        "tilt_y": 0.0,
+        "tilt_z": 0.0,
+        "comment": "field 1",
+        "n_rays": 2000,
+        "power": 1.0,
+        "wavelengths": [
+          0.4861327,
+          0.5875618,
+          0.6562725
+        ],
+        "sampling": "random",
+        "half_x": 10.2,
+        "half_y": 10.2,
+        "cone_angle": 0.0,
+        "cos_exponent": 0.0
+      },
+      {
+        "type": "SOURCE_ELLIPSE",
+        "x": 0.0,
+        "y": -0.19249730553908717,
+        "z": -11.028163248358878,
+        "tilt_x": -1.0000000000000002,
+        "tilt_y": 0.0,
+        "tilt_z": 0.0,
+        "comment": "field 2",
+        "n_rays": 2000,
+        "power": 1.0,
+        "wavelengths": [
+          0.4861327,
+          0.5875618,
+          0.6562725
+        ],
+        "sampling": "random",
+        "half_x": 10.2,
+        "half_y": 10.2,
+        "cone_angle": 0.0,
+        "cos_exponent": 0.0
+      },
+      {
+        "type": "SOURCE_ELLIPSE",
+        "x": 0.0,
+        "y": -0.38511194671330423,
+        "z": -11.028163248358878,
+        "tilt_x": -2.0000000000000004,
+        "tilt_y": 0.0,
+        "tilt_z": 0.0,
+        "comment": "field 3",
+        "n_rays": 2000,
+        "power": 1.0,
+        "wavelengths": [
+          0.4861327,
+          0.5875618,
+          0.6562725
+        ],
+        "sampling": "random",
+        "half_x": 10.2,
+        "half_y": 10.2,
+        "cone_angle": 0.0,
+        "cos_exponent": 0.0
+      }
+    ]
+  }
+}

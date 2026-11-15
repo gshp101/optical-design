@@ -14,6 +14,7 @@ splitting, also reflect by Fresnel's equations or a ``coating`` reflectance):
 * :class:`Sphere`        ball of radius R
 * :class:`RectangularVolume`  box, z from 0 to ``length``
 * :class:`CylinderVolume`     rod, z from 0 to ``length``
+* :class:`Prism`              triangular prism (dispersing or right-angle TIR prism)
 
 Surfaces (no volume; ``material`` "MIRROR" reflects, "ABSORB" absorbs):
 
@@ -23,6 +24,11 @@ Surfaces (no volume; ``material`` "MIRROR" reflects, "ABSORB" absorbs):
 * :class:`Detector`         flat rectangular pixel detector (absorbs unless ``transparent``)
 
 Sources: :class:`SourcePoint`, :class:`SourceEllipse`, :class:`SourceRectangle`.
+
+``ref`` (object number from 1, 0 = global) places an object or source relative to
+another object's frame, as Zemax's "Ref Object": its position and tilts are then
+given in that object's local coordinates.  :meth:`NonSequentialSystem.resolved`
+turns every pose into a global one (the tracer does this first).
 """
 
 from __future__ import annotations
@@ -120,7 +126,8 @@ class SphereFace(Face):
 class PlaneFace(Face):
     """Flat face through ``center`` with unit ``normal``; ``u`` is its first in-plane axis.
 
-    ``shape`` is ("rect", half_u, half_v) or ("disk", r_max, r_min).
+    ``shape`` is ("rect", half_u, half_v), ("disk", r_max, r_min) or ("poly", [(u, v), ...]) with
+    the corners of a convex polygon in order.
     """
 
     def __init__(self, center, normal, u, shape, name="plane"):
@@ -142,6 +149,8 @@ class PlaneFace(Face):
             u, v = self.local_uv(H)
         if self.shape[0] == "rect":
             inside = (np.abs(u) <= self.shape[1]) & (np.abs(v) <= self.shape[2])
+        elif self.shape[0] == "poly":
+            inside = _in_convex(np.asarray(self.shape[1], float), u, v)
         else:
             r2 = u * u + v * v
             inside = (r2 <= self.shape[1] ** 2 * (1 + 1e-12)) & (r2 > self.shape[2] ** 2 * (1 + 1e-9))
@@ -151,6 +160,23 @@ class PlaneFace(Face):
 
     def normal(self, P):
         return np.broadcast_to(self.n, P.shape).copy()
+
+
+def _in_convex(poly, u, v):
+    """Points (u, v) inside (or on the edge of) the convex polygon ``poly`` (k, 2)."""
+    with np.errstate(invalid="ignore"):
+        sign = None
+        ok = np.ones(np.shape(u), dtype=bool)
+        for k in range(len(poly)):
+            a, b = poly[k], poly[(k + 1) % len(poly)]
+            c = (b[0] - a[0]) * (v - a[1]) - (b[1] - a[1]) * (u - a[0])
+            tol = 1e-9 * (abs(b[0] - a[0]) + abs(b[1] - a[1]) + 1.0)
+            if sign is None:  # orientation of the polygon
+                area = sum(poly[i][0] * poly[(i + 1) % len(poly)][1] - poly[(i + 1) % len(poly)][0] * poly[i][1]
+                           for i in range(len(poly)))
+                sign = 1.0 if area >= 0 else -1.0
+            ok &= sign * c >= -tol
+    return ok
 
 
 def _nearest_root(a, b, c, P, D, accept):
@@ -180,10 +206,11 @@ def _nearest_root(a, b, c, P, D, accept):
 class Posed:
     """Position and X-Y-Z tilts (degrees)."""
 
-    def __init__(self, x=0.0, y=0.0, z=0.0, tilt_x=0.0, tilt_y=0.0, tilt_z=0.0, comment=""):
+    def __init__(self, x=0.0, y=0.0, z=0.0, tilt_x=0.0, tilt_y=0.0, tilt_z=0.0, comment="", ref=0):
         self.x, self.y, self.z = float(x), float(y), float(z)
         self.tilt_x, self.tilt_y, self.tilt_z = float(tilt_x), float(tilt_y), float(tilt_z)
         self.comment = comment
+        self.ref = int(ref or 0)  # object number (from 1) whose frame the pose is given in; 0 = global
 
     @property
     def R(self):
@@ -211,7 +238,26 @@ class Posed:
     _pose_keys = ("x", "y", "z", "tilt_x", "tilt_y", "tilt_z")
 
     def _pose_dict(self):
-        return {k: getattr(self, k) for k in self._pose_keys}
+        d = {k: getattr(self, k) for k in self._pose_keys}
+        if getattr(self, "ref", 0):
+            d["ref"] = self.ref
+        return d
+
+    def outline(self, n=41, plane="y"):
+        """Polylines (lists of (k, 3) global points) of the object's section in the local YZ
+        (``plane`` "y") or XZ ("x") plane, for layout drawings."""
+        return [self.to_global(p) for p in self._section(n, 0 if plane == "x" else 1)]
+
+    def _section(self, n, axis):
+        return []
+
+    def wireframe(self, n=41):
+        """Polylines (global) that sketch the object in 3-D: both sections plus its rims and edges."""
+        lines = self.outline(n, "y") + self.outline(n, "x")
+        return lines + [self.to_global(p) for p in self._rims(n)]
+
+    def _rims(self, n):
+        return []
 
 
 def angles_from_matrix(R):
@@ -285,10 +331,6 @@ class NSObject(Posed):
     def copy(self):
         return object_from_dict(self.to_dict())
 
-    def outline(self, n=41):
-        """Polylines (lists of (k, 3) global points) for layout drawings."""
-        return []
-
     def __repr__(self):
         return f"{type(self).__name__}({self.comment or self.material!r} at {self.x:g}, {self.y:g}, {self.z:g})"
 
@@ -303,10 +345,35 @@ def _surf_dict(s):
     return None if s is None else s.to_dict()
 
 
-def _profile(surface, z0, r, n):
-    y = np.linspace(-r, r, n)
-    z = z0 + surface.sag(np.zeros(n), y)
-    return np.stack([np.zeros(n), y, z], axis=1)
+def _profile(surface, z0, r, n, axis=1):
+    s = np.linspace(-r, r, n)
+    x, y = (s, np.zeros(n)) if axis == 0 else (np.zeros(n), s)
+    z = z0 + surface.sag(x, y)
+    return np.stack([x, y, z], axis=1)
+
+
+def _circle(r, z, n, sag=None):
+    """Local circle of radius r at height z (plus ``sag`` (x, y) of a surface) about the z axis."""
+    th = np.linspace(0, 2 * np.pi, 2 * n)
+    x, y = r * np.cos(th), r * np.sin(th)
+    zz = z + (sag(x, y) if sag is not None else 0.0)
+    return np.stack([x, y, np.broadcast_to(zz, x.shape)], axis=1)
+
+
+def _seg(axis, pts):
+    """Local points from (s, z) pairs in the section plane (s along x for axis 0, y for axis 1)."""
+    pts = np.asarray(pts, float)
+    out = np.zeros((len(pts), 3))
+    out[:, axis] = pts[:, 0]
+    out[:, 2] = pts[:, 1]
+    return out
+
+
+def _box_edges(hx, hy, z0, z1):
+    c = [(-hx, -hy), (hx, -hy), (hx, hy), (-hx, hy)]
+    lines = [np.array([[x, y, z0] for x, y in c + c[:1]]), np.array([[x, y, z1] for x, y in c + c[:1]])]
+    lines += [np.array([[x, y, z0], [x, y, z1]]) for x, y in c]
+    return lines
 
 
 @_register
@@ -359,12 +426,16 @@ class StandardLens(NSObject):
     def from_dict(cls, d):
         return cls(**d)
 
-    def outline(self, n=41):
+    def _section(self, n, axis):
         s1, s2 = self._surfaces()
-        a = _profile(s1, 0.0, self.semi_diameter, n)
-        b = _profile(s2, self.thickness, self.semi_diameter, n)
-        loop = np.concatenate([a, b[::-1], a[:1]])
-        return [self.to_global(loop)]
+        a = _profile(s1, 0.0, self.semi_diameter, n, axis)
+        b = _profile(s2, self.thickness, self.semi_diameter, n, axis)
+        return [np.concatenate([a, b[::-1], a[:1]])]
+
+    def _rims(self, n):
+        s1, s2 = self._surfaces()
+        sd = self.semi_diameter
+        return [_circle(sd, 0.0, n, s1.sag), _circle(sd, self.thickness, n, s2.sag)]
 
 
 @_register
@@ -384,10 +455,12 @@ class Sphere(NSObject):
     def from_dict(cls, d):
         return cls(**d)
 
-    def outline(self, n=41):
+    def _section(self, n, axis):
         th = np.linspace(0, 2 * np.pi, 2 * n)
-        p = np.stack([np.zeros_like(th), self.radius * np.sin(th), self.radius * np.cos(th)], axis=1)
-        return [self.to_global(p)]
+        return [_seg(axis, np.stack([self.radius * np.sin(th), self.radius * np.cos(th)], axis=1))]
+
+    def _rims(self, n):
+        return [_circle(self.radius, 0.0, n)]
 
 
 @_register
@@ -416,10 +489,12 @@ class RectangularVolume(NSObject):
     def from_dict(cls, d):
         return cls(**d)
 
-    def outline(self, n=41):
-        hy, L = self.half_y, self.length
-        p = np.array([[0, -hy, 0], [0, hy, 0], [0, hy, L], [0, -hy, L], [0, -hy, 0]], float)
-        return [self.to_global(p)]
+    def _section(self, n, axis):
+        h, L = (self.half_x, self.half_y)[axis], self.length
+        return [_seg(axis, [(-h, 0), (h, 0), (h, L), (-h, L), (-h, 0)])]
+
+    def _rims(self, n):
+        return _box_edges(self.half_x, self.half_y, 0.0, self.length)
 
 
 @_register
@@ -445,10 +520,76 @@ class CylinderVolume(NSObject):
     def from_dict(cls, d):
         return cls(**d)
 
-    def outline(self, n=41):
+    def _section(self, n, axis):
         R, L = self.radius, self.length
-        p = np.array([[0, -R, 0], [0, R, 0], [0, R, L], [0, -R, L], [0, -R, 0]], float)
-        return [self.to_global(p)]
+        return [_seg(axis, [(-R, 0), (R, 0), (R, L), (-R, L), (-R, 0)])]
+
+    def _rims(self, n):
+        return [_circle(self.radius, 0.0, n), _circle(self.radius, self.length, n)]
+
+
+@_register
+class Prism(NSObject):
+    """Triangular prism: its section in the local YZ plane is an isosceles triangle with the base
+    (length ``base``) on z = 0 from y = -base/2 to +base/2 and the apex angle ``apex_angle`` (deg)
+    at (y = 0, z = height); it runs from x = -half_x to +half_x.  Apex 60 deg is the classic
+    dispersing prism, apex 90 deg a right-angle prism (light through the base is turned back by TIR).
+    """
+
+    kind = "PRISM"
+    is_volume = True
+    params = (("base", "Base length"), ("apex_angle", "Apex angle (deg)"), ("half_x", "X half width"))
+
+    def __init__(self, base=10.0, apex_angle=60.0, half_x=5.0, material="N-BK7", **kw):
+        super().__init__(material=material, **kw)
+        self.base, self.apex_angle, self.half_x = float(base), float(apex_angle), float(half_x)
+
+    @property
+    def height(self):
+        return 0.5 * self.base / math.tan(math.radians(0.5 * self.apex_angle))
+
+    def corners(self):
+        """(y, z) of the triangle: base left, base right, apex."""
+        b, h = 0.5 * self.base, self.height
+        return np.array([[-b, 0.0], [b, 0.0], [0.0, h]])
+
+    def faces(self):
+        if not (0 < self.apex_angle < 180) or self.base <= 0:
+            raise ValueError("a prism needs 0 < apex angle < 180 deg and a positive base")
+        ex, ey, ez = np.eye(3)
+        A, B, C = self.corners()
+        cen = (A + B + C) / 3
+        faces = [PlaneFace([0, 0, 0], -ez, ex, ("rect", self.half_x, 0.5 * self.base), "base")]
+        for (p, q), name in (((A, C), "left"), ((B, C), "right")):
+            mid = 0.5 * (p + q)
+            t = (q - p) / np.linalg.norm(q - p)
+            nrm = np.array([-t[1], t[0]])
+            if np.dot(nrm, mid - cen) < 0:
+                nrm = -nrm
+            faces.append(PlaneFace([0, mid[0], mid[1]], [0, nrm[0], nrm[1]], ex,
+                                   ("rect", self.half_x, 0.5 * float(np.linalg.norm(q - p))), name))
+        tri = [(y, z) for y, z in (A, B, C)]
+        faces.append(PlaneFace([self.half_x, 0, 0], ex, ey, ("poly", tri), "+x"))
+        faces.append(PlaneFace([-self.half_x, 0, 0], -ex, ey, ("poly", [(y, -z) for y, z in tri]), "-x"))
+        return faces
+
+    @classmethod
+    def from_dict(cls, d):
+        return cls(**d)
+
+    def _section(self, n, axis):
+        A, B, C = self.corners()
+        if axis == 1:
+            return [_seg(1, [A, B, C, A])]
+        hx, h = self.half_x, self.height
+        return [_seg(0, [(-hx, 0), (hx, 0), (hx, h), (-hx, h), (-hx, 0)])]
+
+    def _rims(self, n):
+        out = []
+        for x in (-self.half_x, self.half_x):
+            out.append(np.array([[x, y, z] for y, z in list(self.corners()) + [self.corners()[0]]]))
+        out += [np.array([[-self.half_x, y, z], [self.half_x, y, z]]) for y, z in self.corners()]
+        return out
 
 
 @_register
@@ -484,8 +625,18 @@ class StandardSurface(NSObject):
     def from_dict(cls, d):
         return cls(**d)
 
-    def outline(self, n=41):
-        return [self.to_global(_profile(self._surface(), 0.0, self.semi_diameter, n))]
+    def _section(self, n, axis):
+        p = _profile(self._surface(), 0.0, self.semi_diameter, n, axis)
+        if self.inner_radius <= 0:
+            return [p]
+        s = p[:, axis]
+        return [p[s <= -self.inner_radius], p[s >= self.inner_radius]]
+
+    def _rims(self, n):
+        out = [_circle(self.semi_diameter, 0.0, n, self._surface().sag)]
+        if self.inner_radius > 0:
+            out.append(_circle(self.inner_radius, 0.0, n, self._surface().sag))
+        return out
 
 
 @_register
@@ -511,10 +662,13 @@ class Annulus(NSObject):
     def from_dict(cls, d):
         return cls(**d)
 
-    def outline(self, n=41):
+    def _section(self, n, axis):
         a, b = self.inner_radius, self.outer_radius
-        return [self.to_global(np.array([[0, a, 0], [0, b, 0]], float)),
-                self.to_global(np.array([[0, -a, 0], [0, -b, 0]], float))]
+        return [_seg(axis, [(a, 0), (b, 0)]), _seg(axis, [(-a, 0), (-b, 0)])]
+
+    def _rims(self, n):
+        return [_circle(self.outer_radius, 0.0, n)] + ([_circle(self.inner_radius, 0.0, n)]
+                                                       if self.inner_radius > 0 else [])
 
 
 @_register
@@ -539,8 +693,12 @@ class Rectangle(NSObject):
     def from_dict(cls, d):
         return cls(**d)
 
-    def outline(self, n=41):
-        return [self.to_global(np.array([[0, -self.half_y, 0], [0, self.half_y, 0]], float))]
+    def _section(self, n, axis):
+        h = (self.half_x, self.half_y)[axis]
+        return [_seg(axis, [(-h, 0), (h, 0)])]
+
+    def _rims(self, n):
+        return _box_edges(self.half_x, self.half_y, 0.0, 0.0)[:1]
 
 
 @_register
@@ -572,8 +730,12 @@ class Detector(NSObject):
     def from_dict(cls, d):
         return cls(**d)
 
-    def outline(self, n=41):
-        return [self.to_global(np.array([[0, -self.half_y, 0], [0, self.half_y, 0]], float))]
+    def _section(self, n, axis):
+        h = (self.half_x, self.half_y)[axis]
+        return [_seg(axis, [(-h, 0), (h, 0)])]
+
+    def _rims(self, n):
+        return _box_edges(self.half_x, self.half_y, 0.0, 0.0)[:1]
 
 
 # ---------------------------------------------------------------------------
@@ -635,8 +797,9 @@ def source_from_dict(d):
     return _SOURCES[d.pop("type")].from_dict(d)
 
 
-def _cone_dirs(n, half_angle_deg, rng, sampling):
-    """Unit directions uniform in solid angle within a cone about +z."""
+def _cone_dirs(n, half_angle_deg, rng, sampling, cos_exponent=0.0):
+    """Unit directions within a cone about +z: uniform in solid angle (``cos_exponent`` 0), or with
+    radiant intensity proportional to cos(theta)^``cos_exponent`` (1 = Lambertian)."""
     ca = math.cos(math.radians(half_angle_deg))
     if sampling == "grid":
         k = max(int(round(math.sqrt(n))), 1)
@@ -645,7 +808,12 @@ def _cone_dirs(n, half_angle_deg, rng, sampling):
         u, v = u.ravel(), v.ravel()
     else:
         u, v = rng.random(n), rng.random(n)
-    cz = 1 - u * (1 - ca)
+    m = float(cos_exponent) + 1.0
+    if m == 1.0:
+        cz = 1 - u * (1 - ca)
+    else:  # pdf of cos(theta) proportional to cos^(m-1) on [ca, 1]
+        lo = max(ca, 0.0) ** m
+        cz = (lo + u * (1 - lo)) ** (1 / m)
     s = np.sqrt(np.maximum(1 - cz * cz, 0))
     ph = 2 * np.pi * v
     return np.stack([s * np.cos(ph), s * np.sin(ph), cz], axis=1)
@@ -656,14 +824,14 @@ class SourcePoint(Source):
     """Point source radiating uniformly into a cone of half-angle ``cone_angle`` (deg) about local +z."""
 
     kind = "SOURCE_POINT"
-    params = (("cone_angle", "Cone half-angle (deg)"),)
+    params = (("cone_angle", "Cone half-angle (deg)"), ("cos_exponent", "Cosine exponent (1 = Lambertian)"))
 
-    def __init__(self, cone_angle=10.0, **kw):
+    def __init__(self, cone_angle=10.0, cos_exponent=0.0, **kw):
         super().__init__(**kw)
-        self.cone_angle = float(cone_angle)
+        self.cone_angle, self.cos_exponent = float(cone_angle), float(cos_exponent)
 
     def local_rays(self, n, rng):
-        D = _cone_dirs(n, self.cone_angle, rng, self.sampling)
+        D = _cone_dirs(n, self.cone_angle, rng, self.sampling, self.cos_exponent)
         return np.zeros_like(D), D
 
 
@@ -684,18 +852,20 @@ def _area_points(n, rng, sampling, ellipse):
 
 
 class _AreaSource(Source):
-    params = (("half_x", "X half width"), ("half_y", "Y half width"), ("cone_angle", "Divergence half-angle (deg)"))
+    params = (("half_x", "X half width"), ("half_y", "Y half width"), ("cone_angle", "Divergence half-angle (deg)"),
+              ("cos_exponent", "Cosine exponent (1 = Lambertian)"))
     ellipse = True
 
-    def __init__(self, half_x=5.0, half_y=5.0, cone_angle=0.0, **kw):
+    def __init__(self, half_x=5.0, half_y=5.0, cone_angle=0.0, cos_exponent=0.0, **kw):
         super().__init__(**kw)
         self.half_x, self.half_y, self.cone_angle = float(half_x), float(half_y), float(cone_angle)
+        self.cos_exponent = float(cos_exponent)
 
     def local_rays(self, n, rng):
         u, v = _area_points(n, rng, self.sampling, self.ellipse)
         P = np.stack([u * self.half_x, v * self.half_y, np.zeros_like(u)], axis=1)
         if self.cone_angle > 0:
-            D = _cone_dirs(len(P), self.cone_angle, rng, "random")
+            D = _cone_dirs(len(P), self.cone_angle, rng, "random", self.cos_exponent)
         else:
             D = np.tile([0.0, 0.0, 1.0], (len(P), 1))
         return P, D

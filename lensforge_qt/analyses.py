@@ -827,3 +827,113 @@ register(AnalysisSpec("ghost_layout", "Ghost Ray Layout", "Stray Light", _ghost_
                                maximum=999),
                        Setting("j", "Second reflection at surface", "int", 0, minimum=0, maximum=999),
                        FIELD, WAVE, Setting("n_rays", "Rays", "int", 7, minimum=1, maximum=101)]))
+
+
+# ---------------------------------------------------------------------------
+# Non-sequential (the lens's scene, edited in the Non-Sequential Component Editor)
+# ---------------------------------------------------------------------------
+
+def _ns_trace(system):
+    from .ns_table import trace
+    return trace(getattr(system, "nonseq", None), system.library)
+
+
+def _ns_rays(v):
+    """Setting value -> the ``rays`` selection of lensforge.nonseq ("all", "direct", "ghost" or a count)."""
+    v = str(v)
+    return int(v) if v.isdigit() else v
+
+
+def _ns_det(result, k):
+    """Setting value (object number, 0 = first detector) -> detector object index."""
+    dets = [d.object_index for d in result.detectors]
+    if not dets:
+        raise ValueError("The scene has no detector: add a Detector Rectangle in the Non-Sequential Component Editor.")
+    if not k:
+        return dets[0]
+    if int(k) - 1 not in dets:
+        raise ValueError(f"Object {int(k)} is not a detector (detectors: {', '.join(str(d + 1) for d in dets)}).")
+    return int(k) - 1
+
+
+def _ns_path(result, opts):
+    k = int(opts.get("path", 0) or 0)
+    if not k:
+        return None
+    paths = result.paths(_ns_det(result, opts.get("detector", 0)))
+    if k > len(paths):
+        raise ValueError(f"There are only {len(paths)} ray paths to this detector (Ray Path Analysis lists them).")
+    return paths[k - 1]
+
+
+NS_RAYS = Setting("rays", "Rays", "choice", "all",
+                  [("All", "all"), ("Direct (no reflection)", "direct"), ("Ghosts (2+ reflections)", "ghost"),
+                   ("1 reflection", "1"), ("2 reflections", "2"), ("3 reflections", "3")], plot_only=True)
+NS_COLOR = Setting("color_by", "Color by", "choice", "reflections",
+                   [("Reflections", "reflections"), ("Source", "source"), ("Wavelength", "wavelength"),
+                    ("Power", "power")], plot_only=True)
+NS_PATH = Setting("path", "Path (0 = all; k = k-th brightest)", "int", 0, minimum=0, maximum=9999, plot_only=True)
+NS_DET = Setting("detector", "Detector (object #, 0 = first)", "int", 0, minimum=0, maximum=9999, plot_only=True)
+NS_MAX = Setting("max_segments", "Segments drawn", "choice", 4000,
+                 [("1000", 1000), ("4000", 4000), ("10000", 10000), ("30000", 30000)], plot_only=True)
+
+
+def _ns_layout_plot(fig, r, opts, system):
+    P.ns_layout(r, fig.add_subplot(111), plane=opts.get("plane", "y"), color_by=opts.get("color_by", "reflections"),
+                rays=_ns_rays(opts.get("rays", "all")), path=_ns_path(r, opts),
+                max_segments=int(opts.get("max_segments", 4000)))
+
+
+def _ns_layout_3d_plot(fig, r, opts, system):
+    P.ns_layout_3d(r, fig.add_subplot(111, projection="3d"), elevation=opts.get("elevation", 20.0),
+                   azimuth=opts.get("azimuth", -60.0), color_by=opts.get("color_by", "reflections"),
+                   rays=_ns_rays(opts.get("rays", "all")), path=_ns_path(r, opts),
+                   max_segments=int(opts.get("max_segments", 4000)))
+
+
+def _ns_detector_plot(fig, r, opts, system):
+    k = _ns_det(r, opts.get("detector", 0))
+    sel = {}
+    if int(opts.get("source", 0) or 0):
+        sel["source"] = int(opts["source"]) - 1
+    P.ns_detector(r, k, fig.add_subplot(111), rays=_ns_rays(opts.get("rays", "all")), log=bool(opts.get("log")),
+                  show=opts.get("show", "irradiance"), **sel)
+
+
+def _ns_paths_text(system, detector=0, rays="all", max_paths=25):
+    from .ns_table import paths_report
+    r = _ns_trace(system)
+    det = None if not detector else _ns_det(r, detector)
+    return paths_report(r, det, _ns_rays(rays), int(max_paths))
+
+
+def _ns_report_text(system):
+    from .ns_table import trace_report
+    return trace_report(_ns_trace(system))
+
+
+register(AnalysisSpec("ns_layout", "NS Layout", "Non-Sequential", _ns_trace, _ns_layout_plot,
+                      [Setting("plane", "Plane", "choice", "y", [("YZ", "y"), ("XZ", "x")], plot_only=True),
+                       NS_COLOR, NS_RAYS, NS_PATH, NS_DET, NS_MAX], zoomable=True))
+register(AnalysisSpec("ns_layout_3d", "NS 3D Layout", "Non-Sequential", _ns_trace, _ns_layout_3d_plot,
+                      [Setting("elevation", "Elevation (deg)", "float", 20.0, minimum=-90, maximum=90, plot_only=True),
+                       Setting("azimuth", "Azimuth (deg)", "float", -60.0, minimum=-360, maximum=360, plot_only=True),
+                       NS_COLOR, NS_RAYS, NS_PATH, NS_DET,
+                       Setting("max_segments", "Segments drawn", "choice", 1000,
+                               [("300", 300), ("1000", 1000), ("4000", 4000)], plot_only=True)]))
+register(AnalysisSpec("ns_detector", "Detector Viewer", "Non-Sequential", _ns_trace, _ns_detector_plot,
+                      [NS_DET,
+                       Setting("show", "Show", "choice", "irradiance",
+                               [("Irradiance", "irradiance"), ("True color", "color"),
+                                ("Cross-section X (row y = 0)", "cross_x"),
+                                ("Cross-section Y (column x = 0)", "cross_y"),
+                                ("Angle space (direction cosines)", "angle")], plot_only=True),
+                       NS_RAYS,
+                       Setting("source", "Source (0 = all)", "int", 0, minimum=0, maximum=9999, plot_only=True),
+                       Setting("log", "Log scale", "bool", False, plot_only=True)]))
+register(AnalysisSpec("ns_paths", "Ray Path Analysis", "Non-Sequential", _ns_paths_text, None,
+                      [Setting("detector", "Detector (object #, 0 = every detector)", "int", 0, minimum=0,
+                               maximum=9999),
+                       Setting("rays", "Rays", "choice", "all", NS_RAYS.choices),
+                       Setting("max_paths", "Paths listed", "int", 25, minimum=1, maximum=1000)]))
+register(AnalysisSpec("ns_report", "NS Trace Report", "Non-Sequential", _ns_report_text, None, []))

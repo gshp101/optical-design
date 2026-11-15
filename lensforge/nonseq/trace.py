@@ -29,6 +29,9 @@ REFRACT, REFLECT, TIR, MIRROR, ABSORBED, DETECTED, ESCAPED, CUTOFF, PASSED = ran
 EVENT_NAMES = {REFRACT: "refracted", REFLECT: "split reflection", TIR: "total internal reflection",
                MIRROR: "mirror", ABSORBED: "absorbed", DETECTED: "detected", ESCAPED: "escaped",
                CUTOFF: "stopped (segments or intensity limit)", PASSED: "passed through"}
+#: one-letter codes of the events in ray-path strings (:meth:`NSTraceResult.paths`)
+EVENT_CODES = {REFRACT: "T", REFLECT: "R", TIR: "X", MIRROR: "M", ABSORBED: "A", DETECTED: "D", ESCAPED: "E",
+               CUTOFF: "C", PASSED: "P"}
 
 
 def _fresnel_R(n1, n2, cos_i):
@@ -118,8 +121,10 @@ class NSTraceResult:
 
     ``segments`` holds one row per straight ray segment: ``start``, ``end``
     (global), ``power`` carried, ``ray`` / ``parent`` ids, ``source``,
-    ``wavelength``, ``n_reflections``, the ``object`` hit at the end (-1 none)
-    and the ``event`` there (see ``EVENT_NAMES``).
+    ``wavelength``, ``n_reflections``, the ``object`` hit at the end (-1 none),
+    its ``face`` (index into ``object.faces()``), the ``event`` there (see
+    ``EVENT_NAMES``) and the trace ``step`` it was made in.  ``system`` is the
+    traced scene with every pose made global (see ``NonSequentialSystem.resolved``).
     """
 
     system: object
@@ -129,14 +134,119 @@ class NSTraceResult:
     n_launched: int
     n_rays_total: int
     settings: dict = dc_field(default_factory=dict)
+    scene: object = None  # the scene as given to trace() (``system`` has its poses made global)
+
+    def _det_index(self, det):
+        if self.scene is not None and not any(det is o for o in self.system.objects):
+            for k, o in enumerate(self.scene.objects):
+                if det is o:
+                    return k
+        return self.system.detector_index(det)
 
     def detector(self, det=0) -> DetectorData:
         """Detector data by detector number (0 = first detector), object index or object."""
-        k = self.system.detector_index(det)
+        k = self._det_index(det)
         for d in self.detectors:
             if d.object_index == k:
                 return d
         raise KeyError(det)
+
+    # -- ray paths (ghost / stray-light analysis) ------------------------------------------
+    def _histories(self):
+        """Per ray id: its full history as a list of (step, segment index) from its source on."""
+        if getattr(self, "_hist", None) is not None:
+            return self._hist
+        seg = self.segments
+        order = np.lexsort((np.arange(len(seg["ray"])), seg["step"], seg["ray"]))
+        rays = seg["ray"][order]
+        cut = np.flatnonzero(np.diff(rays)) + 1
+        own = {int(seg["ray"][g[0]]): g for g in (order[i:j] for i, j in zip(np.r_[0, cut], np.r_[cut, len(order)]))
+               if len(g)}
+        self._own, self._hist = own, {}
+        return self._hist
+
+    def history(self, ray: int):
+        """Segment indices (in order) that a ray and its ancestors travelled, from the source to the
+        ray's last segment.  A split-off (reflected) ray inherits its parent's path up to the split."""
+        hist = self._histories()
+        if ray in hist:
+            return hist[ray]
+        seg = self.segments
+        mine = self._own.get(ray, np.zeros(0, dtype=int))
+        out = []
+        if len(mine):
+            parent = int(seg["parent"][mine[0]])
+            if parent >= 0:
+                born = int(seg["step"][mine[0]])
+                out = [i for i in self.history(parent) if seg["step"][i] < born]
+        out = out + [int(i) for i in mine]
+        hist[ray] = out
+        return out
+
+    def paths(self, det=None, rays="all", max_paths=None):
+        """Distinct ray paths that end on a detector (``det``: detector number, object index or object;
+        None = every detector), brightest first.
+
+        Each path is a dict: ``label`` ("S -> 1 front T -> 2 back R -> ... -> 4 D"), ``steps`` (list of
+        (object index, face name, event code), codes in :data:`EVENT_CODES`; "R" marks a Fresnel
+        reflection, "X" total internal reflection), ``power`` arriving, ``fraction`` of the selected
+        detector power, ``rays`` (hits), ``n_reflections`` and ``segments`` (indices of every
+        segment of the path, for drawing it).  ``rays`` filters by reflection count as
+        :meth:`DetectorData.select` does.
+        """
+        seg = self.segments
+        ev, obj = seg["event"], seg["object"]
+        dets = ([self._det_index(det)] if det is not None
+                else [k for k, o in enumerate(self.system.objects) if o.is_detector])
+        end = np.flatnonzero(np.isin(obj, dets) & np.isin(ev, (DETECTED, PASSED)))
+        nr = seg["n_reflections"][end]
+        if rays == "direct":
+            end = end[nr == 0]
+        elif rays == "ghost":
+            end = end[nr >= 2]
+        elif isinstance(rays, (int, np.integer)):
+            end = end[nr == rays]
+        elif rays != "all":
+            raise ValueError("rays must be 'all', 'direct', 'ghost' or a number of reflections")
+        names = {}
+
+        def face_name(k, f):
+            if k not in names:
+                try:
+                    names[k] = [fc.name for fc in self.system.objects[k].faces()]
+                except Exception:  # noqa: BLE001
+                    names[k] = []
+            return names[k][f] if 0 <= f < len(names[k]) else str(f)
+
+        groups = {}
+        for i in end:
+            h = self.history(int(seg["ray"][i]))
+            h = h[:h.index(int(i)) + 1] if int(i) in h else h
+            steps = []
+            for n, j in enumerate(h):
+                k = int(obj[j])
+                if k < 0:
+                    continue
+                code = EVENT_CODES[int(ev[j])]
+                # a split-off ray continues from its parent's REFRACT segment as a reflection
+                if code == "T" and n + 1 < len(h) and seg["ray"][h[n + 1]] != seg["ray"][j]:
+                    code = "R"
+                steps.append((k, face_name(k, int(seg["face"][j])), code))
+            key = tuple(steps)
+            g = groups.setdefault(key, {"power": 0.0, "rays": 0, "segments": set()})
+            g["power"] += float(seg["power"][i])
+            g["rays"] += 1
+            g["segments"].update(h)
+        total = sum(g["power"] for g in groups.values()) or 1.0
+        out = []
+        for key, g in groups.items():
+            label = " -> ".join(["S"] + [f"{k + 1} {fn} {c}" if c not in ("D", "P") else f"{k + 1} {c}"
+                                         for k, fn, c in key])
+            out.append({"label": label, "steps": list(key), "power": g["power"], "fraction": g["power"] / total,
+                        "rays": g["rays"], "n_reflections": sum(c == "R" for _, _, c in key),
+                        "segments": np.array(sorted(g["segments"]), dtype=int)})
+        out.sort(key=lambda p: -p["power"])
+        return out[:max_paths] if max_paths else out
 
     def power_by_event(self):
         ev = self.segments["event"]
@@ -195,6 +305,7 @@ def trace(system, split: bool = False, fresnel: bool = True, min_relative_intens
     ``rays``: optional (P, D, power, wavelength_um) to launch instead of the
     sources (P, D global (N, 3); power (N,) or scalar; one wavelength or (N,)).
     """
+    scene, system = system, system.resolved()  # Ref Object placements -> global poses
     objs = system.objects
     if rays is not None:
         P, D, pw, wl_um = rays
@@ -233,7 +344,9 @@ def trace(system, split: bool = False, fresnel: bool = True, min_relative_intens
     next_id = N
 
     seg = {k: [] for k in ("start", "end", "power", "ray", "parent", "source", "wavelength", "n_reflections",
-                           "object", "event")}
+                           "object", "face", "event", "step")}
+    step = 0
+    face_hit = np.zeros(0, dtype=int)
     dets = {k: {f: [] for f in ("x", "y", "power", "n_reflections", "n_tir", "wavelength", "source", "direction")}
             for k, o in enumerate(objs) if o.is_detector}
 
@@ -251,10 +364,12 @@ def trace(system, split: bool = False, fresnel: bool = True, min_relative_intens
         seg["wavelength"].append(wls_arr[wi[mask]])
         seg["n_reflections"].append(nref[mask])
         seg["object"].append(np.broadcast_to(obj, P.shape[:1])[mask] if np.ndim(obj) else np.full(mask.sum(), obj))
+        seg["face"].append(np.where(seg["object"][-1] >= 0, face_hit[mask], -1))
         seg["event"].append(np.full(mask.sum(), event))
+        seg["step"].append(np.full(mask.sum(), step))
 
     total_rays = N
-    for _ in range(100000):
+    for step in range(100000):
         if len(P) == 0:
             break
         M = len(objs)
@@ -271,6 +386,7 @@ def trace(system, split: bool = False, fresnel: bool = True, min_relative_intens
                 F[better, k] = f
         k_hit = np.argmin(T, axis=1)
         t_hit = T[np.arange(len(P)), k_hit]
+        face_hit = F[np.arange(len(P)), k_hit] if M else np.zeros(len(P), dtype=int)
         hit = np.isfinite(t_hit)
         G = P + np.where(hit, t_hit, L_esc)[:, None] * D
 
@@ -439,7 +555,7 @@ def trace(system, split: bool = False, fresnel: bool = True, min_relative_intens
         return np.concatenate(v) if v else np.zeros(shape)
 
     segments = {k: cat(v, (0, 3) if k in ("start", "end") else (0,)) for k, v in seg.items()}
-    for k in ("ray", "parent", "source", "n_reflections", "object", "event"):
+    for k in ("ray", "parent", "source", "n_reflections", "object", "face", "event", "step"):
         segments[k] = segments[k].astype(int)
     det_out = []
     for k, d in dets.items():
@@ -449,4 +565,4 @@ def trace(system, split: bool = False, fresnel: bool = True, min_relative_intens
                                     cat(d["source"]).astype(int), cat(d["direction"], (0, 3))))
     return NSTraceResult(system, segments, det_out, launched, N, total_rays,
                          {"split": split, "fresnel": fresnel, "min_relative_intensity": min_relative_intensity,
-                          "max_segments": max_segments, "seed": seed})
+                          "max_segments": max_segments, "seed": seed}, scene)

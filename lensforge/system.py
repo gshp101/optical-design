@@ -77,6 +77,8 @@ class OpticalSystem:
         self.ray_aiming = "paraxial"  # or "real"
         self.notes = ""
         self.multiconfig = None  # lensforge.multiconfig.MultiConfig, or None for a single configuration
+        # lensforge.nonseq.NonSequentialSystem kept with the lens (the Non-Sequential Component Editor's scene)
+        self.nonseq = None
 
     # ------------------------------------------------------------------
     # Construction helpers
@@ -349,7 +351,12 @@ class OpticalSystem:
             "surfaces": surfs,
             **self._multiconfig_dict(),
             **self._optimization_dict(),
+            **self._nonseq_dict(),
         }
+
+    def _nonseq_dict(self) -> dict:
+        ns = getattr(self, "nonseq", None)
+        return {} if ns is None else {"nonseq": ns.to_json_dict()}
 
     def _multiconfig_dict(self) -> dict:
         mc = getattr(self, "multiconfig", None)
@@ -392,6 +399,9 @@ class OpticalSystem:
             from .multiconfig import MultiConfig
             sys.multiconfig = MultiConfig.from_dict(d["multiconfig"])
             sys.multiconfig.apply(sys, solves=False)  # the stored current column wins over the surface data
+        if d.get("nonseq"):
+            from .nonseq import NonSequentialSystem
+            sys.nonseq = NonSequentialSystem.from_dict(d["nonseq"], sys.library)
         if d.get("optimization"):
             from .optimize import MeritFunction, VariableSet, solve_from_dict, variable_from_dict
             o = d["optimization"]

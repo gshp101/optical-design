@@ -78,7 +78,7 @@ def menu_tree() -> List[dict]:
             _item("Python Shell", "F8"), SEP,
             _item("Merit Function Editor", "F6"), _item("Multi-Configuration Editor", "F7"),
             _item("Next Configuration", "Ctrl+]"), _item("Previous Configuration", "Ctrl+["),
-            _sub("Non-Sequential", [_item("Non-Sequential Editor", "Ctrl+Shift+N"),
+            _sub("Non-Sequential", [_item("Non-Sequential Component Editor", "Ctrl+Shift+N"),
                                     _item("Convert Lens to Non-Sequential")]),
             _sub("Variables and Solves", [_item("Make All Curvatures Variable"), _item("Make All Air Spaces Variable"),
                                           _item("Remove All Variables"), _item("Remove All Solves")]),
@@ -169,19 +169,20 @@ WEB_HELP: Dict[str, Tuple[str, str]] = {
         "(lensforge.optimize) and `np` (NumPy) are defined. Changes the script makes to `lens` become one "
         "undoable edit; print() output appears below. Variables you define stay for the next run. Ctrl+Enter "
         "runs the script."),
-    "Tools > Non-Sequential > Non-Sequential Editor": (
-        "Build and trace a non-sequential scene (objects, sources, detectors).",
-        "Opens the Non-Sequential Editor window: a table of objects (lenses, spheres, boxes, rods, mirrors, "
-        "annuli, rectangles, detectors) and a table of sources (point, ellipse, rectangle), each with a "
-        "position, tilts and parameters. Trace (F5 in the window) follows every ray, splitting it at "
-        "refracting faces when Split rays is on (ghosts and stray light), and shows the rays and the "
-        "irradiance on a detector. Scenes are saved in this browser's storage and can be downloaded or "
-        "loaded from .ns.json files (scripting: lensforge.nonseq)."),
+    "Tools > Non-Sequential > Non-Sequential Component Editor": (
+        qt_lookup("Tools > Non-Sequential > Non-Sequential Component Editor")[0],
+        qt_lookup("Tools > Non-Sequential > Non-Sequential Component Editor")[1].replace(
+            "Import Scene and Export Scene (.ns.json files)",
+            "Import Scene (opens a .ns.json file from your computer) and Export Scene (downloads the scene as a "
+            ".ns.json file)").replace("Ctrl+Up / Ctrl+Down", "Alt+Up / Alt+Down in the editor").replace(
+            "(in the desktop app you can also drag the plot to rotate it)", "")
+        + " The scene is stored in this browser together with the lens (File &gt; Save) and goes into the "
+          "lens file that File &gt; Export to Disk downloads."),
     "Examples > Browse Examples": (
         "Open one of the example lenses that come with LensForge.",
         "The Examples menu lists every lens file of the examples folder, grouped by subfolder: the lenses "
         "written by the example scripts (Cooke triplet, scripted singlet, grating demo, spot size merit, "
-        "hyperspectral imager), the approximate Arducam LK004 lens kit models, and the prescriptions from "
+        "hyperspectral imager), the non-sequential scenes (Non-Sequential: achromat ghosts, Cassegrain, ball lens, dispersing prism, retroreflecting prism, LED reflector, light pipe, periscope; they open with the Non-Sequential Component Editor), the approximate Arducam LK004 lens kit models, and the prescriptions from "
         "Warren Smith's <i>Modern Lens Design</i> by chapter (Modern Lens Design (Smith) &gt; Chapter 7 - "
         "Eyepieces and Magnifiers &gt; Figure 7.1 ...). The examples are part of this web site, so they load "
         "without a server or an internet search. Pick a lens to open it; hovering an entry shows its file. "
@@ -208,7 +209,7 @@ POPOUT_HELP = (
     "in its tab. &#8601; Return to Main Tab, or closing the tab, puts it back. Reloading or closing the main "
     "tab closes its pop-out tabs. If nothing opens, allow pop-ups for this site.</p>")
 POPOUT_COMMANDS = ("Tools > Merit Function Editor", "Tools > Multi-Configuration Editor", "Tools > Python Shell",
-                   "Tools > Optimization", "Tools > Tolerancing", "Tools > Non-Sequential > Non-Sequential Editor",
+                   "Tools > Optimization", "Tools > Tolerancing", "Tools > Non-Sequential > Non-Sequential Component Editor",
                    "Edit > Undo History", "View > Undo History", "Help > Help Contents")
 
 ANALYSIS_WINDOW_COMMANDS = ("Analysis > Tab All Analysis Windows", "Analysis > Close All Analysis Windows")

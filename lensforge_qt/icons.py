@@ -11,7 +11,7 @@ from .icon_svgs import APP_ICON, ns_svg, svg
 
 
 def ns_icon(key: str) -> QIcon:
-    """Icon of a Non-Sequential Editor toolbar button."""
+    """Icon of a Non-Sequential Component Editor toolbar button."""
     markup = ns_svg(key)
     ic = QIcon()
     for size in (16, 24, 32, 48):

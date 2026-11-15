@@ -208,49 +208,64 @@ HELP = {
         "explain every column, how weights work and how to balance them, the field and pupil coordinates "
         "Hx, Hy, Px, Py used by ray operands, every operand with its parameters, and a worked example that "
         "minimises the RMS spot size (File &gt; Sample Lenses &gt; Spot Size Merit Example)."),
-    "Tools > Non-Sequential > Non-Sequential Editor": (
-        "Open the non-sequential editor: objects anywhere in 3-D, rays in any order, ray splitting.",
-        "Opens the Non-Sequential Editor window. A non-sequential scene holds <b>objects</b> placed anywhere "
-        "(position X, Y, Z and tilts about the local X, then Y, then Z axes, in degrees) and <b>sources</b>. "
-        "Rays go to whichever object they meet next, in any order, so stray light, ghosts, light pipes, prisms "
-        "and fold mirrors are traced as they really behave.<br><br>"
-        "<b>Objects</b> (Add Object button): Standard Lens (two faces and a cylindrical edge; Parameters "
-        "radius1, conic1, thickness, radius2, conic2, semi_diameter), Sphere (radius), Rectangular Volume "
-        "(half_x, half_y, length), Cylinder Volume (radius, length), Standard Surface (one mirror or absorbing "
-        "surface: radius, conic, semi_diameter, inner_radius), Annulus (flat ring: stops and baffles), "
-        "Rectangle (fold mirror or baffle) and Detector Rectangle (half_x, half_y, nx, ny pixels, transparent "
-        "1/0). Volumes take a glass in Material; surfaces take MIRROR or ABSORB. Coating R sets the "
-        "reflectance of a volume's faces (empty = uncoated Fresnel). Edit the Parameters cell as "
-        "name=value pairs; hovering it lists the names. Volumes must not overlap, except that touching faces "
-        "(a cemented doublet) pass light straight from one glass to the other.<br><br>"
-        "<b>Sources</b> (Add Source button): Source Point (cone_angle), Source Ellipse and Source Rectangle "
-        "(half_x, half_y, divergence cone_angle; collimated at 0). Rays leave along the source's local +z "
-        "axis; the power is shared evenly by its rays and wavelengths. Sampling is random (Monte Carlo) or "
-        "grid.<br><br>"
-        "<b>Trace</b> (F5) traces every source. <b>Split rays</b> follows both the reflected and the "
-        "transmitted part at each refracting face (unpolarised Fresnel or the coating reflectance); split rays "
-        "weaker than <b>Min. intensity</b> times their source ray are dropped, and no ray has more than "
-        "<b>Max. segments</b>. Total internal reflection is always followed. Without splitting, rays take the "
-        "transmitted path and lose the reflected power when <b>Fresnel losses</b> is on. The left plot shows "
-        "the objects and rays (blue direct, green one reflection, red two or more: ghosts); the right plot "
-        "shows the irradiance on the chosen detector, filtered by Show (all, direct, ghosts, or an exact "
-        "number of reflections). The text below gives where the power ended (absorbed, detected, escaped) "
-        "and the power on each detector.<br><br>"
-        "The toolbar also has New Scene, Open Scene, Save Scene (.ns.json), From Current Lens (converts the "
-        "lens in the main window) and Delete Row. From Python: <code>from lensforge import nonseq as ns</code>; "
-        "<code>scene = ns.from_sequential(lens)</code>; <code>r = scene.trace(split=True)</code>; "
-        "<code>r.detector(0).image('ghost')</code>; plots with <code>lensforge.plot.ns_layout</code> and "
-        "<code>lensforge.plot.ns_detector</code>."),
+    "Tools > Non-Sequential > Non-Sequential Component Editor": (
+        "Edit the lens's non-sequential scene: objects anywhere in 3-D, sources, detectors and the ray-trace settings.",
+        "Opens the Non-Sequential Component Editor, laid out like Zemax's NSC Editor. A non-sequential scene "
+        "holds <b>objects</b> placed anywhere and <b>sources</b>; rays go to whichever object they meet next, in "
+        "any order, so stray light, ghosts, light pipes, prisms, reflectors and fold mirrors are traced as they "
+        "really behave. The scene is kept <b>with the lens</b>: it is saved in the lens file, every edit can be "
+        "undone with Edit &gt; Undo, and a lens file that has a scene opens with this editor.<br><br>"
+        "<b>Columns.</b> Type (pick another type from the cell's list: position, comment and Ref are kept), "
+        "Comment, <b>Ref</b> (Ref Object: the number of the object whose coordinate frame the position and "
+        "tilts are given in, 0 = global; move a lens and everything placed on it moves too), X, Y, Z, "
+        "Tilt X, Tilt Y, Tilt Z (degrees, about the local X, then Y, then Z axis), then Material and Coating R "
+        "for objects, or Rays, Power, Wavelengths and Sampling for sources, and <b>Par 1</b>, Par 2 ... whose "
+        "meaning depends on the type: select a row and the column headers show its parameter names (a cell's "
+        "tooltip names it too). Grey cells do not apply to the row. A Material cell turns red when no loaded "
+        "catalog has the glass; right-click it for Choose Material.<br><br>"
+        "<b>Objects</b> (Add Object): Standard Lens (Radius 1, Conic 1, Thickness, Radius 2, Conic 2, "
+        "Semi-diameter), Sphere (Radius), Rectangular Volume (X and Y half widths, Length), Cylinder Volume "
+        "(Radius, Length: light pipes), Prism (Base length, Apex angle, X half width: 60 deg for a dispersing "
+        "prism, 90 deg for a right-angle prism), Standard Surface (one mirror or absorbing surface: Radius, "
+        "Conic, Semi-diameter, Inner radius), Annulus (flat ring: stops and baffles), Rectangle (fold mirror "
+        "or baffle) and Detector Rectangle (half widths, X and Y pixels, Transparent 1/0). Volumes take a "
+        "glass; surfaces take MIRROR or ABSORB. Coating R sets the reflectance of a volume's faces (empty = "
+        "uncoated Fresnel). Volumes must not overlap, except that touching faces (a cemented doublet) pass "
+        "light straight from one glass to the other.<br><br>"
+        "<b>Sources</b> (Add Source): Source Point (cone half-angle), Source Ellipse and Source Rectangle "
+        "(half widths, divergence half-angle; collimated at 0); all have a <b>cosine exponent</b> (0 = uniform "
+        "in angle, 1 = Lambertian like an LED). Rays leave along the source's local +z axis; the power is "
+        "shared evenly by its rays and wavelengths. Sampling is random (Monte Carlo, seeded) or grid.<br><br>"
+        "<b>Ray Trace Control</b> (saved with the scene): <b>Split rays</b> follows both the reflected and the "
+        "transmitted part at each refracting face (unpolarised Fresnel or the coating reflectance), which is "
+        "what shows ghosts; split rays weaker than <b>Min. relative intensity</b> times their source ray are "
+        "dropped, and no ray has more than <b>Max. segments</b>. Total internal reflection is always followed. "
+        "Without splitting, rays take the transmitted path and lose the reflected power when <b>Fresnel "
+        "losses</b> is on. <b>Trace</b> (F5) traces every source and shows where the power went and the "
+        "statistics of each detector.<br><br>"
+        "<b>Analyses</b> (buttons here, or Analysis &gt; Non-Sequential): NS Layout and NS 3D Layout draw the "
+        "objects and rays, the Detector Viewer shows a detector (irradiance, true colour, cross-sections, "
+        "angle space), Ray Path Analysis lists the brightest ray paths to a detector (the ghost and "
+        "stray-light paths) and NS Trace Report gives the numbers. They trace the scene themselves and "
+        "update after every edit; windows of one scene share the trace.<br><br>"
+        "The toolbar also has New Scene, Import Scene and Export Scene (.ns.json files), From Current Lens "
+        "(converts the sequential lens), Duplicate Row, Move Up and Move Down (Ctrl+Up / Ctrl+Down; Ref numbers "
+        "follow the moves) and Delete Row. Examples &gt; Non-Sequential has ready-made scenes. From Python: "
+        "<code>from lensforge import nonseq as ns</code>; <code>lens.nonseq = ns.from_sequential(lens)</code>; "
+        "<code>r = lens.nonseq.trace(split=True)</code>; <code>r.detector(0).image('ghost')</code>; "
+        "<code>r.paths(0)</code>; plots with <code>lensforge.plot.ns_layout</code>, <code>ns_layout_3d</code> "
+        "and <code>ns_detector</code>."),
     "Tools > Non-Sequential > Convert Lens to Non-Sequential": (
-        "Turn the current lens into a non-sequential scene and open it in the Non-Sequential Editor.",
+        "Turn the current lens into its non-sequential scene and show it in the Non-Sequential Component Editor.",
         "Every glass element becomes a Standard Lens object with the exact surface shapes (aspheres, toroids "
         "and freeforms included); cemented groups become touching lenses. Mirrors become mirror surfaces (a "
         "Cassegrain primary gets the central hole the returning beam needs), the stop gets an absorbing "
         "annulus and the image surface a detector. Each field becomes a source that fills the entrance pupil: "
         "collimated for objects at infinity, a point source otherwise. Ideal (paraxial) and phase surfaces "
-        "cannot be converted. The lens itself is not changed. Trace with Split rays on to see the ghosts; "
-        "the two-reflection light matches Analysis > Stray Light > Ghost Image. From Python: "
-        "<code>lensforge.nonseq.from_sequential(lens)</code>."),
+        "cannot be converted. The scene replaces any scene the lens had (Edit &gt; Undo brings it back); the "
+        "sequential lens is not changed. Ray splitting is switched on, so the NS Layout, the Detector Viewer "
+        "and the Ray Path Analysis show the ghosts; the two-reflection light matches Analysis &gt; Stray Light "
+        "&gt; Ghost Image. From Python: <code>lens.nonseq = lensforge.nonseq.from_sequential(lens)</code>."),
     "Tools > Multi-Configuration Editor": (
         "Edit the configurations of the lens: zoom positions, focus settings and other states.",
         "Opens the Multi-Configuration Editor. One lens can hold several <b>configurations</b>, such as the "
@@ -313,7 +328,7 @@ HELP = {
         "Open one of the example lenses shipped with LensForge.",
         "The Examples menu lists every lens file in the examples folder, grouped by subfolder: the "
         "lenses written by the example scripts (Cooke triplet, scripted singlet, grating demo, spot size "
-        "merit, hyperspectral imager), the approximate Arducam LK004 lens kit models, and the prescriptions "
+        "merit, hyperspectral imager), the non-sequential scenes (Non-Sequential: achromat ghosts, Cassegrain, ball lens, dispersing prism, retroreflecting prism, LED reflector, light pipe, periscope; they open with the Non-Sequential Component Editor), the approximate Arducam LK004 lens kit models, and the prescriptions "
         "from Warren Smith's <i>Modern Lens Design</i> by chapter (Modern Lens Design (Smith) &gt; Chapter 7 "
         "- Eyepieces and Magnifiers &gt; Figure 7.1 ...). Pick a lens to open it; hovering an entry shows "
         "its file. Browse Examples... opens the Open dialog in the examples folder instead, to search or "
@@ -372,6 +387,45 @@ _SAMPLING = (' Pupil sampling is the grid across the exit pupil: more points fol
              'refused with a message; use the FFT method for fine sampling.')
 
 ANALYSIS_HELP = {
+    "ns_layout": ("Objects and traced rays of the non-sequential scene, in the YZ or XZ plane.",
+                  "Traces the lens's non-sequential scene (Tools &gt; Non-Sequential &gt; Non-Sequential Component "
+                  "Editor) with its Ray Trace Control settings and draws each object's section and the ray "
+                  "segments, with the object numbers. <b>Color by</b> reflections (blue direct, green one "
+                  "Fresnel reflection, red two or more: ghosts), source, wavelength or power. <b>Rays</b> keeps "
+                  "only direct light, ghosts or an exact number of reflections. <b>Path</b> k draws only the "
+                  "k-th brightest ray path to the <b>Detector</b> (numbered as in the Ray Path Analysis), which "
+                  "shows exactly where a ghost goes. At most <b>Segments drawn</b> are drawn (whole ray paths, "
+                  "picked within each reflection order so faint ghosts stay visible). Mouse wheel zooms. From "
+                  "Python: <code>lensforge.plot.ns_layout(lens.nonseq.trace(), plane='y')</code>."),
+    "ns_layout_3d": ("3-D wireframe of the non-sequential scene and its rays.",
+                     "Draws every object as a wireframe (both sections plus rims and edges) and the traced ray "
+                     "segments in 3-D, z across. Elevation and Azimuth turn the view (in the desktop app you can "
+                     "also drag the plot to rotate it). Color by, Rays and Path work as in the NS Layout. From "
+                     "Python: <code>lensforge.plot.ns_layout_3d(result)</code>."),
+    "ns_detector": ("What a detector of the non-sequential scene received.",
+                    "The Detector Viewer: <b>Irradiance</b> (power per area in each pixel), <b>True color</b> (the "
+                    "pixels coloured by the wavelengths that reached them: dispersion), <b>Cross-section</b> X or "
+                    "Y (the row through y = 0 or the column through x = 0) and <b>Angle space</b> (power against "
+                    "the direction cosines of the arriving rays: the radiant intensity pattern). Detector is "
+                    "the object number of the detector (0 = the first one); Rays keeps all light, direct light, "
+                    "ghosts or an exact number of reflections; Source picks one source (0 = all); Log scale "
+                    "shows faint ghosts and stray light. The title gives the total power. The NS Trace Report "
+                    "lists hits, power, peak irradiance, centroid and RMS radius. From Python: "
+                    "<code>r.detector(0).image('ghost')</code>, <code>lensforge.plot.ns_detector(r, 0)</code>."),
+    "ns_paths": ("The brightest ray paths to a detector: ghost and stray-light analysis.",
+                 "Groups every ray that reached the detector (0 = every detector) by the sequence of objects, "
+                 "faces and events it went through and lists the paths by power, with their share of the "
+                 "detector power, the number of rays and of Fresnel reflections. Events: T transmitted, R "
+                 "Fresnel (partial) reflection, X total internal reflection, M mirror, D detected, P passed a "
+                 "transparent detector; for example <i>S -&gt; 1 front T -&gt; 2 back R -&gt; 1 front R -&gt; "
+                 "... -&gt; 4 D</i> is a ghost that reflected at the back of object 2 and then at the front of "
+                 "object 1. Turn on Split rays in the editor's Ray Trace Control to see ghosts. Set Path in the "
+                 "NS Layout to a path's number to draw it. From Python: <code>r.paths(det)</code>."),
+    "ns_report": ("Numbers of the non-sequential trace: where the power went and what each detector got.",
+                  "Rays launched and traced (with split rays), the ray-trace settings, the power that was "
+                  "absorbed, detected, escaped or stopped, and for each detector the hits, power, peak "
+                  "irradiance, centroid and RMS radius of all light, direct light, one-reflection light and "
+                  "ghosts. From Python: <code>print(lens.nonseq.trace().summary())</code>."),
     "ghost_focus": ("Table of every two-bounce ghost: where it focuses, how big and how bright it is.",
                     "The Ghost Focus Generator. For every pair of refracting surfaces i > j it follows the light "
                     "that reflects at surface i, goes back, reflects again at surface j and then reaches the "

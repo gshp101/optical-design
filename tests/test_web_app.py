@@ -115,6 +115,53 @@ def test_session_runs_analyses():
     assert "text" in txt and "THICKNESS" in txt["text"].upper()
 
 
+def test_session_non_sequential_editor_and_analyses():
+    from lensforge_qt import ns_table as NT
+    s = Session()
+    call(s, "load_sample", name="Cemented Achromat")
+    st = call(s, "state")["result"]
+    assert st["nonseq"]["objects"] == [] and st["nonseq"]["trace"]["split"] is False
+    info = call(s, "ns_info")["result"]
+    assert info["obj_cols"] == NT.OBJ_COLS and len(info["buttons"]) == len(NT.BUTTONS)
+    out = call(s, "ns_from_lens")
+    ns_st = out["state"]["nonseq"]
+    assert [r["kind"] for r in ns_st["objects"]] == ["STANDARD_LENS", "STANDARD_LENS", "ANNULUS", "DETECTOR"]
+    assert ns_st["objects"][0]["labels"][0] == "Radius 1" and ns_st["trace"]["split"] is True
+    assert out["state"]["undo"] == "Convert lens to non-sequential"
+    out = call(s, "ns_set_cell", table="objects", r=3, c=NT.OBJ_PAR0 + 2, text="51")
+    assert out["state"]["nonseq"]["objects"][3]["cells"][NT.OBJ_PAR0 + 2] == "51"
+    args = {"table": "objects", "r": 0, "c": NT.OBJ_PAR0, "text": "x"}
+    bad = json.loads(dispatch("ns_set_cell", json.dumps(args), s))
+    assert "error" in bad
+    r = call(s, "ns_add", kind="PRISM", after=0)["result"]
+    assert r == {"table": "objects", "row": 1}
+    assert call(s, "ns_move", table="objects", r=1, delta=1)["result"]["row"] == 2
+    assert call(s, "ns_duplicate", table="objects", r=2)["result"]["row"] == 3
+    call(s, "ns_delete", table="objects", r=3)
+    call(s, "ns_delete", table="objects", r=2)
+    call(s, "ns_change_type", table="sources", r=0, kind="SOURCE_RECTANGLE")
+    out = call(s, "ns_set_trace", key="max_segments", value=60)
+    assert out["state"]["nonseq"]["trace"]["max_segments"] == 60
+    report = call(s, "ns_trace")["result"]
+    assert "Detector 4 (image)" in report
+    for key in ("ns_layout", "ns_layout_3d", "ns_detector"):
+        assert "png" in call(s, "run_analysis", key=key, width=400, height=300)["result"], key
+    paths = call(s, "run_analysis", key="ns_paths")["result"]["text"]
+    assert "S -> 1 front T" in paths
+    # the scene goes into the lens text, and opening it says so
+    text = call(s, "lens_text")["result"]
+    assert json.loads(text)["nonseq"]["trace_settings"]["max_segments"] == 60
+    scene_text = call(s, "ns_text")["result"]
+    call(s, "ns_new")
+    assert call(s, "state")["result"]["nonseq"]["objects"] == []
+    call(s, "ns_open", text=scene_text, filename="x.ns.json")
+    assert len(call(s, "state")["result"]["nonseq"]["objects"]) == 4
+    call(s, "undo")
+    assert call(s, "state")["result"]["nonseq"]["objects"] == []
+    b = Session()
+    assert call(b, "open_text", text=text, filename="a.lens.json")["result"]["nonseq"] is True
+
+
 def test_session_errors_come_back_as_messages():
     s = Session()
     out = json.loads(dispatch("load_sample", json.dumps({"name": "no such lens"}), s))

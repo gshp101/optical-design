@@ -1,0 +1,127 @@
+{
+  "format": "lensforge-1",
+  "name": "Ball lens (non-sequential)",
+  "units": "mm",
+  "aperture": {
+    "type": "EPD",
+    "value": 10.0
+  },
+  "fields": {
+    "type": "ANGLE",
+    "values": [
+      {
+        "x": 0.0,
+        "y": 0.0,
+        "weight": 1.0,
+        "vdx": 0.0,
+        "vdy": 0.0,
+        "vcx": 0.0,
+        "vcy": 0.0
+      }
+    ]
+  },
+  "wavelengths": {
+    "values": [
+      {
+        "value": 0.5875618,
+        "weight": 1.0
+      }
+    ],
+    "primary": 0
+  },
+  "ray_aiming": "paraxial",
+  "notes": "A 4 mm N-BK7 ball lens focuses a 3 mm collimated beam. The ball's strong spherical aberration shows in the NS Layout (the marginal rays cross well before the paraxial focus where the detector is) and in the Detector Viewer's cross-section. Rays are split, so the Ray Path Analysis also lists the light reflected inside the ball.",
+  "surfaces": [
+    {
+      "type": "STANDARD",
+      "curvature": 0.0,
+      "conic": 0.0,
+      "thickness": "inf",
+      "material": null,
+      "comment": "OBJECT"
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.0,
+      "conic": 0.0,
+      "thickness": 0.0,
+      "material": null,
+      "stop": true
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.0,
+      "conic": 0.0,
+      "thickness": 0.0,
+      "material": null,
+      "comment": "IMAGE"
+    }
+  ],
+  "nonseq": {
+    "format": "lensforge-ns-1",
+    "name": "Ball lens",
+    "units": "mm",
+    "ambient": "AIR",
+    "notes": "A 4 mm N-BK7 ball lens focuses a 3 mm collimated beam. The ball's strong spherical aberration shows in the NS Layout (the marginal rays cross well before the paraxial focus where the detector is) and in the Detector Viewer's cross-section. Rays are split, so the Ray Path Analysis also lists the light reflected inside the ball.",
+    "trace_settings": {
+      "split": true,
+      "fresnel": true,
+      "min_relative_intensity": 0.0001,
+      "max_segments": 100,
+      "seed": 0,
+      "max_rays": 2000000
+    },
+    "objects": [
+      {
+        "type": "SPHERE",
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0,
+        "tilt_x": 0.0,
+        "tilt_y": 0.0,
+        "tilt_z": 0.0,
+        "material": "N-BK7",
+        "comment": "ball lens",
+        "radius": 2.0
+      },
+      {
+        "type": "DETECTOR",
+        "x": 0.0,
+        "y": 0.0,
+        "z": 2.935,
+        "tilt_x": 0.0,
+        "tilt_y": 0.0,
+        "tilt_z": 0.0,
+        "material": null,
+        "comment": "paraxial focus",
+        "half_x": 0.4,
+        "half_y": 0.4,
+        "nx": 101,
+        "ny": 101,
+        "transparent": false
+      }
+    ],
+    "sources": [
+      {
+        "type": "SOURCE_ELLIPSE",
+        "x": 0.0,
+        "y": 0.0,
+        "z": -6.0,
+        "tilt_x": 0.0,
+        "tilt_y": 0.0,
+        "tilt_z": 0.0,
+        "comment": "collimated beam",
+        "n_rays": 3000,
+        "power": 1.0,
+        "wavelengths": [
+          0.5875618
+        ],
+        "sampling": "random",
+        "half_x": 1.5,
+        "half_y": 1.5,
+        "cone_angle": 0.0,
+        "cos_exponent": 0.0
+      }
+    ]
+  }
+}

@@ -135,7 +135,7 @@ ICONS = {
                              '<path d="M6 9l3 3-3 3" stroke="#7fe08a" stroke-width="2"/>'
                              '<path d="M11 16h6" stroke="#ffd54f" stroke-width="2"/>'),
     "Tools > Merit Function Editor": TABLE + f'<path d="M12 12l2 2 5-5" stroke="{GREEN}" stroke-width="2.2"/>',
-    "Tools > Non-Sequential > Non-Sequential Editor": (
+    "Tools > Non-Sequential > Non-Sequential Component Editor": (
         f'<path d="M3 20l5-14 5 9 4-7 4 12" stroke="{RED}" stroke-width="1.4"/>'
         f'<circle cx="8" cy="6" r="2.2" fill="{GLASS}"/><rect x="11" y="13" width="4" height="4" fill="{GLASS}"/>'
         f'<path d="M15 6l2 2" stroke="{GREEN}" stroke-width="2"/>'),
@@ -187,6 +187,23 @@ ICONS = {
 ICONS["View > Undo History"] = ICONS["Edit > Undo History"]  # the same command in two menus
 
 ANALYSIS_ICONS = {
+    "ns_layout": (f'<rect x="15" y="4" width="5" height="16" fill="{GLASS}"/><circle cx="8" cy="12" r="3.2" fill="{GLASS}"/>'
+                  f'<path d="M2 10h3.5l5 1L15 8M2 14h3.5l5-1L15 16" stroke="{RED}" stroke-width="1.1"/>'
+                  f'<path d="M20 5v14" stroke="{ORANGE}" stroke-width="2"/>'),
+    "ns_layout_3d": ('<path d="M4 8l8-4 8 4v9l-8 4-8-4z" fill="#eef6fc"/><path d="M4 8l8 4 8-4M12 12v9"/>'
+                     f'<path d="M3 15l7-2 4 3 7-6" stroke="{RED}" stroke-width="1.3"/>'),
+    "ns_detector": ('<rect x="3" y="3" width="18" height="18" fill="#140f24" stroke="#140f24"/>'
+                    '<circle cx="12" cy="12" r="4.5" fill="#ff9d3a" stroke="none" opacity="0.8"/>'
+                    '<circle cx="12" cy="12" r="2" fill="#fff3c4" stroke="none"/>'
+                    f'<path d="M3 18.5h18" stroke="{ORANGE}" stroke-width="1"/><path d="M3 18.5q9-12 18 0" '
+                    f'stroke="#7fe08a" stroke-width="1.2"/>'),
+    "ns_paths": (f'<circle cx="4" cy="12" r="2" fill="#ffd54f" stroke="{ORANGE}"/>'
+                 '<path d="M9 4v16M15 4v16" stroke-width="2"/>'
+                 f'<path d="M6 12h3l6 0h5" stroke="{GREEN}" stroke-width="1.4"/>'
+                 f'<path d="M6 12h3l6 1.5-6 1.5 6 1.5h5" stroke="{RED}" stroke-width="1"/>'
+                 '<path d="M20 9v8" stroke-width="2"/>'),
+    "ns_report": (PAGE + f'<path d="M8 9h6M8 12h7M8 15h5" stroke="{GREY}"/>'
+                  f'<path d="M7 19l3-2 3 1 4-3" stroke="{RED}" stroke-width="1.3"/>'),
     "ghost_focus": (TABLE + f'<path d="M12 6.5l7 0M12 12l7 0M12 17l7 0" stroke="{PURPLE}" stroke-width="0.9"/>'
                     + f'<circle cx="6" cy="12" r="2.3" fill="{PURPLE}" stroke="{PURPLE}" opacity="0.55"/>'),
     "ghost_image": ('<rect x="3" y="3" width="18" height="18" fill="#1b1b2f" stroke="#1b1b2f"/>'
@@ -338,7 +355,7 @@ def svg(item_id: str) -> Optional[str]:
             f'stroke="{INK}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">{body}</svg>')
 
 
-#: toolbar of the Non-Sequential Editor window (keys of ns_window.BUTTONS)
+#: toolbar of the Non-Sequential Component Editor window (keys of ns_table.BUTTONS)
 NS_ICONS = {
     "new": PAGE + f'<circle cx="12" cy="13" r="2.4" fill="{GLASS}"/>' + plus(17, 18, r=2.6),
     "open": ('<path d="M3 6.5h6l2 2h9v11H3z" fill="#f6d78b"/><path d="M3 19.5l3-8h17l-3 8" fill="#fbe7b4"/>'
@@ -350,6 +367,18 @@ NS_ICONS = {
     "add_source": (f'<circle cx="7" cy="12" r="2.6" fill="#ffd54f" stroke="{ORANGE}"/>'
                    f'<path d="M10.5 12h6M10 8.5l5-3M10 15.5l5 3" stroke="{ORANGE}"/>' + plus(18, 18, r=2.6)),
     "delete": TABLE + cross(16, 15),
+    "duplicate": ('<rect x="3" y="3" width="12" height="12" rx="1" fill="#fff"/>'
+                  f'<rect x="8" y="8" width="12" height="12" rx="1" fill="{GLASS}"/>' + plus(18, 18, r=2.6)),
+    "move_up": TABLE + f'<path d="M15 18V9m-3.5 3.5L15 9l3.5 3.5" stroke="{GREEN}" stroke-width="2"/>',
+    "move_down": TABLE + f'<path d="M15 9v9m-3.5-3.5L15 18l3.5-3.5" stroke="{ORANGE}" stroke-width="2"/>',
+    "layout": (f'<circle cx="9" cy="12" r="4" fill="{GLASS}"/><path d="M19 4v16" stroke="{ORANGE}" stroke-width="2"/>'
+               f'<path d="M2 9h4l6 1 7 2M2 15h4l6-1 7-2" stroke="{RED}" stroke-width="1.2"/>'),
+    "detector": ('<rect x="5" y="3" width="15" height="18" fill="#140f24" stroke="#140f24"/>'
+                 '<circle cx="12.5" cy="12" r="3.5" fill="#ff9d3a" stroke="none"/>'
+                 f'<path d="M1 12h3" stroke="{RED}" stroke-width="1.6"/>'),
+    "paths": (f'<path d="M3 6h18M3 12h18M3 18h18" stroke="{GREY}" stroke-width="0.8"/>'
+              f'<path d="M3 6h7l3 6-3 6h11" stroke="{RED}" stroke-width="1.6"/>'
+              f'<circle cx="13" cy="12" r="1.8" fill="{PURPLE}" stroke="none"/>'),
     "trace": (f'<path d="M2 12h6l5-7 4 14 5-7" stroke="{RED}" stroke-width="1.8"/>'
               f'<circle cx="13" cy="5" r="1.5" fill="{GREEN}" stroke="none"/>'),
     "help": '<circle cx="12" cy="12" r="9" fill="#fff"/>' + letter(12, 16.5, "?", INK, 13),
@@ -357,7 +386,7 @@ NS_ICONS = {
 
 
 def ns_svg(key: str) -> str:
-    """SVG markup of a Non-Sequential Editor toolbar button (keys of ns_window.BUTTONS)."""
+    """SVG markup of a Non-Sequential Component Editor toolbar button (keys of ns_table.BUTTONS)."""
     return ('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" fill="none" '
             f'stroke="{INK}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">{NS_ICONS[key]}</svg>')
 
