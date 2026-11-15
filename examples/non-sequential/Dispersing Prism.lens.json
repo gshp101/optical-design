@@ -1,0 +1,133 @@
+{
+  "format": "lensforge-1",
+  "name": "Dispersing prism (non-sequential)",
+  "units": "mm",
+  "aperture": {
+    "type": "EPD",
+    "value": 10.0
+  },
+  "fields": {
+    "type": "ANGLE",
+    "values": [
+      {
+        "x": 0.0,
+        "y": 0.0,
+        "weight": 1.0,
+        "vdx": 0.0,
+        "vdy": 0.0,
+        "vcx": 0.0,
+        "vcy": 0.0
+      }
+    ]
+  },
+  "wavelengths": {
+    "values": [
+      {
+        "value": 0.5875618,
+        "weight": 1.0
+      }
+    ],
+    "primary": 0
+  },
+  "ray_aiming": "paraxial",
+  "notes": "A 60 degree N-SF11 prism at minimum deviation for 550 nm disperses a narrow white beam (five wavelengths, 450 to 650 nm). Open the Detector Viewer with Show = True color to see the spectrum, and the NS Layout coloured by wavelength. The prism lies with its apex up (Tilt X -90); the source and the detector are tilted along the incoming and the deviated beam.",
+  "surfaces": [
+    {
+      "type": "STANDARD",
+      "curvature": 0.0,
+      "conic": 0.0,
+      "thickness": "inf",
+      "material": null,
+      "comment": "OBJECT"
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.0,
+      "conic": 0.0,
+      "thickness": 0.0,
+      "material": null,
+      "stop": true
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.0,
+      "conic": 0.0,
+      "thickness": 0.0,
+      "material": null,
+      "comment": "IMAGE"
+    }
+  ],
+  "nonseq": {
+    "format": "lensforge-ns-1",
+    "name": "Dispersing prism",
+    "units": "mm",
+    "ambient": "AIR",
+    "notes": "A 60 degree N-SF11 prism at minimum deviation for 550 nm disperses a narrow white beam (five wavelengths, 450 to 650 nm). Open the Detector Viewer with Show = True color to see the spectrum, and the NS Layout coloured by wavelength. The prism lies with its apex up (Tilt X -90); the source and the detector are tilted along the incoming and the deviated beam.",
+    "trace_settings": {
+      "split": false,
+      "fresnel": true,
+      "min_relative_intensity": 1e-06,
+      "max_segments": 100,
+      "seed": 0,
+      "max_rays": 2000000
+    },
+    "objects": [
+      {
+        "type": "PRISM",
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0,
+        "tilt_x": -90.0,
+        "tilt_y": 0.0,
+        "tilt_z": 0.0,
+        "material": "N-SF11",
+        "comment": "60 deg prism",
+        "base": 20.0,
+        "apex_angle": 60.0,
+        "half_x": 6.0
+      },
+      {
+        "type": "DETECTOR",
+        "x": 0.0,
+        "y": -24.5281,
+        "z": 54.9853,
+        "tilt_x": 33.5827,
+        "tilt_y": 0.0,
+        "tilt_z": 0.0,
+        "material": null,
+        "comment": "screen",
+        "half_x": 3.0,
+        "half_y": 6.0,
+        "nx": 61,
+        "ny": 241,
+        "transparent": false
+      }
+    ],
+    "sources": [
+      {
+        "type": "SOURCE_ELLIPSE",
+        "x": 0.0,
+        "y": -7.9339,
+        "z": -29.9927,
+        "tilt_x": -33.5827,
+        "tilt_y": 0.0,
+        "tilt_z": 0.0,
+        "comment": "white beam",
+        "n_rays": 2500,
+        "power": 1.0,
+        "wavelengths": [
+          0.45,
+          0.5,
+          0.55,
+          0.6,
+          0.65
+        ],
+        "sampling": "random",
+        "half_x": 0.4,
+        "half_y": 0.4,
+        "cone_angle": 0.0,
+        "cos_exponent": 0.0
+      }
+    ]
+  }
+}

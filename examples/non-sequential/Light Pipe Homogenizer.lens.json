@@ -1,0 +1,127 @@
+{
+  "format": "lensforge-1",
+  "name": "Light pipe (non-sequential)",
+  "units": "mm",
+  "aperture": {
+    "type": "EPD",
+    "value": 10.0
+  },
+  "fields": {
+    "type": "ANGLE",
+    "values": [
+      {
+        "x": 0.0,
+        "y": 0.0,
+        "weight": 1.0,
+        "vdx": 0.0,
+        "vdy": 0.0,
+        "vcx": 0.0,
+        "vcy": 0.0
+      }
+    ]
+  },
+  "wavelengths": {
+    "values": [
+      {
+        "value": 0.5875618,
+        "weight": 1.0
+      }
+    ],
+    "primary": 0
+  },
+  "ray_aiming": "paraxial",
+  "notes": "A wide-angle Lambertian source in front of a 4 x 4 x 50 mm N-BK7 rod. Light bounces along the rod by total internal reflection and leaves it as a nearly uniform square: compare the Detector Viewer's irradiance at the rod's exit with the source's hot spot. The rays are not split, so only TIR (always followed) bends them back.",
+  "surfaces": [
+    {
+      "type": "STANDARD",
+      "curvature": 0.0,
+      "conic": 0.0,
+      "thickness": "inf",
+      "material": null,
+      "comment": "OBJECT"
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.0,
+      "conic": 0.0,
+      "thickness": 0.0,
+      "material": null,
+      "stop": true
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.0,
+      "conic": 0.0,
+      "thickness": 0.0,
+      "material": null,
+      "comment": "IMAGE"
+    }
+  ],
+  "nonseq": {
+    "format": "lensforge-ns-1",
+    "name": "Light pipe homogeniser",
+    "units": "mm",
+    "ambient": "AIR",
+    "notes": "A wide-angle Lambertian source in front of a 4 x 4 x 50 mm N-BK7 rod. Light bounces along the rod by total internal reflection and leaves it as a nearly uniform square: compare the Detector Viewer's irradiance at the rod's exit with the source's hot spot. The rays are not split, so only TIR (always followed) bends them back.",
+    "trace_settings": {
+      "split": false,
+      "fresnel": true,
+      "min_relative_intensity": 1e-06,
+      "max_segments": 200,
+      "seed": 0,
+      "max_rays": 2000000
+    },
+    "objects": [
+      {
+        "type": "RECT_VOLUME",
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0,
+        "tilt_x": 0.0,
+        "tilt_y": 0.0,
+        "tilt_z": 0.0,
+        "material": "N-BK7",
+        "comment": "light pipe",
+        "half_x": 2.0,
+        "half_y": 2.0,
+        "length": 50.0
+      },
+      {
+        "type": "DETECTOR",
+        "x": 0.0,
+        "y": 0.0,
+        "z": 50.2,
+        "tilt_x": 0.0,
+        "tilt_y": 0.0,
+        "tilt_z": 0.0,
+        "material": null,
+        "comment": "exit face",
+        "half_x": 2.5,
+        "half_y": 2.5,
+        "nx": 51,
+        "ny": 51,
+        "transparent": false
+      }
+    ],
+    "sources": [
+      {
+        "type": "SOURCE_POINT",
+        "x": 0.0,
+        "y": 0.0,
+        "z": -0.5,
+        "tilt_x": 0.0,
+        "tilt_y": 0.0,
+        "tilt_z": 0.0,
+        "comment": "LED",
+        "n_rays": 5000,
+        "power": 1.0,
+        "wavelengths": [
+          0.5875618
+        ],
+        "sampling": "random",
+        "cone_angle": 70.0,
+        "cos_exponent": 1.0
+      }
+    ]
+  }
+}

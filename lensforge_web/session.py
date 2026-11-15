@@ -123,9 +123,6 @@ class Session:
         self.namespace = {}          # Python Shell variables kept between runs
         self.opt_result = None       # optimised lens waiting for Load Result
         self.mc_result = None        # last Monte Carlo result (Load Worst)
-        self.ns_scene = lf.nonseq.NonSequentialSystem("Scene")
-        self.ns_result = None
-        self.ns_path = None
         self._analysis_cache = {}    # window id -> (signature, result, system) for re-plotting only
         self.agf_names = []          # AGF catalogs loaded this session (name -> reloaded at start-up by the page)
         # hooks the worker replaces: progress reports to the page and the Stop button's flag
@@ -156,6 +153,7 @@ class Session:
             "image_index": s.image_index,
             "missing": s.missing_materials_message(),
             "units": s.units,
+            "nonseq": self._ns(),
         }
 
     def _status(self):
@@ -186,7 +184,7 @@ class Session:
             "Hovering a toolbar button", "Lens files are kept in this browser's storage (File &gt; Open, File &gt; "
             "Export to Disk). Hovering a toolbar button")
         overview += ("<p><b>Editors in their own tabs.</b> The Merit Function Editor, the Multi-Configuration Editor, "
-                     "the Python Shell, the analysis windows, Optimization, Tolerancing, the Non-Sequential Editor and "
+                     "the Python Shell, the analysis windows, Optimization, Tolerancing, the Non-Sequential Component Editor and "
                      "this help can each move into a browser tab of their own with the &#8599; (Open in New Tab) "
                      "button in their title bar, e.g. to put them on a second screen. They stay connected to the "
                      "main tab and update together with it; closing the tab puts the editor back.</p>")
@@ -225,7 +223,9 @@ class Session:
                 break
         self.doc.reset(system, path=path, import_name=None if path else base)
         notes = system.notes if system.notes.startswith("ZMX import ignored") else ""
-        return {"missing": system.missing_materials_message(), "notes": notes, "name": self.doc.display_name}
+        sc = getattr(system, "nonseq", None)
+        return {"missing": system.missing_materials_message(), "notes": notes, "name": self.doc.display_name,
+                "nonseq": bool(sc is not None and (sc.objects or sc.sources))}
 
     def lens_text(self):
         return self.doc.to_text()
@@ -1324,105 +1324,93 @@ class Session:
             report = f"The system report failed:\n{type(e).__name__}: {e}"
         return {"info": info, "report": report}
 
-    # ======================================================================== Non-Sequential Editor
-    def ns_state(self):
-        sc = self.ns_scene
-        objs = []
-        for o in sc.objects:
-            vals = [NT.OBJECT_LABELS.get(o.kind, o.kind), o.comment] + [NT._fmt(getattr(o, k)) for k in NT.POSE] + [
-                NT._fmt(o.material or "") if not o.is_detector else "",
-                "" if o.coating is None else NT._fmt(o.coating),
-                ", ".join(f"{n}={NT._fmt(getattr(o, n))}" for n, _ in o.params)]
-            objs.append({"cells": vals, "tip": "; ".join(f"{n}: {lab}" for n, lab in o.params),
-                         "detector": bool(o.is_detector)})
-        srcs = []
-        for s in sc.sources:
-            vals = [NT.SOURCE_LABELS.get(s.kind, s.kind), s.comment] + [NT._fmt(getattr(s, k)) for k in NT.POSE] + [
-                str(s.n_rays), NT._fmt(s.power), ", ".join(NT._fmt(w) for w in s.wavelengths), s.sampling,
-                ", ".join(f"{n}={NT._fmt(getattr(s, n))}" for n, _ in s.params)]
-            srcs.append({"cells": vals, "tip": "; ".join(f"{n}: {lab}" for n, lab in s.params)})
-        return {"name": sc.name or "Scene", "objects": objs, "sources": srcs, "obj_cols": NT.OBJ_COLS,
-                "src_cols": NT.SRC_COLS, "object_types": [[k, v] for k, v in NT.OBJECT_LABELS.items()],
+    # ======================================================================== Non-Sequential Component Editor
+    def _ns(self):
+        """The scene's tables for the Non-Sequential Component Editor (part of :meth:`state`)."""
+        s = self.doc.system
+        sc = NT.scene_of(s)
+        if sc is None:
+            sc = lf.nonseq.NonSequentialSystem(s.name or "Scene")
+        missing = NT.missing_rows(sc)
+        return {"name": sc.name or "Scene", "objects": NT.table_rows(sc, "objects", missing),
+                "sources": NT.table_rows(sc, "sources"), "trace": dict(sc.trace_settings),
+                "detectors": [[k, lab] for k, lab in NT.detectors(sc)]}
+
+    def ns_info(self):
+        """Fixed data of the editor: columns, types, buttons, trace settings."""
+        return {"obj_cols": NT.OBJ_COLS, "src_cols": NT.SRC_COLS, "obj_par0": NT.OBJ_PAR0, "src_par0": NT.SRC_PAR0,
+                "column_tips": NT.COLUMN_TIPS,
+                "object_types": [[k, v] for k, v in NT.OBJECT_LABELS.items()],
                 "source_types": [[k, v] for k, v in NT.SOURCE_LABELS.items()],
-                "detectors": [[k, f"{k + 1}: {o.comment or 'detector'}"] for k, o in enumerate(sc.objects)
-                              if o.is_detector],
-                "buttons": [[k, t, tip, ns_svg(k)] for k, (t, tip) in NT.BUTTONS.items()],
-                "traced": self.ns_result is not None, "summary": self.ns_result.summary() if self.ns_result else ""}
+                "trace_fields": [[k, lab, kind, tip] for k, (lab, kind, tip) in NT.TRACE_FIELDS.items()],
+                "buttons": [[k, t, tip, ns_svg(k)] for k, (t, tip) in NT.BUTTONS.items()]}
+
+    def _ns_edit(self, text, fn):
+        out = {}
+
+        def apply(system):
+            out["v"] = fn(NT.scene_of(system, create=True))
+        self._modify(text, apply)
+        return out.get("v", True) if out.get("v") is not None else True
 
     def ns_set_cell(self, table, r, c, text):
         is_obj = table == "objects"
-        target = (self.ns_scene.objects if is_obj else self.ns_scene.sources)[r]
-        NT.apply_cell(target, c, str(text), is_obj)
-        return True
+        cols = NT.OBJ_COLS if is_obj else NT.SRC_COLS
+        return self._ns_edit(f"{'Object' if is_obj else 'Source'} {r + 1} {cols[c]}",
+                             lambda sc: NT.apply_cell(NT.items(sc, table)[r], int(c), str(text), is_obj))
+
+    def ns_change_type(self, table, r, kind):
+        return self._ns_edit(f"{table[:-1].capitalize()} {r + 1} type", lambda sc: NT.change_type(sc, table, r, kind))
 
     def ns_add(self, kind, after=-1):
-        if kind in lf.nonseq.OBJECT_TYPES:
-            at = len(self.ns_scene.objects) if after < 0 else after + 1
-            self.ns_scene.objects.insert(at, lf.nonseq.OBJECT_TYPES[kind]())
-            return {"table": "objects", "row": at}
-        self.ns_scene.sources.append(lf.nonseq.SOURCE_TYPES[kind](z=-10.0))
-        return {"table": "sources", "row": len(self.ns_scene.sources) - 1}
+        labels = {**NT.OBJECT_LABELS, **NT.SOURCE_LABELS}
+        t, row = self._ns_edit(f"Add {labels.get(kind, kind)}", lambda sc: NT.insert(sc, kind, int(after)))
+        return {"table": t, "row": row}
 
     def ns_delete(self, table, r):
-        items = self.ns_scene.objects if table == "objects" else self.ns_scene.sources
-        if 0 <= r < len(items):
-            del items[r]
-        return True
+        return self._ns_edit(f"Delete {table[:-1]} {r + 1}", lambda sc: NT.delete(sc, table, int(r)))
+
+    def ns_duplicate(self, table, r):
+        return {"row": self._ns_edit(f"Duplicate {table[:-1]} {r + 1}", lambda sc: NT.duplicate(sc, table, int(r)))}
+
+    def ns_move(self, table, r, delta):
+        return {"row": self._ns_edit(f"Move {table[:-1]} {r + 1}", lambda sc: NT.move(sc, table, int(r), int(delta)))}
+
+    def ns_set_trace(self, key, value):
+        return self._ns_edit(f"Ray trace: {NT.TRACE_FIELDS[key][0]}", lambda sc: NT.set_trace_setting(sc, key, value))
 
     def ns_new(self):
-        self.ns_scene, self.ns_result, self.ns_path = lf.nonseq.NonSequentialSystem("Scene"), None, None
-        return True
+        def fn(s):
+            s.nonseq = lf.nonseq.NonSequentialSystem(s.name or "Scene", s.units, library=s.library)
+        return self._modify("New non-sequential scene", fn)
+
+    def _ns_replace(self, text, scene):
+        def fn(s):
+            scene.library = s.library
+            s.nonseq = scene
+        return self._modify(text, fn)
 
     def ns_from_lens(self):
         try:
-            scene = lf.nonseq.from_sequential(self.doc.system, n_rays=1000, sampling="random")
+            scene = NT.from_lens(self.doc.system)
         except Exception as e:  # noqa: BLE001
             raise ValueError(f"This lens cannot be converted: {e}") from e
-        self.ns_scene, self.ns_result = scene, None
-        return True
+        return self._ns_replace("Convert lens to non-sequential", scene)
 
     def ns_open(self, text, filename):
-        tmp = "/tmp/lensforge_web_scene.ns.json"
-        with open(tmp, "w", encoding="utf-8") as f:
-            f.write(text)
-        self.ns_scene, self.ns_result, self.ns_path = lf.nonseq.load(tmp), None, filename
-        return True
+        d = json.loads(text)
+        if d.get("format") != "lensforge-ns-1":
+            raise ValueError(f"{filename} is not a lensforge non-sequential scene (.ns.json)")
+        return self._ns_replace("Import non-sequential scene", lf.nonseq.NonSequentialSystem.from_dict(d))
 
     def ns_text(self):
-        tmp = "/tmp/lensforge_web_scene_out.ns.json"
-        lf.nonseq.save(self.ns_scene, tmp)
-        with open(tmp, encoding="utf-8") as f:
-            return f.read()
+        sc = NT.scene_of(self.doc.system) or lf.nonseq.NonSequentialSystem(self.doc.system.name or "Scene")
+        return json.dumps(sc.to_json_dict(), indent=2)
 
-    def ns_trace(self, split=True, fresnel=True, min_relative_intensity=1e-5, max_segments=100):
-        scene = self.ns_scene.copy()
-        miss = scene.missing_materials()
-        if miss:
-            return {"summary": "Cannot trace: " + "; ".join(
-                f"{m} (objects {', '.join(str(k + 1) for k in rows)})" for m, rows in miss.items())
-                + " not in any loaded glass catalog.", "traced": False}
-        if not scene.sources:
-            return {"summary": "Add a source first (Add Source on the toolbar).", "traced": False}
-        self.ns_result = lf.nonseq.trace(scene, split=bool(split), fresnel=bool(fresnel),
-                                         min_relative_intensity=float(min_relative_intensity),
-                                         max_segments=int(max_segments))
-        return {"summary": self.ns_result.summary(), "traced": True}
-
-    def ns_plot(self, detector=None, rays="all", log=True, plane="y", width=900, height=380, dpr=1.0):
-        import lensforge.plot as P
-        r = self.ns_result
-        if r is None:
-            return None
-        fig = _figure(width, height)
-        ax1 = fig.add_subplot(1, 2, 1)
-        P.ns_layout(r, ax1, plane=plane)
-        if r.detectors and detector is not None:
-            ax2 = fig.add_subplot(1, 2, 2)
-            try:
-                P.ns_detector(r, int(detector), ax2, rays=rays, log=bool(log))
-            except KeyError:  # detector added after the trace
-                ax2.set_title("Trace again to see this detector")
-        return _png(fig, dpr)
+    def ns_trace(self):
+        """Trace the scene (shared with the analysis windows) and return the trace report."""
+        s = self.doc.system
+        return NT.trace_report(NT.trace(NT.scene_of(s), s.library))
 
 
 # ============================================================================ dispatch
@@ -1434,8 +1422,8 @@ READ_ONLY = {"state", "menus", "help_data", "about", "samples", "lens_text", "su
              "squash", "system_settings", "input_rays", "pupil_pattern", "analysis_specs", "run_analysis",
              "forget_analysis",
              "mfe_evaluate", "operands", "operand_names", "operand_menu", "wizard_info", "script_example", "opt_info",
-             "history_plot", "tolerance_setup", "default_tolerances", "insert_preview", "inspect", "ns_state",
-             "ns_text", "ns_plot"}
+             "history_plot", "tolerance_setup", "default_tolerances", "insert_preview", "inspect", "ns_info",
+             "ns_text", "ns_trace"}
 
 
 def session() -> Session:

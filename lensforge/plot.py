@@ -383,53 +383,131 @@ def ghost_image(result, ax=None, log=True, show="ghost"):
     return ax
 
 
-def ns_layout(result, ax=None, plane="y", max_segments=4000, color_by="reflections", min_power=0.0):
+def _ns_keep(result, rays="all", path=None, min_power=0.0):
+    """Indices of the segments to draw: by reflection count of the light (``rays`` as
+    :meth:`DetectorData.select`), or the segments of one ray ``path`` (a dict from
+    :meth:`NSTraceResult.paths`, or an array of segment indices)."""
+    seg = result.segments
+    if path is not None:
+        idx = path["segments"] if isinstance(path, dict) else np.asarray(path, dtype=int)
+        return idx[seg["power"][idx] >= min_power]
+    m = seg["power"] >= min_power
+    nr = seg["n_reflections"]
+    if rays == "direct":
+        m &= nr == 0
+    elif rays == "ghost":
+        m &= nr >= 2
+    elif isinstance(rays, (int, np.integer)):
+        m &= nr == rays
+    return np.flatnonzero(m)
+
+
+def _ns_thin(result, keep, max_segments):
+    """At most ``max_segments`` of ``keep``: whole ray paths picked at random within each
+    reflection order, so faint ghost paths stay visible."""
+    seg = result.segments
+    if len(keep) <= max_segments:
+        return keep
+    rng = np.random.default_rng(0)
+    order = np.minimum(seg["n_reflections"][keep], 2)
+    share = {0: 2.0, 1: 1.0, 2: 1.0}  # direct light gets half the budget when there are reflections
+    present = [k for k in range(3) if np.any(order == k)]
+    total = sum(share[k] for k in present)
+    parts = []
+    for k in present:
+        g = keep[order == k]
+        ids = np.unique(seg["ray"][g])
+        rng.shuffle(ids)
+        per_ray = max(len(g) / max(len(ids), 1), 1.0)
+        take = ids[: max(1, int(max_segments * share[k] / total / per_ray))]
+        parts.append(g[np.isin(seg["ray"][g], take)])
+    return np.concatenate(parts)
+
+
+def wavelength_rgb(wl_um):
+    """Approximate display colour (r, g, b in 0..1) of a wavelength in um (grey outside 380-780 nm)."""
+    w = float(wl_um) * 1000
+    if w < 380 or w > 780:
+        return (0.5, 0.5, 0.5)
+    if w < 440:
+        r, g, b = (440 - w) / 60, 0.0, 1.0
+    elif w < 490:
+        r, g, b = 0.0, (w - 440) / 50, 1.0
+    elif w < 510:
+        r, g, b = 0.0, 1.0, (510 - w) / 20
+    elif w < 580:
+        r, g, b = (w - 510) / 70, 1.0, 0.0
+    elif w < 645:
+        r, g, b = 1.0, (645 - w) / 65, 0.0
+    else:
+        r, g, b = 1.0, 0.0, 0.0
+    f = 0.3 + 0.7 * (w - 380) / 40 if w < 420 else 0.3 + 0.7 * (780 - w) / 80 if w > 700 else 1.0
+    return (r * f, g * f, b * f)
+
+
+def _ns_colors(result, keep, color_by):
+    """(colours, legend {colour: label}) of the segments ``keep``."""
+    seg = result.segments
+    if color_by == "power":
+        lp = np.log10(np.maximum(seg["power"][keep], 1e-300))
+        lo, hi = (lp.min(), lp.max()) if len(lp) else (0, 1)
+        g = (lp - lo) / max(hi - lo, 1e-12)
+        return [(0.85 * (1 - v), 0.85 * (1 - v), 0.85 * (1 - v) + 0.15 * v) for v in g], {}
+    if color_by == "source":
+        src = seg["source"][keep]
+        return [f"C{int(v) % 10}" for v in src], {f"C{int(v) % 10}": f"source {int(v) + 1}"
+                                                  for v in np.unique(src)[:10] if v >= 0}
+    if color_by == "wavelength":
+        wl = seg["wavelength"][keep]
+        cmap = {float(w): wavelength_rgb(w) for w in np.unique(wl)}
+        return [cmap[float(w)] for w in wl], {c: f"{w:.4f} um" for w, c in list(cmap.items())[:10]}
+    nr = np.minimum(seg["n_reflections"][keep], 2)
+    cmap = {0: "C0", 1: "C2", 2: "C3"}
+    labels = {"C0": "direct", "C2": "1 reflection", "C3": "2+ reflections (ghosts)"}
+    present = {cmap[int(v)] for v in np.unique(nr)}
+    return [cmap[int(v)] for v in nr], {c: lab for c, lab in labels.items() if c in present}
+
+
+def _ns_object_color(o):
+    if o.is_detector:
+        return "C1"
+    if o.is_volume:
+        return "k"
+    return "0.3"
+
+
+def ns_layout(result, ax=None, plane="y", max_segments=4000, color_by="reflections", min_power=0.0, rays="all",
+              path=None, numbers=True):
     """2-D projection of a non-sequential trace (:class:`lensforge.nonseq.NSTraceResult`) with its objects.
 
-    ``color_by``: "reflections" (direct / one / two+ Fresnel reflections), "source" or "power"
-    (grey level by log power).  At most ``max_segments`` segments are drawn: the strongest of
-    reflection order, as complete ray paths picked at random.
+    ``plane`` "y" draws z across and y up with each object's YZ section, "x" the XZ plane.
+    ``color_by``: "reflections" (direct / one / two+ Fresnel reflections), "source", "wavelength"
+    or "power" (grey level by log power).  ``rays`` keeps only light with that reflection history
+    ("all", "direct", "ghost" or a count); ``path`` draws only one ray path (from
+    :meth:`NSTraceResult.paths`).  At most ``max_segments`` segments are drawn: whole ray paths
+    picked at random within each reflection order.  ``numbers`` labels each object with its number.
     """
     from matplotlib.collections import LineCollection
     ax = _ax(ax, figsize=(9, 4))
     j = 0 if plane == "x" else 1
-    for o in result.system.objects:
-        for line in o.outline():
-            ax.plot(line[:, 2], line[:, j], color="k" if o.is_volume else ("C1" if o.is_detector else "0.3"),
+    for k, o in enumerate(result.system.objects):
+        lines = o.outline(plane=plane)
+        for line in lines:
+            ax.plot(line[:, 2], line[:, j], color=_ns_object_color(o),
                     lw=1.4 if o.action == "mirror" or o.is_detector else 1)
+        if numbers and lines:
+            pts = np.concatenate(lines)
+            top = pts[np.argmax(pts[:, j])]
+            ax.annotate(str(k + 1), (top[2], top[j]), textcoords="offset points", xytext=(0, 3), ha="center",
+                        fontsize=7, color="0.35")
     seg = result.segments
-    pw = seg["power"]
-    keep = np.flatnonzero(pw >= min_power)
-    if len(keep) > max_segments:
-        # whole ray paths, picked at random within each reflection order, so faint ghost paths stay visible
-        rng = np.random.default_rng(0)
-        order = np.minimum(seg["n_reflections"][keep], 2)
-        parts = []
-        for k in range(3):
-            g = keep[order == k]
-            ids = np.unique(seg["ray"][g])
-            rng.shuffle(ids)
-            per_ray = max(len(g) / max(len(ids), 1), 1.0)
-            take = set(ids[: max(1, int(max_segments / 3 / per_ray))].tolist())
-            parts.append(g[np.isin(seg["ray"][g], list(take))])
-        keep = np.concatenate(parts)
+    keep = _ns_thin(result, _ns_keep(result, rays, path, min_power), max_segments)
+    keep = keep[np.argsort(-seg["n_reflections"][keep], kind="stable")]  # direct light drawn on top
     a, b = seg["start"][keep], seg["end"][keep]
     lines = np.stack([np.stack([a[:, 2], a[:, j]], 1), np.stack([b[:, 2], b[:, j]], 1)], axis=1)
-    if color_by == "power":
-        lp = np.log10(np.maximum(pw[keep], 1e-300))
-        lo, hi = (lp.min(), lp.max()) if len(lp) else (0, 1)
-        g = (lp - lo) / max(hi - lo, 1e-12)
-        colors = [(0.85 * (1 - v), 0.85 * (1 - v), 0.85 * (1 - v) + 0.15 * v) for v in g]
-        labels = {}
-    elif color_by == "source":
-        colors = [f"C{int(s) % 10}" for s in seg["source"][keep]]
-        labels = {}
-    else:
-        nr = np.minimum(seg["n_reflections"][keep], 2)
-        cmap = {0: "C0", 1: "C2", 2: "C3"}
-        colors = [cmap[int(v)] for v in nr]
-        labels = {"C0": "direct", "C2": "1 reflection", "C3": "2+ reflections (ghosts)"}
-    ax.add_collection(LineCollection(lines, colors=colors, linewidths=0.5))
+    colors, labels = _ns_colors(result, keep, color_by)
+    if len(keep):
+        ax.add_collection(LineCollection(lines, colors=colors, linewidths=0.5))
     for c, lab in labels.items():
         ax.plot([], [], color=c, label=lab)
     if labels:
@@ -438,21 +516,148 @@ def ns_layout(result, ax=None, plane="y", max_segments=4000, color_by="reflectio
     ax.set_aspect("equal", adjustable="datalim")
     ax.set_xlabel("z")
     ax.set_ylabel("x" if j == 0 else "y")
+    if path is not None and isinstance(path, dict):
+        ax.set_title(path.get("label", ""), fontsize=7)
     return ax
 
 
-def ns_detector(result, det=0, ax=None, rays="all", log=False, **select):
-    """Irradiance on a detector of a non-sequential trace.  ``rays``: "all", "direct", "ghost" or a count."""
+def ns_layout_3d(result, ax=None, elevation=20.0, azimuth=-60.0, max_segments=3000, color_by="reflections",
+                 rays="all", path=None, min_power=0.0):
+    """3-D wireframe view of a non-sequential trace: objects (sections, rims and edges) and rays.
+
+    The optical axis z runs across the view (drawn as the first plot axis), x and y are the
+    other two.  ``ax`` must be a 3-D axes (``fig.add_subplot(projection="3d")``) or None.
+    """
+    from mpl_toolkits.mplot3d.art3d import Line3DCollection
+    if ax is None:
+        ax = _plt().figure(figsize=(8, 6)).add_subplot(projection="3d")
+    pts = []
+    for o in result.system.objects:
+        c = _ns_object_color(o)
+        for line in o.wireframe(25):
+            ax.plot(line[:, 2], line[:, 0], line[:, 1], color=c, lw=0.8)
+            pts.append(line)
+    seg = result.segments
+    keep = _ns_thin(result, _ns_keep(result, rays, path, min_power), max_segments)
+    a, b = seg["start"][keep], seg["end"][keep]
+    if len(keep):
+        colors, labels = _ns_colors(result, keep, color_by)
+        lines = np.stack([a[:, [2, 0, 1]], b[:, [2, 0, 1]]], axis=1)
+        ax.add_collection3d(Line3DCollection(lines, colors=colors, linewidths=0.4))
+        for c, lab in labels.items():
+            ax.plot([], [], [], color=c, label=lab)
+        if labels:
+            ax.legend(fontsize=7, loc="upper right")
+        pts += [a, b]
+    if pts:
+        P = np.concatenate(pts)
+        P = P[np.all(np.isfinite(P), axis=1)]
+        lo, hi = P.min(axis=0), P.max(axis=0)
+        mid, half = (lo + hi) / 2, max(float((hi - lo).max()) / 2, 1e-6)
+        ax.set_xlim(mid[2] - half, mid[2] + half)
+        ax.set_ylim(mid[0] - half, mid[0] + half)
+        ax.set_zlim(mid[1] - half, mid[1] + half)
+    try:
+        ax.set_box_aspect((1, 1, 1))
+    except Exception:  # noqa: BLE001 - old matplotlib
+        pass
+    ax.view_init(elev=float(elevation), azim=float(azimuth))
+    ax.set_xlabel("z")
+    ax.set_ylabel("x")
+    ax.set_zlabel("y")
+    return ax
+
+
+def ns_detector(result, det=0, ax=None, rays="all", log=False, show="irradiance", **select):
+    """A detector of a non-sequential trace.  ``rays``: "all", "direct", "ghost" or a count.
+
+    ``show``: "irradiance" (power per area map), "color" (true-colour image of the wavelengths),
+    "cross_x" / "cross_y" (irradiance along x through y = 0 / along y through x = 0) or
+    "angle" (radiant intensity against the direction cosines of the arriving rays).
+    """
     ax = _ax(ax, figsize=(6, 5))
     d = result.detector(det)
-    Z = d.image(rays, **select)
-    if log:
-        pos = Z[Z > 0]
-        Z = np.log10(np.maximum(Z, pos.min() if pos.size else 1e-300))
-    im = ax.imshow(Z, origin="lower", extent=d.extent, cmap="inferno")
-    ax.figure.colorbar(im, ax=ax, label=("log10 " if log else "") + "irradiance (power / area)")
     name = d.detector.comment or f"object {d.object_index + 1}"
-    ax.set_title(f"Detector {name} ({rays}): total {d.total_power(rays, **select):.4g}")
-    ax.set_xlabel("x")
-    ax.set_ylabel("y")
+    total = d.total_power(rays, **select)
+    title = f"Detector {name} ({rays}): total {total:.4g}"
+    if show == "color":
+        m = d.select(rays, **select)
+        o = d.detector
+        ex = np.linspace(-o.half_x, o.half_x, o.nx + 1)
+        ey = np.linspace(-o.half_y, o.half_y, o.ny + 1)
+        img = np.zeros((o.ny, o.nx, 3))
+        for w in np.unique(d.wavelength[m]):
+            mw = m & np.isclose(d.wavelength, w)
+            H, _, _ = np.histogram2d(d.y[mw], d.x[mw], bins=[ey, ex], weights=d.power[mw])
+            img += H[:, :, None] * np.array(wavelength_rgb(w))[None, None, :]
+        if log and img.max() > 0:
+            lo = img[img > 0].min()
+            img = np.log10(np.maximum(img, lo) / lo) + np.where(img > 0, 1.0, 0.0)
+        img = img / img.max() if img.max() > 0 else img
+        ax.imshow(img, origin="lower", extent=d.extent)
+        ax.set_xlabel("x")
+        ax.set_ylabel("y")
+    elif show in ("cross_x", "cross_y"):
+        Z = d.image(rays, **select)
+        o = d.detector
+        if show == "cross_x":
+            row = Z[Z.shape[0] // 2, :] if o.ny % 2 else Z[Z.shape[0] // 2 - 1: Z.shape[0] // 2 + 1, :].mean(axis=0)
+            u = np.linspace(-o.half_x, o.half_x, o.nx + 1)
+            lab = "x"
+        else:
+            row = Z[:, Z.shape[1] // 2] if o.nx % 2 else Z[:, Z.shape[1] // 2 - 1: Z.shape[1] // 2 + 1].mean(axis=1)
+            u = np.linspace(-o.half_y, o.half_y, o.ny + 1)
+            lab = "y"
+        c = 0.5 * (u[1:] + u[:-1])
+        ax.plot(c, row, color="C0", lw=1.2, drawstyle="steps-mid")
+        if log and np.any(row > 0):
+            ax.set_yscale("log")
+        ax.set_xlabel(lab)
+        ax.set_ylabel("irradiance (power / area)")
+        ax.grid(True, alpha=0.3)
+        title += f"; {'row y = 0' if show == 'cross_x' else 'column x = 0'}"
+    elif show == "angle":
+        m = d.select(rays, **select)
+        D = d.direction[m]
+        D = D * np.where(D[:, 2:3] < 0, -1.0, 1.0)  # light arriving from either side
+        n = 61
+        e = np.linspace(-1, 1, n + 1)
+        H, _, _ = np.histogram2d(D[:, 1], D[:, 0], bins=[e, e], weights=d.power[m]) if len(D) else (
+            np.zeros((n, n)), None, None)
+        if log:
+            pos = H[H > 0]
+            H = np.log10(np.maximum(H, pos.min() if pos.size else 1e-300))
+        im = ax.imshow(H, origin="lower", extent=(-1, 1, -1, 1), cmap="viridis")
+        ax.figure.colorbar(im, ax=ax, label=("log10 " if log else "") + "power per direction-cosine bin")
+        ax.set_xlabel("direction cosine l (x)")
+        ax.set_ylabel("direction cosine m (y)")
+    else:
+        Z = d.image(rays, **select)
+        if log:
+            pos = Z[Z > 0]
+            Z = np.log10(np.maximum(Z, pos.min() if pos.size else 1e-300))
+        im = ax.imshow(Z, origin="lower", extent=d.extent, cmap="inferno")
+        ax.figure.colorbar(im, ax=ax, label=("log10 " if log else "") + "irradiance (power / area)")
+        ax.set_xlabel("x")
+        ax.set_ylabel("y")
+    ax.set_title(title, fontsize=9)
+    return ax
+
+
+def ns_paths(paths, ax=None, n=15):
+    """Bar chart of the power of the brightest ray paths (from :meth:`NSTraceResult.paths`)."""
+    ax = _ax(ax, figsize=(8, 5))
+    top = paths[:n]
+    if not top:
+        ax.text(0.5, 0.5, "No ray reached the detector", ha="center", va="center", transform=ax.transAxes)
+        return ax
+    y = np.arange(len(top))[::-1]
+    cols = ["C0" if p["n_reflections"] == 0 else "C2" if p["n_reflections"] == 1 else "C3" for p in top]
+    ax.barh(y, [max(p["power"], 1e-300) for p in top], color=cols)
+    ax.set_xscale("log")
+    ax.set_yticks(y)
+    ax.set_yticklabels([f"{k + 1}: {p['n_reflections']} refl., {p['rays']} rays" for k, p in enumerate(top)],
+                       fontsize=7)
+    ax.set_xlabel("power on the detector")
+    ax.grid(True, axis="x", alpha=0.3)
     return ax

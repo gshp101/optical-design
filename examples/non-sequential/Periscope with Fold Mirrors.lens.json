@@ -1,0 +1,163 @@
+{
+  "format": "lensforge-1",
+  "name": "Periscope (non-sequential)",
+  "units": "mm",
+  "aperture": {
+    "type": "EPD",
+    "value": 10.0
+  },
+  "fields": {
+    "type": "ANGLE",
+    "values": [
+      {
+        "x": 0.0,
+        "y": 0.0,
+        "weight": 1.0,
+        "vdx": 0.0,
+        "vdy": 0.0,
+        "vcx": 0.0,
+        "vcy": 0.0
+      }
+    ]
+  },
+  "wavelengths": {
+    "values": [
+      {
+        "value": 0.5875618,
+        "weight": 1.0
+      }
+    ],
+    "primary": 0
+  },
+  "ray_aiming": "paraxial",
+  "notes": "Two 45 degree fold mirrors lift a collimated beam by 30 mm, then a singlet focuses it. The second mirror is placed relative to the first (Ref = 1): change the first mirror's Z or Tilt X and the second one moves with it. The lens is placed on the second mirror's frame too (Ref = 2), so the whole periscope moves together.",
+  "surfaces": [
+    {
+      "type": "STANDARD",
+      "curvature": 0.0,
+      "conic": 0.0,
+      "thickness": "inf",
+      "material": null,
+      "comment": "OBJECT"
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.0,
+      "conic": 0.0,
+      "thickness": 0.0,
+      "material": null,
+      "stop": true
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.0,
+      "conic": 0.0,
+      "thickness": 0.0,
+      "material": null,
+      "comment": "IMAGE"
+    }
+  ],
+  "nonseq": {
+    "format": "lensforge-ns-1",
+    "name": "Periscope",
+    "units": "mm",
+    "ambient": "AIR",
+    "notes": "Two 45 degree fold mirrors lift a collimated beam by 30 mm, then a singlet focuses it. The second mirror is placed relative to the first (Ref = 1): change the first mirror's Z or Tilt X and the second one moves with it. The lens is placed on the second mirror's frame too (Ref = 2), so the whole periscope moves together.",
+    "trace_settings": {
+      "split": true,
+      "fresnel": true,
+      "min_relative_intensity": 0.0001,
+      "max_segments": 100,
+      "seed": 0,
+      "max_rays": 2000000
+    },
+    "objects": [
+      {
+        "type": "RECTANGLE",
+        "x": 0.0,
+        "y": 0.0,
+        "z": 20.0,
+        "tilt_x": 45.0,
+        "tilt_y": 0.0,
+        "tilt_z": 0.0,
+        "material": "MIRROR",
+        "comment": "fold mirror 1",
+        "half_x": 7.0,
+        "half_y": 9.0,
+        "reflectance": 1.0
+      },
+      {
+        "type": "RECTANGLE",
+        "x": 0.0,
+        "y": 21.213203435596427,
+        "z": -21.213203435596427,
+        "tilt_x": 0.0,
+        "tilt_y": 0.0,
+        "tilt_z": 0.0,
+        "ref": 1,
+        "material": "MIRROR",
+        "comment": "fold mirror 2",
+        "half_x": 7.0,
+        "half_y": 9.0,
+        "reflectance": 1.0
+      },
+      {
+        "type": "STANDARD_LENS",
+        "x": 0.0,
+        "y": 14.142135623730951,
+        "z": 14.142135623730951,
+        "tilt_x": -45.0,
+        "tilt_y": 0.0,
+        "tilt_z": 0.0,
+        "ref": 2,
+        "material": "N-BK7",
+        "comment": "singlet f 50",
+        "radius1": 51.5,
+        "conic1": 0.0,
+        "thickness": 4.0,
+        "radius2": -51.5,
+        "conic2": 0.0,
+        "semi_diameter": 8.0
+      },
+      {
+        "type": "DETECTOR",
+        "x": 0.0,
+        "y": 0.0,
+        "z": 52.9,
+        "tilt_x": 0.0,
+        "tilt_y": 0.0,
+        "tilt_z": 0.0,
+        "ref": 3,
+        "material": null,
+        "comment": "focus",
+        "half_x": 1.0,
+        "half_y": 1.0,
+        "nx": 101,
+        "ny": 101,
+        "transparent": false
+      }
+    ],
+    "sources": [
+      {
+        "type": "SOURCE_ELLIPSE",
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0,
+        "tilt_x": 0.0,
+        "tilt_y": 0.0,
+        "tilt_z": 0.0,
+        "comment": "collimated beam",
+        "n_rays": 2000,
+        "power": 1.0,
+        "wavelengths": [
+          0.5875618
+        ],
+        "sampling": "random",
+        "half_x": 4.0,
+        "half_y": 4.0,
+        "cone_angle": 0.0,
+        "cos_exponent": 0.0
+      }
+    ]
+  }
+}

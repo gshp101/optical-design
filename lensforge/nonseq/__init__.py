@@ -16,21 +16,29 @@ Typical use::
 
     scene = ns.from_sequential(lf.samples.achromat())   # any sequential lens
 
-Plot helpers: :func:`lensforge.plot.ns_layout`, :func:`lensforge.plot.ns_detector`.
+    r.paths(det=0)[:5]                     # the brightest ray paths to the detector (ghost paths)
+
+A scene can be kept inside a lens file: ``lens.nonseq = scene`` (saved by ``lf.save``); the
+desktop and web apps edit it in the Non-Sequential Component Editor.  ``scene.trace_settings``
+holds the ray-trace settings ``scene.trace()`` uses.
+
+Plot helpers: :func:`lensforge.plot.ns_layout`, :func:`lensforge.plot.ns_layout_3d`,
+:func:`lensforge.plot.ns_detector`, :func:`lensforge.plot.ns_paths`.
 """
 
-from .objects import (Annulus, CylinderVolume, Detector, NSObject, OBJECT_TYPES, Rectangle, RectangularVolume,
+from .objects import (Annulus, CylinderVolume, Detector, NSObject, OBJECT_TYPES, Prism, Rectangle, RectangularVolume,
                       SOURCE_TYPES, Source, SourceEllipse, SourcePoint, SourceRectangle, Sphere, StandardLens,
                       StandardSurface, angles_from_matrix, direction_angles, object_from_dict, source_from_dict)
 from .system import NonSequentialSystem, load_ns, save_ns
-from .trace import EVENT_NAMES, DetectorData, NSTraceResult, trace
+from .trace import EVENT_CODES, EVENT_NAMES, DetectorData, NSTraceResult, trace
 from .convert import from_sequential
 
 load = load_ns
 save = save_ns
 
-__all__ = ["Annulus", "CylinderVolume", "Detector", "NSObject", "OBJECT_TYPES", "Rectangle", "RectangularVolume",
+__all__ = ["Annulus", "CylinderVolume", "Detector", "NSObject", "OBJECT_TYPES", "Prism", "Rectangle",
+           "RectangularVolume",
            "SOURCE_TYPES", "Source", "SourceEllipse", "SourcePoint", "SourceRectangle", "Sphere", "StandardLens",
            "StandardSurface", "angles_from_matrix", "direction_angles", "object_from_dict", "source_from_dict",
            "NonSequentialSystem", "load_ns", "save_ns", "load", "save", "EVENT_NAMES", "DetectorData",
-           "NSTraceResult", "trace", "from_sequential"]
+           "NSTraceResult", "trace", "EVENT_CODES", "from_sequential"]

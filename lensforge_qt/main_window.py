@@ -79,6 +79,7 @@ class MainWindow(QMainWindow):
         self._make_status()
 
         self.doc.changed.connect(self._update_status)
+        self.doc.opened.connect(self._lens_opened)
         self.doc.titleChanged.connect(self._update_title)
         self.doc.error.connect(lambda m: self.statusBar().showMessage(m, 8000))
         self.lde.statusMessage.connect(lambda m: self.statusBar().showMessage(m, 5000))
@@ -135,7 +136,7 @@ class MainWindow(QMainWindow):
         self.a_focus = A("&Quick Focus (paraxial)", self.quick_focus, "Ctrl+Shift+F")
         self.a_mfe = A("&Merit Function Editor", self.show_mfe, "F6")
         self.a_mce = A("Multi-&Configuration Editor", self.show_mce, "F7")
-        self.a_ns = A("&Non-Sequential Editor", self.show_ns, "Ctrl+Shift+N")
+        self.a_ns = A("&Non-Sequential Component Editor", self.show_ns, "Ctrl+Shift+N")
         self.a_ns_convert = A("&Convert Lens to Non-Sequential", self.convert_to_ns)
         self.a_next_config = A("&Next Configuration", lambda: self.step_config(+1), "Ctrl+]")
         self.a_prev_config = A("Pre&vious Configuration", lambda: self.step_config(-1), "Ctrl+[")
@@ -665,7 +666,7 @@ class MainWindow(QMainWindow):
         self.mce_dock.raise_()
 
     def show_ns(self):
-        """Open (or bring to the front) the Non-Sequential Editor window."""
+        """Open (or bring to the front) the Non-Sequential Component Editor of the lens's scene."""
         from .ns_window import NonSequentialWindow
         w = getattr(self, "ns_window", None)
         if w is None:
@@ -676,10 +677,19 @@ class MainWindow(QMainWindow):
         return w
 
     def convert_to_ns(self):
-        """Convert the current lens and show it in the Non-Sequential Editor."""
+        """Convert the current lens into the non-sequential scene (one undoable edit) and show it in the
+        Non-Sequential Component Editor with the NS Layout."""
         w = self.show_ns()
-        w.from_current_lens()
+        if w.from_current_lens():
+            self.open_analysis("ns_layout")
+            w.raise_()
         return w
+
+    def _lens_opened(self):
+        """A lens that carries a non-sequential scene opens with the Non-Sequential Component Editor."""
+        sc = getattr(self.doc.system, "nonseq", None)
+        if sc is not None and (sc.objects or sc.sources):
+            self.show_ns()
 
     def step_config(self, step):
         """Show the next (+1) or previous (-1) configuration, wrapping round."""

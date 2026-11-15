@@ -4,6 +4,7 @@ import { App, run, call, status, statusError, onState, cmd } from "./core.js";
 import * as engine from "./engine.js";
 import * as store from "./storage.js";
 import { el, esc, btn, select, numInput, check, openWindow, dialog, message, confirmBox, download, pickFile, iconImg, svgURL, copyText } from "./ui.js";
+import { openAnalysis } from "./analysis.js";
 
 const dpr = () => Math.min(2, window.devicePixelRatio || 1);
 const fmt = (v, p = 10) => (v === null || v === undefined ? "-" : (+v).toPrecision(p));
@@ -188,108 +189,162 @@ export async function tolerancing() {
   generate();
 }
 
-// ================================================================== Non-Sequential Editor
-let nsWin = null;
+// ================================================================== Non-Sequential Component Editor
+// The lens's non-sequential scene (as lensforge_qt/ns_window.py): object and source tables laid out as
+// Zemax's NSC Editor, the Ray Trace Control settings and Trace. Every edit is an undoable lens edit; the
+// tables come with each lens state (state.nonseq), the analyses are Analysis > Non-Sequential windows.
+const NS_HELP = "Tools > Non-Sequential > Non-Sequential Component Editor";
+let nsWin = null, nsInfo = null;
 export async function nsEditor() {
   if (nsWin && !nsWin.closed) { nsWin.raise(); return nsWin; }
-  const w = nsWin = openWindow({ title: "Non-Sequential Editor", popout: "nonseq", width: 1200, height: 820, resizable: true, flush: true,
-    help: () => cmd("__help:Tools > Non-Sequential > Non-Sequential Editor") });
-  let st = await run("ns_state");
-  let tab = "objects", sel = { objects: -1, sources: -1 };
+  if (!nsInfo) nsInfo = await run("ns_info");
+  if (!nsInfo) return null;
+  const I = nsInfo;
+  let alive = true;
+  const w = nsWin = openWindow({ title: "Non-Sequential Component Editor", popout: "nonseq", width: 1180, height: 640, resizable: true, flush: true,
+    help: () => cmd("__help:" + NS_HELP), onclose: () => { alive = false; } });
+  let tab = "objects";
+  const sel = { objects: -1, sources: -1 };
   const tb = el("div", { class: "editor-bar" });
   const tabsBar = el("div", { class: "tabs", style: { padding: "4px 6px 0" } });
-  const tableWrap = el("div", { class: "table-wrap", style: { flex: "0 0 260px", margin: "0 6px" } });
-  const split = check("Split rays", true, null, "Follow both the reflected and transmitted part at every refracting face (shows ghosts and stray light).");
-  const fresnel = check("Fresnel losses", true);
-  const minInt = numInput(1e-5, { min: 0, max: 1, step: 1e-5 });
-  minInt.title = "Minimum relative ray intensity: split rays weaker than this fraction of their source ray are dropped.";
-  const maxSeg = numInput(100, { min: 2, max: 10000, step: 1 });
-  maxSeg.title = "Maximum segments per ray.";
-  const det = el("select", { title: "Detector shown on the right." });
-  const filt = select([["all", "All rays"], ["direct", "Direct (no reflection)"], ["ghost", "Ghosts (2+ reflections)"], ["1", "1 reflection"], ["2", "2 reflections"], ["3", "3 reflections"], ["4", "4 reflections"]], "all");
-  filt.title = "Which rays the detector image and the layout count, by the number of Fresnel (partial) reflections they took.";
-  const log = check("Log scale", true);
-  const plane = select([["y", "YZ layout"], ["x", "XZ layout"]], "y");
-  const traceB = btn("Trace", () => trace(), { title: "Trace all sources with the settings below and show the rays and the detector (F5)." });
-  const plotImg = el("img", { style: { flex: "1", minHeight: "0", width: "100%", objectFit: "contain" }, alt: "" });
-  const summary = el("pre", { class: "mono", style: { height: "100px", border: "1px solid var(--border)", padding: "4px", margin: "0 6px 6px", flex: "none" } });
-  const settings = el("div", { class: "an-bar" }, split, fresnel, el("label", {}, "Min. intensity", minInt), el("label", {}, "Max. segments", maxSeg),
-    el("label", {}, "Detector", det), el("label", {}, "Show", filt), log, plane, traceB);
-  w.body.append(tb, tabsBar, tableWrap, settings, el("div", { style: { flex: "1", minHeight: "0", display: "flex", padding: "0 6px" } }, plotImg), summary);
-  [det, filt, plane].forEach((x) => x.addEventListener("change", () => redraw()));
-  log.input.addEventListener("change", () => redraw());
+  const tableWrap = el("div", { class: "table-wrap", style: { flex: "1 1 260px", minHeight: "120px", margin: "0 6px" } });
+  const traceBar = el("div", { class: "an-bar", title: "Ray Trace Control: saved with the scene and used by the Analysis > Non-Sequential windows." });
+  const summary = el("pre", { class: "mono", style: { flex: "0 1 170px", minHeight: "60px", overflow: "auto", border: "1px solid var(--border)", padding: "4px", margin: "0 6px 6px" } },
+    "Press Trace (F5) to trace the scene; the summary appears here.");
+  w.body.append(tb, tabsBar, tableWrap, traceBar, summary);
 
-  const pick = async (kinds) => new Promise((resolve) => {
-    const r = tb.getBoundingClientRect();
-    import("./ui.js").then(({ popupMenu }) => popupMenu(kinds.map(([k, lab]) => ({ label: lab, action: () => resolve(k) })), r.left + 120, r.bottom));
+  const traceCtl = {};
+  for (const [key, label, kind, tip] of I.trace_fields) {
+    if (kind === "bool") {
+      const c = check(label, false, (v) => edit("ns_set_trace", { key, value: v }), tip);
+      traceCtl[key] = { set: (v) => { c.input.checked = !!v; } };
+      traceBar.append(c);
+    } else {
+      const inp = numInput(0, { min: 0, max: kind === "int" ? 1000000 : 1, step: kind === "int" ? 1 : "any", width: kind === "int" ? "80px" : "100px",
+        onchange: (v) => edit("ns_set_trace", { key, value: v }) });
+      inp.title = tip;
+      traceCtl[key] = { set: (v) => { if (document.activeElement !== inp) inp.value = String(v); } };
+      traceBar.append(el("label", { title: tip }, label, inp));
+    }
+  }
+  const tip = (k) => `${I.buttons.find((b) => b[0] === k)[1]}\n${I.buttons.find((b) => b[0] === k)[2]}`;
+  const traceB = btn("Trace", () => trace(), { title: tip("trace") });
+  traceBar.append(traceB);
+  for (const [k, key] of [["layout", "ns_layout"], ["detector", "ns_detector"], ["paths", "ns_paths"]])
+    traceBar.append(btn(I.buttons.find((b) => b[0] === k)[1], () => openAnalysis(key), { title: tip(k) }));
+
+  async function edit(method, args) {
+    try { const r = await call(method, args); status(""); return r; }
+    catch (e) { statusError(`Not changed: ${e.message}`); fill(App.state); return undefined; }
+  }
+  const pick = (items, anchor) => new Promise((resolve) => {
+    const r = (anchor || tb).getBoundingClientRect();
+    import("./ui.js").then(({ popupMenu }) => popupMenu(items.map(([k, lab]) => ({ label: lab, action: () => resolve(k) })), r.left, r.bottom));
   });
+  const select1 = (t, r) => { tab = t; sel[t] = r; fill(App.state); };
   const actions = {
-    new: async () => { if ((st.objects.length || st.sources.length) && !(await confirmBox("New scene", "Discard the current scene?", "Discard"))) return; await run("ns_new"); refresh(); },
+    new: async () => {
+      const st = App.state.nonseq;
+      if ((st.objects.length || st.sources.length) && !(await confirmBox("New scene", "Delete every object and source of the scene?", "Delete"))) return;
+      await edit("ns_new", {});
+    },
     open: async () => {
       const f = await pickFile(".json");
       if (!f) return;
-      try { await call("ns_open", { text: f.text, filename: f.name }); refresh(); } catch (e) { message("Open scene", `Could not open ${esc(f.name)}: ${esc(e.message)}`); }
+      try { await call("ns_open", { text: f.text, filename: f.name }); status(`Imported ${f.name}`); } catch (e) { message("Import scene", `Could not open ${esc(f.name)}: ${esc(e.message)}`); }
     },
-    save: async () => { const t = await run("ns_text"); if (t) { download((st.name || "scene").replace(/[\\/:*?"<>|]+/g, "_") + ".ns.json", t); status("Scene downloaded"); } },
-    convert: async () => { try { await call("ns_from_lens"); refresh(); } catch (e) { message("Convert lens", esc(e.message)); } },
-    add_object: async () => { const k = await pick(st.object_types); const r = await run("ns_add", { kind: k, after: sel.objects }); if (r) { tab = r.table; sel[tab] = r.row; refresh(); } },
-    add_source: async () => { const k = await pick(st.source_types); const r = await run("ns_add", { kind: k }); if (r) { tab = r.table; sel[tab] = r.row; refresh(); } },
-    delete: async () => { await run("ns_delete", { table: tab, r: sel[tab] }); sel[tab] = -1; refresh(); },
+    save: async () => { const t = await run("ns_text"); if (t) { download((App.state.nonseq.name || "scene").replace(/[\\/:*?"<>|]+/g, "_") + ".ns.json", t); status("Scene downloaded"); } },
+    convert: async () => { try { await call("ns_from_lens"); status("Lens converted to a non-sequential scene"); return true; } catch (e) { message("Convert lens", esc(e.message)); return false; } },
+    add_object: async (anchor) => { const k = await pick(I.object_types, anchor); const r = await edit("ns_add", { kind: k, after: sel.objects }); if (r) select1(r.table, r.row); },
+    add_source: async (anchor) => { const k = await pick(I.source_types, anchor); const r = await edit("ns_add", { kind: k, after: sel.sources }); if (r) select1(r.table, r.row); },
+    duplicate: async () => { if (sel[tab] < 0) return status("Select a row first"); const r = await edit("ns_duplicate", { table: tab, r: sel[tab] }); if (r) select1(tab, r.row); },
+    move_up: async () => { if (sel[tab] < 0) return; const r = await edit("ns_move", { table: tab, r: sel[tab], delta: -1 }); if (r) select1(tab, r.row); },
+    move_down: async () => { if (sel[tab] < 0) return; const r = await edit("ns_move", { table: tab, r: sel[tab], delta: 1 }); if (r) select1(tab, r.row); },
+    delete: async () => { if (sel[tab] < 0) return status("Select a row to delete first"); await edit("ns_delete", { table: tab, r: sel[tab] }); sel[tab] = -1; fill(App.state); },
     trace: () => trace(),
-    help: () => cmd("__help:Tools > Non-Sequential > Non-Sequential Editor"),
+    layout: () => openAnalysis("ns_layout"),
+    detector: () => openAnalysis("ns_detector"),
+    paths: () => openAnalysis("ns_paths"),
+    help: () => cmd("__help:" + NS_HELP),
   };
-  tb.append(...st.buttons.map(([k, text, tip, svg]) => el("button", { type: "button", title: `${text}\n${tip}`, onclick: actions[k],
-    style: { display: "inline-flex", alignItems: "center", gap: "4px" } }, iconImg(svg, 20), text)));
-  w.element.addEventListener("keydown", (e) => { if (e.key === "F5") { e.preventDefault(); e.stopPropagation(); trace(); } });
+  for (const [k, text, t, svg] of I.buttons) {
+    const b = el("button", { type: "button", title: `${text}\n${t}`, style: { display: "inline-flex", alignItems: "center", gap: "4px" } }, iconImg(svg, 20), text);
+    b.addEventListener("click", () => actions[k](b));
+    tb.append(b);
+    if (k === "convert" || k === "delete" || k === "trace") tb.append(el("span", { class: "sep", style: { borderLeft: "1px solid var(--border)", margin: "0 4px" } }));
+  }
+  w.element.addEventListener("keydown", (e) => {
+    if (e.key === "F5") { e.preventDefault(); e.stopPropagation(); trace(); }
+    else if (e.altKey && (e.key === "ArrowUp" || e.key === "ArrowDown")) { e.preventDefault(); e.stopPropagation(); actions[e.key === "ArrowUp" ? "move_up" : "move_down"](); }
+  });
 
-  const fill = () => {
-    w.setTitle(`Non-Sequential Editor - ${st.name}`);
-    tabsBar.replaceChildren(...[["objects", "Objects"], ["sources", "Sources"]].map(([k, lab]) =>
-      el("div", { class: "tab" + (tab === k ? " active" : ""), onclick: () => { tab = k; fill(); } }, lab)));
-    const cols = tab === "objects" ? st.obj_cols : st.src_cols;
-    const items = tab === "objects" ? st.objects : st.sources;
+  function fill(state) {
+    if (!alive || !state || !state.nonseq) return;
+    const st = state.nonseq;
+    w.setTitle(`Non-Sequential Component Editor - ${st.name}`);
+    tabsBar.replaceChildren(...[["objects", `Objects (${st.objects.length})`], ["sources", `Sources (${st.sources.length})`]].map(([k, lab]) =>
+      el("div", { class: "tab" + (tab === k ? " active" : ""), onclick: () => { tab = k; fill(App.state); } }, lab)));
+    const isObj = tab === "objects";
+    const cols = isObj ? I.obj_cols : I.src_cols;
+    const par0 = isObj ? I.obj_par0 : I.src_par0;
+    const rows = isObj ? st.objects : st.sources;
+    const types = isObj ? I.object_types : I.source_types;
+    if (sel[tab] >= rows.length) sel[tab] = rows.length - 1;
+    const labels = sel[tab] >= 0 ? rows[sel[tab]].labels : [];
+    const head = cols.map((h) => el("th", { title: I.column_tips[h] || "" }, h));
+    const nameHeads = (labs) => cols.forEach((h, c) => {
+      if (c < par0) return;
+      head[c].textContent = labs[c - par0] || h;
+      head[c].title = labs[c - par0] ? `${labs[c - par0]}\n${I.column_tips[h] || ""}` : I.column_tips[h] || "";
+    });
+    nameHeads(labels);
     const tbody = el("tbody");
-    items.forEach((it, r) => {
+    rows.forEach((row, r) => {
       const tr = el("tr", { class: sel[tab] === r ? "sel" : "" });
-      it.cells.forEach((v, c) => {
-        if (c === 0) { tr.append(el("td", {}, v)); return; }
-        const inp = el("input", { type: "text", value: v, title: c === it.cells.length - 1 ? it.tip : "" });
-        inp.addEventListener("change", async () => {
-          try { await call("ns_set_cell", { table: tab, r, c, text: inp.value }); status(""); }
-          catch (e) { statusError(`Not changed: ${e.message}`); }
-          refresh();
-        });
-        tr.append(el("td", {}, inp));
+      tr.append(el("td", { class: "num", style: { color: "var(--muted, #667)" } }, isObj ? String(r + 1) : `S${r + 1}`));
+      row.cells.forEach((v, c) => {
+        if (c === 0) {
+          const s = select(types, row.kind, (k) => edit("ns_change_type", { table: tab, r, kind: k }), { title: I.column_tips.Type, style: "max-width: 190px" });
+          tr.append(el("td", {}, s));
+          return;
+        }
+        const bad = row.bad.includes(c);
+        if (!row.editable[c]) { tr.append(el("td", { title: row.tips[c], style: { background: "#eee" } }, v)); return; }
+        const inp = el("input", { type: "text", value: v, title: row.tips[c], "data-r": String(r), "data-c": String(c),
+          style: { width: `${Math.max(c === 1 ? 10 : 6, Math.min(24, v.length + 2))}ch` } });
+        inp.addEventListener("change", () => edit("ns_set_cell", { table: tab, r, c, text: inp.value }));
+        tr.append(el("td", { style: bad ? { background: "#ffd6d6" } : {} }, inp));
       });
-      tr.addEventListener("pointerdown", () => { if (sel[tab] !== r) { sel[tab] = r; tbody.querySelectorAll("tr").forEach((x, i) => x.classList.toggle("sel", i === r)); } });
+      tr.addEventListener("pointerdown", () => {  // select the row (Par headers follow) without rebuilding it
+        if (sel[tab] === r) return;
+        sel[tab] = r;
+        tbody.querySelectorAll("tr").forEach((x, i) => x.classList.toggle("sel", i === r));
+        nameHeads(row.labels);
+      });
       tbody.append(tr);
     });
-    const t = el("table", { class: "grid", title: tab === "objects" ? "One row per object. Edit any cell; Parameters are name=value pairs (hover a row's Parameters cell for the names)." : "One row per source. Rays leave along the source's local +z axis." },
-      el("thead", {}, el("tr", {}, ...cols.map((h) => el("th", {}, h)))), tbody);
+    const t = el("table", { class: "grid", style: { width: "auto" }, title: isObj ? "One row per object. The Par columns are named after the selected row's type (hover a cell for its parameter); grey cells do not apply to the row." :
+      "One row per source. Rays leave along the source's local +z axis." },
+      el("thead", {}, el("tr", {}, el("th", {}, "#"), ...head)), tbody);
+    // keep the focus in the cell the user is in (an edit's new state rebuilds the table)
+    const a = document.activeElement;
+    const at = a && tableWrap.contains(a) && a.dataset && a.dataset.r !== undefined ? [a.dataset.r, a.dataset.c] : null;
+    const scroll = tableWrap.scrollTop;
     tableWrap.replaceChildren(t);
-    const cur = det.value;
-    det.replaceChildren(...st.detectors.map(([k, lab]) => el("option", { value: String(k) }, lab)));
-    if (st.detectors.some(([k]) => String(k) === cur)) det.value = cur;
-  };
-  const refresh = async () => { st = await run("ns_state"); fill(); if (!st.traced) { plotImg.removeAttribute("src"); summary.textContent = st.summary; } };
-  const trace = async () => {
+    tableWrap.scrollTop = scroll;
+    if (at) { const inp = t.querySelector(`input[data-r="${at[0]}"][data-c="${at[1]}"]`); if (inp) { inp.focus({ preventScroll: true }); inp.select(); } }
+    for (const [k, c] of Object.entries(traceCtl)) c.set(st.trace[k]);
+  }
+  async function trace() {
     summary.textContent = "Tracing...";
     traceB.disabled = true;
-    const r = await run("ns_trace", { split: split.input.checked, fresnel: fresnel.input.checked, min_relative_intensity: +minInt.value, max_segments: +maxSeg.value });
+    try { summary.textContent = await call("ns_trace"); }
+    catch (e) { summary.textContent = `Trace failed: ${e.message}`; }
     traceB.disabled = false;
-    if (!r) { summary.textContent = "Trace failed."; return; }
-    summary.textContent = r.summary;
-    if (r.traced) redraw();
-  };
-  const redraw = async () => {
-    const b = plotImg.parentNode.getBoundingClientRect();
-    const rays = filt.value;
-    const png = await run("ns_plot", { detector: det.value === "" ? null : +det.value, rays: /^\d$/.test(rays) ? +rays : rays, log: log.input.checked,
-      plane: plane.value, width: Math.max(500, b.width), height: Math.max(250, b.height), dpr: dpr() });
-    if (png) plotImg.src = "data:image/png;base64," + png; else plotImg.removeAttribute("src");
-  };
+  }
+  onState((s) => fill(s));
   w.fromLens = actions.convert;
-  fill();
+  fill(App.state);
   return w;
 }
 

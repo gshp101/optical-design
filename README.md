@@ -78,7 +78,8 @@ python -m lensforge_qt --sample achromat            # singlet, achromat, parabol
 | Diffractive surfaces | Diffraction Grating (`DGRATING`: linear grating on a conic surface, lines/um and order, transmissive or reflective, `n'M' = nM + m lambda T`; follow it with a coordinate break onto the diffracted order, see `examples/grating_demo.lens.json`) and Binary 2 (rotationally symmetric diffractive phase). |
 | Optimization (Ctrl+U) | Damped least squares, orthogonal descent (derivative-free, for noisy merit functions such as the non-sequential NSDP / NSRR operands), hammer, global search, glass substitution (optionally from one maker's catalog), on a copy of the lens in the background with live merit plot and Stop (keeps the best design so far); the result is one undo step. |
 | Tolerancing (Ctrl+Shift+T) | Tolerance wizard, editable tolerance table, criterion (RMS spot / wavefront / MTF / merit function), compensator, sensitivity analysis with worst offenders, Monte Carlo with histogram and "load worst lens". |
-| Non-Sequential Editor (Ctrl+Shift+N) | Tools > Non-Sequential: a window with object and source tables (type, comment, position, tilts, material, coating, `name=value` parameters), trace settings (split rays, Fresnel losses, minimum relative intensity, maximum segments), a ray layout coloured by number of Fresnel reflections (direct, one, ghosts) and the irradiance on a chosen detector filtered by reflections. Toolbar: New / Open / Save scene (`.ns.json`), From Current Lens, Add Object, Add Source, Delete Row, Trace (F5), Help. Tools > Non-Sequential > Convert Lens to Non-Sequential opens the current lens as a scene. |
+| Non-Sequential Component Editor (Ctrl+Shift+N) | Tools > Non-Sequential: the lens's non-sequential scene, laid out like Zemax's NSC Editor. Object and source tables with Type (a list), Comment, **Ref** (Ref Object: place a row in another object's frame), X, Y, Z, Tilt X/Y/Z, Material / Coating R (objects) or Rays / Power / Wavelengths / Sampling (sources), and Par 1.. columns named after the selected row's type. Ray Trace Control (split rays, Fresnel losses, minimum relative intensity, maximum segments, seed) and Trace (F5) with a power report. The scene is saved in the lens file and every edit is one undo step; a lens with a scene opens with the editor. Toolbar: New / Import / Export scene (`.ns.json`), From Current Lens, Add Object, Add Source, Duplicate, Move Up / Down (Ref numbers follow), Delete, Trace, NS Layout, Detector Viewer, Path Analysis, Help. Tools > Non-Sequential > Convert Lens to Non-Sequential makes the lens's scene from its sequential part. |
+| Non-sequential analyses | Analysis > Non-Sequential: NS Layout (YZ / XZ sections, colour by reflections / source / wavelength / power, only direct light or ghosts, or one ray path), NS 3D Layout (wireframe objects and rays), Detector Viewer (irradiance, true colour, X / Y cross-sections, angle space; by reflections and source; log scale), Ray Path Analysis (the brightest ray paths to a detector, object by object and face by face: ghost and stray-light analysis), NS Trace Report (power balance, detector statistics). Windows of one scene share the trace. Examples > Non-Sequential has eight ready-made scenes. |
 | Python script (F8) | Runs Python against the open lens (`lens`, `lf`, `opt`, `np`); changes become one undo step, a failing script leaves the lens unchanged. |
 
 Also: undo/redo of every edit (Edit > Undo History), open `.json` / import `.zmx`, save, recent files,
@@ -98,11 +99,11 @@ in `OPERAND_GROUPS` (`lensforge_qt/mfe_help.py`); its reference entry is generat
 menus, items, help and icons; the Lens Data Editor in the centre; analysis windows docked on the right (tabbed,
 floatable, with the same settings bars); the Merit Function Editor, Multi-Configuration Editor and Python Shell
 docked at the bottom; the optional toolbar (View > Show Toolbar / Customize Toolbar); System Explorer, Input Rays,
-material picker, Insert Lens, Inspect Lens File, Optimization (with Stop), Tolerancing, the Non-Sequential Editor,
-Help Contents, What's This? and Keyboard Shortcuts.
+material picker, Insert Lens, Inspect Lens File, Optimization (with Stop), Tolerancing, the Non-Sequential Component Editor (with the Analysis > Non-Sequential
+windows), Help Contents, What's This? and Keyboard Shortcuts.
 
 **Editors in their own tabs.** The Merit Function and Multi-Configuration Editors, the Python Shell, analysis
-windows, Optimization, Tolerancing, the Non-Sequential Editor and Help can move into a browser tab of their own
+windows, Optimization, Tolerancing, the Non-Sequential Component Editor and Help can move into a browser tab of their own
 (the &#8599; Open in New Tab button in their title bar), e.g. to put them on a second screen. The main tab keeps
 running them, so both tabs show every change at once; closing the pop-out tab puts the editor back. The Type
 column of both editors is a searchable menu of every operand with a one-line description.
@@ -122,7 +123,7 @@ AGF catalogs are stored and reloaded at start. Clearing the browser's site data 
 designs you want to keep.
 
 **Differences from the desktop app.** No File > Exit. Shortcuts the browser keeps for itself use Alt:
-New (Alt+N), Wavefront Map (Alt+W), Tolerancing (Alt+Shift+T), Non-Sequential Editor (Alt+Shift+N), Delete
+New (Alt+N), Wavefront Map (Alt+W), Tolerancing (Alt+Shift+T), Non-Sequential Component Editor (Alt+Shift+N), Delete
 Surfaces (Alt+Shift+Del), Surface Properties (Alt+Shift+P), Inspect Lens File (Alt+Shift+O). On a Mac, Cmd works
 wherever Ctrl is shown. Stop interrupts a running optimisation or tolerance run only when the page is
 cross-origin isolated (the local server sends the headers; on GitHub Pages a small service worker adds them).
@@ -243,24 +244,32 @@ print(r.summary())                           # where the power ended; power per 
 d = r.detector(0)
 d.image("ghost")                             # irradiance of light with 2+ Fresnel reflections
 d.total_power("direct"), d.rms_radius(), d.select(2, tir=False)
-P.ns_layout(r); P.ns_detector(r, 0, rays="ghost", log=True)
+r.paths(0)[:5]                               # brightest ray paths to the detector ("S -> 1 front T -> ...")
+P.ns_layout(r, path=r.paths(0)[1]); P.ns_layout_3d(r); P.ns_detector(r, 0, rays="ghost", log=True)
 scene = ns.from_sequential(lens)             # any sequential lens -> objects, sources, image detector
 ns.save(scene, "scene.ns.json"); ns.load("scene.ns.json")
+lens.nonseq = scene                          # kept with the lens: lf.save(lens, ...) writes it too
+scene.trace_settings["split"] = True; scene.trace()   # trace with the scene's own settings
+scene.add(ns.Rectangle(z=30, ref=1))         # Ref Object: pose given in object 1's frame
 ```
 
 | Kind | Objects |
 |---|---|
-| Volumes (`material` = glass; faces refract, split by Fresnel or `coating=R`) | `StandardLens` (two faces of any sequential surface type + cylindrical edge), `Sphere`, `RectangularVolume`, `CylinderVolume` |
+| Volumes (`material` = glass; faces refract, split by Fresnel or `coating=R`) | `StandardLens` (two faces of any sequential surface type + cylindrical edge), `Sphere`, `RectangularVolume`, `CylinderVolume`, `Prism` (base, apex angle: dispersing or right-angle TIR prism) |
 | Surfaces (`material` = `"MIRROR"` or `"ABSORB"`) | `StandardSurface` (annular aperture), `Annulus`, `Rectangle` |
 | Detectors | `Detector` (pixels, absorbing or `transparent`; records position, power, direction, wavelength, source, Fresnel reflections and TIR count of every hit) |
-| Sources (rays along local +z, `random` or `grid` sampling, several wavelengths) | `SourcePoint` (cone), `SourceEllipse`, `SourceRectangle` (optional divergence) |
+| Sources (rays along local +z, `random` or `grid` sampling, several wavelengths) | `SourcePoint` (cone), `SourceEllipse`, `SourceRectangle` (optional divergence); `cos_exponent` 1 = Lambertian |
 
 Poses are position + tilts about local X, then Y, then Z (degrees). Volumes must not overlap,
 except that touching faces (cemented doublets) pass light directly from glass to glass. Without
 splitting, rays take the transmitted path (losing the Fresnel reflection with `fresnel=True`);
 TIR is always followed. Checks in `tests/test_nonseq.py`: converted lenses reproduce the sequential
 trace to 1e-9, two-reflection light matches `ghost_image`, energy is conserved, ball-lens focus,
-TIR light pipe, fold mirror, coated plate. Desktop app: Tools > Non-Sequential.
+TIR light pipe, fold mirror, coated plate, Ref Object placement, prism retroreflection and minimum
+deviation, Lambertian emission, ray paths adding up to the detector power. In the apps: Tools > Non-Sequential
+(the Non-Sequential Component Editor) and Analysis > Non-Sequential. `examples/non-sequential/` holds eight
+example scenes (achromat ghosts, Cassegrain, ball lens, dispersing prism, retroreflecting prism, LED reflector,
+light pipe, periscope with Ref-placed mirrors), built by `make_examples.py`.
 
 ## Optimisation and tolerancing
 

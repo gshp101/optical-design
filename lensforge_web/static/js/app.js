@@ -33,6 +33,7 @@ async function openSource(src) {
   if (r.missing) await message("Missing glass", esc(r.missing).replace(/\n/g, "<br>") +
     "<br><br>Load the catalog with File &gt; Load Glass Catalog (AGF), or pick another material.");
   if (r.notes) await message("Imported file", esc(r.notes).replace(/\n/g, "<br>"));
+  if (r.nonseq) nsEditor();  // a lens with a non-sequential scene opens with its editor
   return true;
 }
 
@@ -119,7 +120,7 @@ async function forgetCatalogs() {
 
 async function convertToNS() {
   const w = await nsEditor();
-  if (w && w.fromLens) w.fromLens();
+  if (w && w.fromLens && (await w.fromLens())) { openAnalysis("ns_layout"); w.raise(); }
 }
 
 // ================================================================== commands
@@ -168,7 +169,7 @@ function buildCommands() {
     "Tools > Multi-Configuration Editor": showMCE,
     "Tools > Next Configuration": lensCmd("step_config", { step: 1 }),
     "Tools > Previous Configuration": lensCmd("step_config", { step: -1 }),
-    "Tools > Non-Sequential > Non-Sequential Editor": nsEditor,
+    "Tools > Non-Sequential > Non-Sequential Component Editor": nsEditor,
     "Tools > Non-Sequential > Convert Lens to Non-Sequential": convertToNS,
     "Tools > Variables and Solves > Make All Curvatures Variable": lensCmd("vary_curvatures"),
     "Tools > Variables and Solves > Make All Air Spaces Variable": lensCmd("vary_air_spaces"),

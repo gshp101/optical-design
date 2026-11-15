@@ -629,7 +629,7 @@ export async function shortcutsHelp() {
     "Material cell opens the material picker; type into a cell to replace it, Enter or F2 edits it, Delete clears a comment or " +
     "semi-diameter. In the Python Shell, Ctrl+Enter runs the script. On a Mac, Cmd works wherever Ctrl is shown.</p>" +
     "<p>A few shortcuts the browser keeps for itself use Alt instead of Ctrl: New (Alt+N), Wavefront Map (Alt+W), Tolerancing " +
-    "(Alt+Shift+T), Non-Sequential Editor (Alt+Shift+N), Delete Surfaces (Alt+Shift+Del), Surface Properties (Alt+Shift+P), " +
+    "(Alt+Shift+T), Non-Sequential Component Editor (Alt+Shift+N), Delete Surfaces (Alt+Shift+Del), Surface Properties (Alt+Shift+P), " +
     "Inspect Lens File (Alt+Shift+O).</p>";
   await message("Keyboard Shortcuts", `<div style="max-height:60vh;overflow:auto"><table class="grid"><tr><th>Menu</th><th>Command</th><th>Keys</th></tr>` +
     rows.map(([m, c, k]) => `<tr><td>${esc(m)}</td><td>${esc(c)}</td><td><b>${esc(k)}</b></td></tr>`).join("") + `</table></div>${extra}`, { width: 640 });

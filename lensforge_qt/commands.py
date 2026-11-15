@@ -57,6 +57,7 @@ def sample_list():
 EXAMPLE_FOLDER_LABELS = {
     "ModernLensDesignSmith": "Modern Lens Design (Smith)",
     "arducam-lk004": "Arducam LK004 Lens Kit (approximate models)",
+    "non-sequential": "Non-Sequential",
 }
 #: folders whose lenses are listed with the top-level examples (the example scripts' output)
 EXAMPLE_MERGED_FOLDERS = {"output"}

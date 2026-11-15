@@ -1,0 +1,242 @@
+{
+  "format": "lensforge-1",
+  "name": "Classical Cassegrain",
+  "units": "mm",
+  "aperture": {
+    "type": "EPD",
+    "value": 100.0
+  },
+  "fields": {
+    "type": "ANGLE",
+    "values": [
+      {
+        "x": 0.0,
+        "y": 0.0,
+        "weight": 1.0,
+        "vdx": 0.0,
+        "vdy": 0.0,
+        "vcx": 0.0,
+        "vcy": 0.0
+      },
+      {
+        "x": 0.0,
+        "y": 0.1,
+        "weight": 1.0,
+        "vdx": 0.0,
+        "vdy": 0.0,
+        "vcx": 0.0,
+        "vcy": 0.0
+      },
+      {
+        "x": 0.0,
+        "y": 0.2,
+        "weight": 1.0,
+        "vdx": 0.0,
+        "vdy": 0.0,
+        "vcx": 0.0,
+        "vcy": 0.0
+      }
+    ]
+  },
+  "wavelengths": {
+    "values": [
+      {
+        "value": 0.5875618,
+        "weight": 1.0
+      }
+    ],
+    "primary": 0
+  },
+  "ray_aiming": "paraxial",
+  "notes": "Non-sequential example: the sample classical Cassegrain converted to a scene. The primary gets a central hole for the returning beam; light that misses the secondary or goes straight through the hole is the stray light the Ray Path Analysis lists.",
+  "surfaces": [
+    {
+      "type": "STANDARD",
+      "curvature": 0.0,
+      "conic": 0.0,
+      "thickness": "inf",
+      "material": null,
+      "comment": "OBJECT"
+    },
+    {
+      "type": "STANDARD",
+      "curvature": -0.001,
+      "conic": -1.0,
+      "thickness": -400.0,
+      "material": "MIRROR",
+      "stop": true
+    },
+    {
+      "type": "STANDARD",
+      "curvature": -0.004,
+      "conic": -2.25,
+      "thickness": 500.0,
+      "material": "MIRROR"
+    },
+    {
+      "type": "STANDARD",
+      "curvature": 0.0,
+      "conic": 0.0,
+      "thickness": 0.0,
+      "material": null,
+      "comment": "IMAGE"
+    }
+  ],
+  "nonseq": {
+    "format": "lensforge-ns-1",
+    "name": "Cassegrain telescope",
+    "units": "mm",
+    "ambient": "AIR",
+    "notes": "Non-sequential example: the sample classical Cassegrain converted to a scene. The primary gets a central hole for the returning beam; light that misses the secondary or goes straight through the hole is the stray light the Ray Path Analysis lists.",
+    "trace_settings": {
+      "split": false,
+      "fresnel": true,
+      "min_relative_intensity": 1e-06,
+      "max_segments": 100,
+      "seed": 0,
+      "max_rays": 2000000
+    },
+    "objects": [
+      {
+        "type": "STANDARD_SURFACE",
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0,
+        "tilt_x": -0.0,
+        "tilt_y": 0.0,
+        "tilt_z": -0.0,
+        "material": "MIRROR",
+        "comment": "S1 mirror (with hole)",
+        "radius": -1000.0,
+        "conic": -1.0,
+        "semi_diameter": 50.00436410256792,
+        "inner_radius": 9.442869987294406,
+        "reflectance": 1.0,
+        "surface": {
+          "type": "STANDARD",
+          "curvature": -0.001,
+          "conic": -1.0,
+          "thickness": 0.0,
+          "material": null,
+          "semi_diameter": 50.00436410256792
+        }
+      },
+      {
+        "type": "STANDARD_SURFACE",
+        "x": 0.0,
+        "y": 0.0,
+        "z": -400.0,
+        "tilt_x": -0.0,
+        "tilt_y": 0.0,
+        "tilt_z": -0.0,
+        "material": "MIRROR",
+        "comment": "S2 mirror",
+        "radius": -250.0,
+        "conic": -2.25,
+        "semi_diameter": 11.404442741951335,
+        "inner_radius": 0.0,
+        "reflectance": 1.0,
+        "surface": {
+          "type": "STANDARD",
+          "curvature": -0.004,
+          "conic": -2.25,
+          "thickness": 0.0,
+          "material": null,
+          "semi_diameter": 11.404442741951335
+        }
+      },
+      {
+        "type": "ANNULUS",
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0,
+        "tilt_x": -0.0,
+        "tilt_y": 0.0,
+        "tilt_z": -0.0,
+        "material": "ABSORB",
+        "comment": "stop",
+        "inner_radius": 50.0,
+        "outer_radius": 150.0,
+        "reflectance": 1.0
+      },
+      {
+        "type": "DETECTOR",
+        "x": 0.0,
+        "y": 0.0,
+        "z": 100.0,
+        "tilt_x": -0.0,
+        "tilt_y": 0.0,
+        "tilt_z": -0.0,
+        "material": null,
+        "comment": "image",
+        "half_x": 10.485832109725077,
+        "half_y": 10.485832109725077,
+        "nx": 101,
+        "ny": 101,
+        "transparent": false
+      }
+    ],
+    "sources": [
+      {
+        "type": "SOURCE_ELLIPSE",
+        "x": 0.0,
+        "y": 0.0,
+        "z": -451.00436410256793,
+        "tilt_x": -0.0,
+        "tilt_y": 0.0,
+        "tilt_z": 0.0,
+        "comment": "field 1",
+        "n_rays": 3000,
+        "power": 1.0,
+        "wavelengths": [
+          0.5875618
+        ],
+        "sampling": "random",
+        "half_x": 51.0,
+        "half_y": 51.0,
+        "cone_angle": 0.0,
+        "cos_exponent": 0.0
+      },
+      {
+        "type": "SOURCE_ELLIPSE",
+        "x": 0.0,
+        "y": -0.7871519087127535,
+        "z": -451.00436410256793,
+        "tilt_x": -0.1,
+        "tilt_y": 0.0,
+        "tilt_z": 0.0,
+        "comment": "field 2",
+        "n_rays": 3000,
+        "power": 1.0,
+        "wavelengths": [
+          0.5875618
+        ],
+        "sampling": "random",
+        "half_x": 51.0,
+        "half_y": 51.0,
+        "cone_angle": 0.0,
+        "cos_exponent": 0.0
+      },
+      {
+        "type": "SOURCE_ELLIPSE",
+        "x": 0.0,
+        "y": -1.5743086130535222,
+        "z": -451.00436410256793,
+        "tilt_x": -0.2,
+        "tilt_y": 0.0,
+        "tilt_z": 0.0,
+        "comment": "field 3",
+        "n_rays": 3000,
+        "power": 1.0,
+        "wavelengths": [
+          0.5875618
+        ],
+        "sampling": "random",
+        "half_x": 51.0,
+        "half_y": 51.0,
+        "cone_angle": 0.0,
+        "cos_exponent": 0.0
+      }
+    ]
+  }
+}

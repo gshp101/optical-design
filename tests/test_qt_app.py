@@ -333,7 +333,11 @@ def test_parse_params():
 
 @pytest.mark.parametrize("key", sorted(REGISTRY))
 def test_every_analysis_window(win, key):
-    win.doc.reset(lf.load(TRIPLET))
+    lens = lf.load(TRIPLET)
+    if key.startswith("ns_"):  # the non-sequential analyses trace the lens's scene
+        from lensforge_qt.ns_table import from_lens
+        lens.nonseq = from_lens(lens)
+    win.doc.reset(lens)
     w = win.open_analysis(key)
     assert w.updates == 1, w.error
     assert w.error is None, w.error
@@ -1369,54 +1373,107 @@ def test_merit_wizard_covers_every_configuration(win, monkeypatch):
 # ---------------------------------------------------------------------------
 
 def test_non_sequential_editor_convert_trace_and_edit(win, tmp_path):
-    from lensforge_qt import ns_window as NW
+    from lensforge_qt import ns_table as NT
     w = win.convert_to_ns()
     assert w is win.show_ns()  # one window, brought to the front
-    kinds = [o.kind for o in w.scene.objects]
-    assert kinds == ["STANDARD_LENS", "STANDARD_LENS", "ANNULUS", "DETECTOR"]
+    sc = win.doc.system.nonseq  # the scene is kept with the lens
+    assert [o.kind for o in sc.objects] == ["STANDARD_LENS", "STANDARD_LENS", "ANNULUS", "DETECTOR"]
+    assert sc.trace_settings["split"] is True
     assert w.obj_table.rowCount() == 4 and w.src_table.rowCount() == 3
-    w.split.setChecked(True)
+    assert any(a.spec.key == "ns_layout" for a in win.analysis_windows)  # convert opens the NS Layout
     w.trace()
-    r = w.result
-    assert r is not None and r.n_rays_total > r.n_launched  # split rays were followed
-    assert "Detector image" in w.summary.toPlainText()
-    assert len(w.figure.axes) >= 2
-    w.filter_box.setCurrentIndex(w.filter_box.findData("ghost"))
-    assert r.detector(0).total_power("ghost") > 0
+    assert "Detector 4 (image)" in w.summary.toPlainText() and "ghosts" in w.summary.toPlainText()
 
-    # edit a pose cell and a parameter, and reject a bad parameter
-    w.obj_table.item(0, 4).setText("1.5")  # Z
-    assert w.scene.objects[0].z == 1.5
-    col = len(NW.OBJ_COLS) - 1
-    w.obj_table.item(0, col).setText("semi_diameter=7")
-    assert w.scene.objects[0].semi_diameter == 7
-    w.obj_table.item(0, col).setText("bogus=1")
-    assert "bogus" in w.statusBar().currentMessage()
-    w.src_table.item(0, 8).setText("77")
-    assert w.scene.sources[0].n_rays == 77
-
-    # add and delete rows, save and reopen
-    w.obj_table.setCurrentCell(3, 0)
-    w.add_item("SPHERE")
-    assert w.scene.objects[4].kind == "SPHERE"
+    # the Par columns are named after the selected row's parameters
     w.tabs.setCurrentIndex(0)
-    w.obj_table.setCurrentCell(4, 0)
+    w.obj_table.setCurrentCell(0, 1)
+    assert w.obj_table.horizontalHeaderItem(NT.OBJ_PAR0).text() == "Radius 1"
+    w.obj_table.setCurrentCell(3, 1)
+    assert w.obj_table.horizontalHeaderItem(NT.OBJ_PAR0 + 4).text() == "Transparent (1/0)"
+
+    # edit a pose cell and a parameter (each one undoable lens edit), reject a bad value
+    w.obj_table.item(0, NT.POSE_COLS.index("Z") + 3).setText("1.5")
+    assert win.doc.system.nonseq.objects[0].z == 1.5
+    w.obj_table.item(0, NT.OBJ_PAR0 + 5).setText("7")  # semi-diameter
+    assert win.doc.system.nonseq.objects[0].semi_diameter == 7
+    win.doc.undo_stack.undo()
+    assert win.doc.system.nonseq.objects[0].semi_diameter != 7
+    w.obj_table.item(0, NT.OBJ_PAR0).setText("abc")
+    assert "Not changed" in w.statusBar().currentMessage()
+    assert not (w.obj_table.item(3, NT.MATERIAL_COL).flags() & Qt.ItemIsEditable)  # detectors have no glass
+    w.src_table.item(0, NT.SRC_PAR0 - 4).setText("77")
+    assert win.doc.system.nonseq.sources[0].n_rays == 77
+    w.obj_table.item(1, NT.MATERIAL_COL).setText("NOGLASS")
+    assert w.obj_table.item(1, NT.MATERIAL_COL).background().color().name() == "#ffd6d6"
+    win.doc.undo_stack.undo()
+
+    # type change keeps the position; insert, duplicate, move and delete keep Ref numbers right
+    w.change_type("objects", 2, "RECTANGLE")
+    assert win.doc.system.nonseq.objects[2].kind == "RECTANGLE"
+    w.obj_table.item(3, 2).setText("3")  # detector placed on object 3
+    w.obj_table.setCurrentCell(0, 1)
+    w.add_item("SPHERE")
+    sc = win.doc.system.nonseq
+    assert sc.objects[1].kind == "SPHERE" and sc.objects[4].ref == 4
+    w.obj_table.setCurrentCell(1, 1)
+    w.move_row(+1)
+    sc = win.doc.system.nonseq
+    assert sc.objects[2].kind == "SPHERE" and w.obj_table.currentRow() == 2
+    w.duplicate_row()
+    sc = win.doc.system.nonseq
+    assert [o.kind for o in sc.objects[2:4]] == ["SPHERE", "SPHERE"] and sc.objects[5].ref == 5
     w.delete_row()
-    assert len(w.scene.objects) == 4
+    w.obj_table.setCurrentCell(2, 1)
+    w.delete_row()
+    sc = win.doc.system.nonseq
+    assert [o.kind for o in sc.objects] == ["STANDARD_LENS", "STANDARD_LENS", "RECTANGLE", "DETECTOR"]
+    assert sc.objects[3].ref == 3
     w.add_item("SOURCE_POINT")
-    assert w.scene.sources[-1].kind == "SOURCE_POINT"
+    assert win.doc.system.nonseq.sources[-1].kind == "SOURCE_POINT"
+
+    # Ray Trace Control is kept with the scene
+    w.trace_widgets["split"].setChecked(False)
+    assert win.doc.system.nonseq.trace_settings["split"] is False
+    w.trace_widgets["max_segments"].setValue(50)
+    assert win.doc.system.nonseq.trace_settings["max_segments"] == 50
+
+    # export, clear and import; the scene goes into the lens file
     p = str(tmp_path / "scene.ns.json")
     w.save_scene(p)
     w.new_scene(ask=False)
-    assert not w.scene.objects
+    assert not win.doc.system.nonseq.objects
     w.open_scene(p)
-    assert len(w.scene.objects) == 4 and len(w.scene.sources) == 4
+    assert len(win.doc.system.nonseq.objects) == 4 and len(win.doc.system.nonseq.sources) == 4
+    lens_path = str(tmp_path / "with_scene.lens.json")
+    win.doc.save(lens_path)
+    assert lf.load(lens_path).nonseq.trace_settings["max_segments"] == 50
     w.close()
+
+
+def test_lens_with_a_scene_opens_the_editor_and_analyses(win):
+    path = os.path.join(HERE, "..", "examples", "non-sequential", "Retroreflecting Prism.lens.json")
+    win.ns_window = None
+    win.doc.open(path, copy=True)
+    w = win.ns_window
+    assert w is not None and w.isVisible() and w.obj_table.rowCount() == 2
+    for key in ("ns_layout", "ns_layout_3d", "ns_detector", "ns_paths", "ns_report"):
+        a = win.open_analysis(key)
+        assert a.error is None, (key, a.error)
+    paths = win.open_analysis("ns_paths").text.toPlainText()
+    assert "1 right X -> 1 left X" in paths
+    lay = win.open_analysis("ns_layout", {"path": 1, "plane": "x", "color_by": "source"})
+    assert lay.error is None and lay.figure.axes
+    det = win.open_analysis("ns_detector", {"detector": 1})
+    assert "not a detector" in det.status.text()
+    # without a scene the analyses say how to make one
+    win.doc.reset(lf.samples.singlet())
+    a = win.open_analysis("ns_report")
+    assert "Non-Sequential Component Editor" in a.status.text()
 
 
 def test_non_sequential_toolbar_icons_and_tooltips(win):
     from lensforge_qt import icons
-    from lensforge_qt.ns_window import BUTTONS
+    from lensforge_qt.ns_table import BUTTONS
     w = win.show_ns()
     assert set(icons.NS_ICONS) == set(BUTTONS)
     assert len(set(icons.NS_ICONS.values())) == len(icons.NS_ICONS)  # every button its own icon
