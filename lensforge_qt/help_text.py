@@ -149,7 +149,8 @@ HELP = {
         "a Material cell. Choose a maker (SCHOTT, OHARA, HOYA, CDGM, SUMITA, HIKARI or a loaded AGF "
         "catalog) or All, and filter by any part of the name: BK7 finds N-BK7, N-BK7HT and so on. Typing in "
         "a Material cell offers the same matches: any glass whose name contains what you typed, ignoring "
-        "case, hyphens and spaces (bk7 offers N-BK7, nbk7 too; k9l offers H-K9L)."),
+        "case, hyphens and spaces (bk7 offers N-BK7, nbk7 too; k9l offers H-K9L). Take a suggestion with "
+        "the arrow keys and Enter, or click (tap) it; Enter on its own keeps what you typed."),
     "Edit > Surface Properties": (
         "Edit the selected surface's comment, stop, aperture and extra parameters.",
         "Opens the Surface Properties dialog: comment, stop, clear aperture or obscuration (optionally "

@@ -167,6 +167,11 @@ class Sheet {
         return;
       }
     }
+    // touch screens: a tap on the cell that is already selected edits it (opens the on-screen keyboard)
+    if (e.pointerType === "touch" && !e.shiftKey && !this.sel && this.cur.row === row && this.cur.col === col) {
+      const c = this.rows()[row]?.cells[col];
+      if (c && c.editable) { e.preventDefault(); this.edit(row, col, undefined, true); return; }
+    }
     if (e.shiftKey && this.anchor) {
       this.sel = { r0: Math.min(this.anchor.row, row), r1: Math.max(this.anchor.row, row), c0: Math.min(this.anchor.col, col), c1: Math.max(this.anchor.col, col) };
       this.cur = { row, col };

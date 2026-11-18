@@ -57,7 +57,7 @@ export function tabs(pages, active = 0, onchange) {
   // pages: [[title, element], ...] -> {element, select(i), index}
   const bar = el("div", { class: "tabs" });
   const wrap = el("div", { style: { display: "flex", flexDirection: "column", flex: "1", minHeight: "0" } }, bar);
-  const t = { element: wrap, index: active, tabs: [], pages: [] };
+  const t = { element: wrap, index: active, tabs: [], pages: [], onchange };  // t.onchange may be set later
   pages.forEach(([title, page], i) => {
     const tab = el("div", { class: "tab", onclick: () => t.select(i) }, title);
     const p = el("div", { class: "tab-page" }, page);
@@ -70,7 +70,7 @@ export function tabs(pages, active = 0, onchange) {
     t.index = i;
     t.tabs.forEach((x, k) => x.classList.toggle("active", k === i));
     t.pages.forEach((x, k) => x.classList.toggle("active", k === i));
-    if (onchange) onchange(i);
+    if (t.onchange) t.onchange(i);
   };
   t.select(active);
   return t;
