@@ -23,9 +23,12 @@ export function init() {
     const td = e.target.closest("td[data-col]");
     if (td && !editing) startEdit(+td.dataset.row, +td.dataset.col);
   });
-  onState((s, old) => {
-    if (editing && old && s.revision !== old.revision) cancelEdit();
-    render();
+  onState(() => {
+    // A change can land while a cell is being typed in: the reply to the edit just committed, an
+    // optimisation step, an undo. Keep the cell being typed in (render() moves it into the new
+    // table) unless the change took that cell away.
+    if (editing && !stillEditable()) cancelEdit();
+    else render();
   });
 }
 
@@ -100,9 +103,34 @@ export function render() {
   });
   const table = el("table", { class: "sheet" }, el("thead", {}, head), body);
   const scroll = [root.scrollLeft, root.scrollTop];
+  const keep = editing && editing.td.isConnected ? keepEditor() : null;
   root.replaceChildren(table);
+  if (keep) keep();
   root.scrollLeft = scroll[0];
   root.scrollTop = scroll[1];
+}
+
+// the open cell editor survives a redraw: its input moves into the new table, with focus and selection
+function stillEditable() {
+  const c = cellInfo(editing.row, editing.col);
+  return !!c && (editing.col === 1 ? true : c.k === editing.key && !c.na && !c.ro);
+}
+
+function keepEditor() {
+  const e = editing, parts = [...e.td.childNodes];
+  const focused = e.input.ownerDocument.activeElement === e.input;
+  const sel = focused && e.input.setSelectionRange ? [e.input.selectionStart, e.input.selectionEnd] : null;
+  return () => {
+    const td = root.querySelector(`td[data-row="${e.row}"][data-col="${e.col}"]`);
+    if (!td) return;
+    td.classList.add("editing");
+    td.replaceChildren(...parts);
+    e.td = td;
+    if (focused) {
+      e.input.focus({ preventScroll: true });
+      if (sel) e.input.setSelectionRange(sel[0], sel[1]);
+    }
+  };
 }
 
 // ------------------------------------------------------------------ selection and keys
@@ -111,6 +139,13 @@ function onPointer(e) {
   if (!td || editing && editing.td.contains(e.target)) return;
   if (editing) commitEdit();
   const row = +td.dataset.row, col = +td.dataset.col;
+  // touch screens have no double-click and no keyboard until a text box has focus: a tap on the
+  // cell that is already selected starts editing it (the on-screen keyboard opens)
+  if (e.pointerType === "touch" && !e.shiftKey && !rangeRows && cur.row === row && cur.col === col && editable(row, col)) {
+    e.preventDefault();
+    startEdit(row, col);
+    return;
+  }
   if (e.shiftKey && anchor !== null) {
     rangeRows = [Math.min(anchor, row), Math.max(anchor, row)];
     if (rangeRows[0] === rangeRows[1]) rangeRows = null;
@@ -189,7 +224,7 @@ export function startEdit(row, col, initial) {
       if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); cancelEdit(); }
       if (e.key === "Enter") { e.preventDefault(); commitEdit(); }
     });
-    s.addEventListener("blur", () => setTimeout(() => editing && editing.input === s && commitEdit(), 0));
+    s.addEventListener("blur", () => setTimeout(() => editing && editing.input === s && document.activeElement !== s && commitEdit(), 0));
     s.focus();
     return;
   }
@@ -243,15 +278,16 @@ function commit(row, key, text) {
 // material name completion (substring match, as the Qt editor's QCompleter)
 function attachCompletion(input) {
   let pop = null, items = [], active = -1, timer = null, token = 0;
-  const close = () => { if (pop) pop.remove(); pop = null; items = []; active = -1; };
+  const hide = () => { if (pop) pop.remove(); pop = null; };
+  const close = () => { hide(); items = []; active = -1; };
   const show = () => {
-    close();
+    hide();   // (not close(): that would also forget the items about to be shown)
     if (!items.length) return;
     const r = input.getBoundingClientRect();
     pop = el("div", { class: "complete-pop", style: { left: r.left + "px", top: r.bottom + "px", minWidth: r.width + "px" } });
     items.slice(0, 200).forEach((t, i) => pop.append(el("div", { class: i === active ? "active" : "",
       onpointerdown: (e) => { e.preventDefault(); input.value = t; close(); commitEdit(); root.focus(); } }, t)));
-    document.body.append(pop);
+    input.ownerDocument.body.append(pop);
   };
   input.addEventListener("input", () => {
     clearTimeout(timer);

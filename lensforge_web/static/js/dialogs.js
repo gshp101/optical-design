@@ -202,7 +202,8 @@ export async function materialDialog(row) {
     const on = numInput(init.n, { min: 0.01, max: 10, step: 0.001 });
     on.addEventListener("input", () => preview());
     other.append(radio("air", "Air (no material)"), el("span"), radio("mirror", "Mirror (reflecting surface)"), el("span"), radio("const", "Constant index"), on);
-    const t = tabs([["Catalog Glass", catPage], ["Model Glass", modelPage], ["Other", other]], init.tab, () => preview());
+    // (no onchange here: preview() is defined below, and tabs() calls onchange as it opens the first tab)
+    const t = tabs([["Catalog Glass", catPage], ["Model Glass", modelPage], ["Other", other]], init.tab);
     const prev = el("div", { style: { padding: "4px", minHeight: "2.6em" } });
     win.body.append(t.element, prev);
     win.body.style.overflow = "hidden";
@@ -229,6 +230,7 @@ export async function materialDialog(row) {
       done(spec);
     };
     bar.append(btn("Cancel", () => done(null)), btn("OK", accept, { primary: true }));
+    t.onchange = () => preview();
     fill();
     preview();
     setTimeout(() => tbody.querySelector("tr.sel")?.scrollIntoView({ block: "center" }), 0);
@@ -627,7 +629,8 @@ export async function shortcutsHelp() {
   for (const [id, c] of Object.entries(App.menus.commands)) if (c.shortcut) rows.push([c.path[0], c.path.slice(1).join(" > "), c.shortcut]);
   const extra = "<p>In the Lens Data Editor, right-click a cell for variables, solves, surface type and stop; the ... button in a " +
     "Material cell opens the material picker; type into a cell to replace it, Enter or F2 edits it, Delete clears a comment or " +
-    "semi-diameter. In the Python Shell, Ctrl+Enter runs the script. On a Mac, Cmd works wherever Ctrl is shown.</p>" +
+    "semi-diameter. Typing in a Material cell lists the matching glasses (arrow keys and Enter, or a click, take one). On a touch " +
+    "screen, tap a selected cell again to type in it. In the Python Shell, Ctrl+Enter runs the script. On a Mac, Cmd works wherever Ctrl is shown.</p>" +
     "<p>A few shortcuts the browser keeps for itself use Alt instead of Ctrl: New (Alt+N), Wavefront Map (Alt+W), Tolerancing " +
     "(Alt+Shift+T), Non-Sequential Component Editor (Alt+Shift+N), Delete Surfaces (Alt+Shift+Del), Surface Properties (Alt+Shift+P), " +
     "Inspect Lens File (Alt+Shift+O).</p>";
