@@ -144,7 +144,9 @@ HELP = {
         "('V' marker), or removes the variable. Right-click a cell for solves."),
     "Edit > Choose Material": (
         "Pick a glass or other material for the selected surface from a dialog.",
-        "Opens the material picker: catalog glasses with a filterable table and an n-V glass map, a model "
+        "Opens the material picker: catalog glasses with a filterable table and an n-V glass map (hover a "
+        "point for its name, or tick Show names on map to label every glass; names are off by default so "
+        "they don't cover the points or the red ring of the selected glass), a model "
         "glass (index and Abbe number), or air, mirror or a constant index. Also opened by the ... button in "
         "a Material cell. Choose a maker (SCHOTT, OHARA, HOYA, CDGM, SUMITA, HIKARI or a loaded AGF "
         "catalog) or All, and filter by any part of the name: BK7 finds N-BK7, N-BK7HT and so on. Typing in "

@@ -165,13 +165,13 @@ export async function materialDialog(row) {
       add("text", { x: (W + m.l) / 2, y: H - 4, "text-anchor": "middle", class: "lab" }, "Abbe number Vd");
       add("text", { x: 12, y: (H) / 2, "text-anchor": "middle", class: "lab", transform: `rotate(-90 12 ${H / 2})` }, "index nd");
       add("text", { x: (W + m.l) / 2, y: 14, "text-anchor": "middle", class: "lab" }, "Glass map");
-      const labels = v.length <= 400;
+      // names (optional, off by default) go under the points and the selected-glass ring
+      if (names.checked && v.length <= 400) for (const r of v) add("text", { x: px(r[4]) + 3, y: py(r[3]) - 3 }, r[2]);
       for (const r of v) {
         const c = add("circle", { cx: px(r[4]), cy: py(r[3]), r: 3 });
         c.addEventListener("click", () => pick(r[0], true));
         c.addEventListener("dblclick", () => { pick(r[0], true); accept(); });
         const t = document.createElementNS(ns, "title"); t.textContent = `${r[2]} (${r[1]}): nd ${r[3].toFixed(5)}, Vd ${r[4].toFixed(2)}`; c.append(t);
-        if (labels) add("text", { x: px(r[4]) + 3, y: py(r[3]) - 3 }, r[2]);
       }
       if (hl) add("circle", { cx: px(hl[4]), cy: py(hl[3]), r: 7, class: "hl" });
       map.replaceChildren(svg);
@@ -183,12 +183,19 @@ export async function materialDialog(row) {
       drawMap(visible());
       preview();
     };
+    const names = el("input", { type: "checkbox" });
+    try { names.checked = localStorage.getItem("lensforge/glassMapNames") === "1"; } catch (e) { /* no storage */ }
+    names.addEventListener("change", () => {
+      try { localStorage.setItem("lensforge/glassMapNames", names.checked ? "1" : "0"); } catch (e) { /* no storage */ }
+      drawMap(visible());
+    });
     cat.addEventListener("change", fill);
     filter.addEventListener("input", fill);
     const catPage = el("div", { style: { display: "flex", flexDirection: "column", gap: "6px", flex: "1", minHeight: "0" } },
       el("div", { class: "row" }, el("label", {}, "Catalog"), cat, filter, loadBtn),
       el("div", { style: { display: "flex", gap: "8px", flex: "1", minHeight: "0" } }, el("div", { style: { flex: "1", display: "flex", minWidth: "0" } }, wrap), map),
-      el("div", { class: "note" }, "Click a glass on the map (Abbe diagram) or in the table; double-click to choose."));
+      el("div", { class: "row" }, el("div", { class: "note grow" }, "Click a glass on the map (Abbe diagram) or in the table; double-click to choose."),
+        el("label", { class: "check", title: "Label every glass on the glass map (hidden by default: the labels cover the points). Names show when 400 or fewer glasses are listed." }, names, "Show names on map")));
     // ---- model glass tab
     const mnd = numInput(init.nd, { min: 1, max: 4.5, step: 0.0001 });
     const mvd = numInput(init.vd, { min: 5, max: 120, step: 0.01 });
