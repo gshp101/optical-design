@@ -18,6 +18,7 @@ import numpy as np
 
 import lensforge as lf
 import lensforge.plot as P
+from lensforge.analysis.geometry import ray_paths
 
 from . import rays as R
 
@@ -112,12 +113,7 @@ def _layout_compute(system):
     for ray in ir["user_rays"]:
         t = lf.trace_rays(system, ray["hx"], ray["hy"], ray["px"], ray["py"],
                           wavelength=R.user_ray_wavelength(system, ray))
-        G = t.global_positions()[:, 0]
-        start = 0 if system.object_at_infinity else 1
-        path = G[start:]
-        if not t.valid[0] and t.error_surface[0] >= 0:
-            path[t.error_surface[0] - start + 1:] = np.nan
-        r["user_rays"].append(path)
+        r["user_rays"].append(ray_paths(t, 0 if system.object_at_infinity else 1)[:, 0])
     return r
 
 
@@ -159,15 +155,21 @@ def _layout_plot(fig, r, opts, system):
 
 
 def _connect_lens_edges(ax, r, system, j):
-    """Draw element edges between consecutive surfaces bounding glass."""
+    """Draw element edges between consecutive surfaces bounding glass.
+
+    Coordinate breaks in between (a wedge, a tilted back face) are skipped: the glass carries on
+    through them to the next real surface."""
     surfs = {s["surface"]: s for s in r["surfaces"]}
     for i in surfs:
-        if i + 1 not in surfs:
+        n = i + 1
+        while n < len(system.surfaces) and system.surfaces[n].is_coordinate_break:
+            n += 1
+        if n not in surfs:
             continue
         m = system.library.resolve(system.surfaces[i].material)
         if m.is_mirror or m.nd == 1.0:
             continue
-        a, b = surfs[i]["points"], surfs[i + 1]["points"]
+        a, b = surfs[i]["points"], surfs[n]["points"]
         for k in (0, -1):
             ax.plot([a[k, 2], b[k, 2]], [a[k, j], b[k, j]], color="k", lw=1)
 

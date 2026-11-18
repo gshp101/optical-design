@@ -443,18 +443,13 @@ def ghost_layout(system, i: int, j: int, field=0, wavelength=None, n_rays: int =
     Returns ``path`` (S, N, 3) along the unfolded ghost system, ``valid`` and
     the original lens ``surfaces`` profiles (from :func:`surface_profiles`).
     """
-    from .geometry import surface_profiles
+    from .geometry import ray_paths, surface_profiles
     wl = system.primary if wavelength is None else wavelength
     hx, hy = resolve_field(system, field)
     p = np.linspace(-1, 1, n_rays)
     px, py = (p, np.zeros(n_rays)) if plane == "x" else (np.zeros(n_rays), p)
     g = ghost_system(system, i, j)
     t = ghost_trace(system, i, j, hx, hy, px, py, wl, ghost=g)
-    G = t.global_positions()
-    start = 0 if system.object_at_infinity else 1
-    path = G[start:]
-    for k in range(path.shape[1]):
-        if not t.valid[k] and t.error_surface[k] >= 0:
-            path[t.error_surface[k] - start + 1:, k] = np.nan
+    path = ray_paths(t, 0 if system.object_at_infinity else 1)
     return {"path": path, "valid": t.valid, "pair": (i, j), "field": field, "wavelength": wl,
             "surfaces": surface_profiles(system, plane=plane), "plane": plane}

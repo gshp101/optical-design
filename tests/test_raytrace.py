@@ -358,7 +358,73 @@ def test_coordinate_break_z_tilt_inverse_pair_is_identity():
     for a, b in zip(lf.surface_profiles(s), base_surfs):
         np.testing.assert_allclose(a["points"], b["points"], atol=1e-12)
     for a, b in zip(lf.layout(s)["rays"], base_rays["rays"]):
-        np.testing.assert_allclose(np.delete(a["path"], [2, 3], axis=0), b["path"], atol=1e-12)
+        np.testing.assert_allclose(a["path"], b["path"], atol=1e-12)  # breaks are not drawn
+
+
+def _fold_mirror():
+    """Singlet, 45 deg fold mirror between coordinate breaks, image 40 below."""
+    s = lf.OpticalSystem("fold")
+    s.set_aperture("EPD", 10.0)
+    s.set_fields([0.0, 3.0])
+    s.add_surface(radius=50, thickness=4, material="N-BK7", stop=True)
+    s.add_surface(radius=-50, thickness=30)
+    s.add_surface(lf.CoordinateBreak(tilt_x=45))
+    s.add_surface(thickness=0, material="MIRROR", semi_diameter=8)
+    s.add_surface(lf.CoordinateBreak(tilt_x=45, thickness=-40))
+    return s
+
+
+def _tilted_element():
+    """Decentred, tilted singlet, then an order-1 return to the original axis."""
+    s = lf.OpticalSystem("tilted element")
+    s.set_aperture("EPD", 10.0)
+    s.set_fields([0.0, 3.0])
+    s.add_surface(thickness=10, stop=True)
+    s.add_surface(lf.CoordinateBreak(decenter_y=3, tilt_x=15))
+    s.add_surface(radius=40, thickness=5, material="N-BK7")
+    s.add_surface(radius=-40, thickness=0)
+    s.add_surface(lf.CoordinateBreak(decenter_y=-3, tilt_x=-15, order=1, thickness=60))
+    return s
+
+
+@pytest.mark.parametrize("make", [_fold_mirror, _tilted_element])
+def test_layout_rays_meet_drawn_surfaces_through_breaks(make):
+    """Every drawn ray point lies on its (tilted, decentred) surface, coordinate
+    breaks are dropped from the paths and no segment overshoots a surface."""
+    s = make()
+    r = lf.layout(s)
+    frames = s.surface_frames()
+    real = [i for i in range(1, len(s.surfaces)) if not s.surfaces[i].is_coordinate_break]
+    assert [p["surface"] for p in r["surfaces"]] == real
+    for ray in r["rays"]:
+        P = ray["path"][1:]  # row 0 is the start point of the collimated beam
+        assert P.shape[0] == len(real)
+        for k, i in enumerate(real):
+            R, O = frames[i]
+            loc = (P[k] - O) @ R
+            np.testing.assert_allclose(loc[:, 2], s.surfaces[i].sag(loc[:, 0], loc[:, 1]), atol=1e-9)
+
+
+def test_layout_image_after_fold_is_perpendicular_to_folded_axis():
+    s = _fold_mirror()
+    img = lf.surface_profiles(s)[-1]["points"]
+    np.testing.assert_allclose(img[:, 1], img[0, 1], atol=1e-9)  # a horizontal line (y constant)
+    np.testing.assert_allclose(img[0, 1], 40.0, atol=1e-9)  # 40 above the mirror (y up after the fold)
+    np.testing.assert_allclose(np.mean(img[:, 2]), 34.0, atol=1e-9)  # centred on the mirror vertex z
+
+
+def test_order_one_return_restores_axis():
+    """Negated decentre and tilts with order 1 undo the break: the axis is parallel to the
+    original again and the decentre is removed (the element's thickness, along its tilted
+    axis, remains), so the image sits 60 beyond the back vertex along the original z."""
+    s = _tilted_element()
+    frames = s.surface_frames()
+    R, O = frames[-1]
+    np.testing.assert_allclose(R, np.eye(3), atol=1e-12)
+    R4, O4 = frames[4]
+    t = math.radians(15)
+    np.testing.assert_allclose(O4, [0, 3 - 5 * math.sin(t), 10 + 5 * math.cos(t)], atol=1e-12)
+    np.testing.assert_allclose(O, O4 + [0, -3, 60], atol=1e-12)
 
 
 @pytest.mark.parametrize("tilt_z", [90, -90, 37, 180])

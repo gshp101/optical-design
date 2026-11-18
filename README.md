@@ -163,7 +163,7 @@ plus mouse-wheel and drag-box zoom).
 | Field curvature / distortion (f-tan and f-theta), grid distortion | `field_curvature`, `distortion`, `grid_distortion` |
 | Lateral colour, longitudinal aberration, chromatic focal shift, pupil aberration | `lateral_color`, `longitudinal_aberration`, `chromatic_focal_shift`, `pupil_aberration` |
 | Relative illumination (+ effective F/#), vignetting plot | `relative_illumination`, `vignetting` |
-| 2-D/3-D layout data, footprint diagram, surface sag and best-fit-sphere departure | `layout`, `surface_profiles`, `footprint`, `surface_sag` |
+| 2-D/3-D layout data (global coordinates, through coordinate breaks: fold mirrors, tilted/decentred elements), footprint diagram, surface sag and best-fit-sphere departure | `layout`, `ray_paths`, `surface_profiles`, `footprint`, `surface_sag` |
 | Interferogram, image simulation (isoplanatic) | `interferogram`, `image_simulation` |
 | Polarisation ray trace, pupil map, transmission, diattenuation (Fresnel, uncoated) | `polarization_trace`, `polarization_pupil_map`, `transmission`, `diattenuation` |
 | Cardinal points, single ray trace, dispersion, system report | `cardinal_points`, `ray_trace_table`, `dispersion`, `system_report` |

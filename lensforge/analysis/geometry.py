@@ -53,6 +53,26 @@ def surface_profiles(system, n: int = 41, plane: str = "y"):
     return out
 
 
+def ray_paths(trace, start: int = 1):
+    """Global (S', N, 3) ray paths of a :func:`trace_rays` result for layout plots.
+
+    ``start`` is the first surface drawn (0 includes the object).  Points after
+    the surface where a ray failed are NaN.  Coordinate breaks are left out:
+    the intercept on a break's plane lies on the straight ray between the real
+    surfaces either side of it, but can sit beyond the next surface (a break
+    in front of a tilted element or fold mirror), which would draw a stray
+    stub poking through the surface.  The break has no optical effect, so the
+    straight line between the neighbouring real surfaces is the true path.
+    """
+    path = trace.global_positions()[start:]
+    for k in range(path.shape[1]):
+        if not trace.valid[k] and trace.error_surface[k] >= 0:
+            path[trace.error_surface[k] - start + 1:, k] = np.nan
+    keep = [k for k in range(path.shape[0])
+            if k + start == 0 or not trace.system.surfaces[k + start].is_coordinate_break]
+    return path[keep]
+
+
 def layout(system, fields=None, wavelengths=None, n_rays: int = 7, plane: str = "y", include_object: bool = False):
     """Ray paths in global coordinates for 2-D/3-D layout plots.
 
@@ -75,13 +95,7 @@ def layout(system, fields=None, wavelengths=None, n_rays: int = 7, plane: str = 
         hx, hy = resolve_field(system, f)
         for w in wls:
             r = trace_rays(system, hx, hy, px, py, wavelength=w)
-            G = r.global_positions()
-            start = 0 if (include_object or system.object_at_infinity) else 1
-            path = G[start:]
-            # keep rays only up to the surface where they failed
-            for k in range(path.shape[1]):
-                if not r.valid[k] and r.error_surface[k] >= 0:
-                    path[r.error_surface[k] - start + 1:, k] = np.nan
+            path = ray_paths(r, 0 if (include_object or system.object_at_infinity) else 1)
             rays.append({"field": f, "wavelength": w, "path": path, "valid": r.valid})
     return {"rays": rays, "surfaces": surface_profiles(system, plane="y" if plane != "x" else "x")}
 

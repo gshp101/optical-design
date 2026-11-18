@@ -464,7 +464,13 @@ ANALYSIS_HELP = {
     "layout": ("2D cross-section of the lens with traced rays.",
                "Draws the surfaces and rays in the YZ or XZ plane, coloured by field (or by wavelength when one "
                "field is shown). The number of rays, plane, fields and wavelengths are set in Input Rays; user "
-               "rays are drawn dashed."),
+               "rays are drawn dashed. Coordinate breaks are followed exactly: every surface after a "
+               "decentre or tilt (either order flag) is drawn where it really is, so fold mirrors, tilted or "
+               "decentred elements, wedges and tilted image planes appear as they are, and the rays meet the "
+               "drawn surfaces. The breaks themselves are not drawn, and rays run straight from the surface "
+               "before a break to the one after it. Each surface is cut along the plotted plane (YZ or XZ); "
+               "a fold out of that plane shows edge-on, so switch the plane in Input Rays to see it. Lens "
+               "edges are joined across breaks inside the glass. From Python: <code>lf.layout(lens)</code>."),
     "footprint": ("Where the rays land on a chosen surface.",
                   "Plots the ray intercepts of every field on one surface, with its semi-diameter, to check "
                   "clear apertures and vignetting."),
