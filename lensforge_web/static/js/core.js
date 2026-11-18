@@ -10,6 +10,7 @@ export const App = {
   commands: {},           // command id -> function
   stateListeners: [],
   focusScope: null,       // "lde" | "mfe" | "mce" | "shell" | null (where local shortcuts go)
+  sheets: {},             // focus scope -> spreadsheet element (keys that land on <body> are passed to it)
 };
 
 // ------------------------------------------------------------------ status bar
