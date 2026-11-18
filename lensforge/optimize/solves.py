@@ -12,7 +12,9 @@ Curvature solves
     :class:`MarginalRayAngle`, :class:`ChiefRayAngle`, :class:`FNumber`,
     :class:`Concentric`.
 Any parameter
-    :class:`Pickup` (value = scale * other cell + offset; also materials).
+    :class:`Pickup` (value = scale * other cell + offset; also materials),
+    :class:`Formula` (value = an expression of other cells, e.g. ``"2 * T2 - R(s - 1)"``;
+    see :mod:`lensforge.optimize.formula`).
 """
 
 from __future__ import annotations
@@ -24,7 +26,11 @@ from typing import List, Optional
 import numpy as np
 
 from ..paraxial import ParaxialAnalysis
-from .variables import get_param, set_param
+from . import formula as F
+
+
+def _cell_param(key):
+    return {"radius": "curvature"}.get(key, key)
 
 
 class Solve:
@@ -43,7 +49,7 @@ class Solve:
 
     @property
     def cell(self):
-        return (self.surface, "curvature" if self.param == "radius" else self.param)
+        return (self.surface, _cell_param(self.param))
 
 
 def _marginal(system, wavelength=None):
@@ -257,18 +263,53 @@ class Pickup(Solve):
             system.surfaces[self.surface].material = system.surfaces[self.from_surface].material
             return
         src = self.from_param or self.param
-        v = get_param(system, self.from_surface, src)
-        set_param(system, self.surface, self.param, self.scale * v + self.offset)
+        v = F.get_cell(system, self.from_surface, src)
+        F.set_cell(system, self.surface, self.param, self.scale * v + self.offset)
+
+    def reads(self, system):
+        """Cells this solve reads, as (surface, param) pairs."""
+        src = self.from_param or self.param
+        return [(self.from_surface, _cell_param(src))]
+
+
+@dataclass
+class Formula(Solve):
+    """``param`` of ``surface`` = ``expression``, a formula of other cells (a general pickup).
+
+    Cells: R3 radius, C3 curvature, T3 thickness, K3 conic, SD3 semi-diameter,
+    N3 index after surface 3, PAR3_2 the Par 2 column; or R(s-1), T(s+1),
+    PAR(3, 2) where s is this surface. Maths: + - * / ** pi sqrt sin cos tan
+    abs min max ... and "a if cond else b". Example: 2*T2 - 0.5.
+    """
+
+    surface: int
+    param: str
+    expression: str = "0"
+
+    def apply(self, system):
+        F.set_cell(system, self.surface, self.param, F.evaluate(system, self.expression, self.surface))
+
+    def reads(self, system):
+        return [(i, _cell_param(k)) for i, k in F.references(system, self.expression, self.surface)
+                if k is not None]
+
+    def renumber(self, fn, new_surface):
+        """Rewrite the surface numbers of the expression (False if it refers to a deleted surface)."""
+        text = F.renumber(self.expression, fn, self.surface, new_surface)
+        if text is None:
+            return False
+        self.expression = text
+        return True
 
 
 SOLVE_TYPES = {c.__name__: c for c in (MarginalRayHeight, ChiefRayHeight, MarginalRayAngle, ChiefRayAngle,
-                                        FNumber, Concentric, EdgeThickness, Position, Pickup)}
+                                        FNumber, Concentric, EdgeThickness, Position, Pickup, Formula)}
 
 
 def solve_from_dict(d: dict) -> Solve:
     d = dict(d)
     cls = SOLVE_TYPES[d.pop("type")]
-    if cls is not Pickup:
+    if cls not in (Pickup, Formula):
         d.pop("param", None)
     return cls(**d)
 
@@ -282,10 +323,82 @@ def solves(system) -> List[Solve]:
 def set_solve(system, solve: Solve) -> Solve:
     """Attach a solve (replacing any other solve on the same cell) and apply it."""
     lst = solves(system)
-    lst[:] = [s for s in lst if s.cell != solve.cell]
-    lst.append(solve)
+    if hasattr(solve, "reads"):
+        solve.reads(system)  # raises ValueError for a bad formula
+    new = [s for s in lst if s.cell != solve.cell] + [solve]
+    cycle = find_cycle(system, new)
+    if cycle:
+        raise ValueError("circular reference: " + " -> ".join(f"S{i} {p}" for i, p in cycle))
+    lst[:] = new
     apply_solves(system)
     return solve
+
+
+def find_cycle(system, lst=None):
+    """A chain of pickups / formulas that refers back to itself, as a list of cells (or None)."""
+    lst = solves(system) if lst is None else lst
+    by_cell = {s.cell: s for s in lst}
+    graph = {}
+    for s in lst:
+        if hasattr(s, "reads"):
+            try:
+                graph[s.cell] = [c for c in s.reads(system) if c in by_cell and hasattr(by_cell[c], "reads")]
+            except ValueError:
+                graph[s.cell] = []
+    state, path = {}, []
+
+    def dfs(c):
+        state[c] = 1
+        path.append(c)
+        for d in graph.get(c, []):
+            if state.get(d) == 1:
+                return path[path.index(d):] + [d]
+            if d not in state:
+                r = dfs(d)
+                if r:
+                    return r
+        state[c] = 2
+        path.pop()
+        return None
+
+    for c in graph:
+        if c not in state:
+            r = dfs(c)
+            if r:
+                return r
+    return None
+
+
+def _ordered(system, lst):
+    """Solves in surface order, with each pickup / formula moved after the solves of the cells it reads."""
+    base = sorted(lst, key=lambda s: (s.surface, 0 if s.changes_power else 1))
+    by_cell = {s.cell: s for s in base}
+    deps = {}
+    for s in base:
+        if hasattr(s, "reads"):
+            try:
+                deps[id(s)] = [by_cell[c] for c in s.reads(system) if c in by_cell and by_cell[c] is not s]
+            except ValueError:
+                deps[id(s)] = []
+    if not any(deps.values()):
+        return base, False
+    out, done, forward = [], set(), False
+
+    def place(s, stack=()):
+        nonlocal forward
+        if id(s) in done or id(s) in stack:
+            return
+        for d in deps.get(id(s), []):
+            if id(d) not in done:
+                if base.index(d) > base.index(s):
+                    forward = True
+                place(d, stack + (id(s),))
+        done.add(id(s))
+        out.append(s)
+
+    for s in base:
+        place(s)
+    return out, forward
 
 
 def remove_solve(system, surface: int, param: str):
@@ -300,9 +413,13 @@ def apply_solves(system):
     lst = getattr(system, "solves", None)
     if not lst:
         return
-    order = sorted(lst, key=lambda s: (s.surface, 0 if s.changes_power else 1))
+    order, forward = _ordered(system, lst)
     passes = 2 if any(s.changes_power for s in order) and system.aperture_type in (
         "IMAGE_FNUM", "WORKING_FNUM") else 1
+    if forward:
+        # a pickup reads a cell solved further down the lens; a ray solve between them may
+        # have used the old value, so go round once more
+        passes = max(passes, 2)
     for _ in range(passes):
         for s in order:
             s.apply(system)

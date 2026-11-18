@@ -268,6 +268,12 @@ def renumber_surface_refs(system, fn, operand_fn=None):
     keep = []
     for x in sl:
         refs = {name: fn(getattr(x, name)) for name in _SOLVE_REFS if isinstance(getattr(x, name, None), int)}
+        if hasattr(x, "renumber") and refs.get("surface") is not None:
+            try:
+                if not x.renumber(fn, refs["surface"]):
+                    continue
+            except ValueError:
+                pass
         if all(n is not None for n in refs.values()):
             for name, n in refs.items():
                 setattr(x, name, n)

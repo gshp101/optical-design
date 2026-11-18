@@ -24,7 +24,7 @@ substitution (:mod:`.glass`) and tolerancing (:mod:`.tolerance`).
 from .variables import (MCVariable, Variable, VariableSet, clear_variables, get_param, is_mc_variable,
                         remove_mc_variable, remove_variable, set_mc_variable, set_param, set_variable,
                         to_model_glass, variable_from_dict, variables, vary_curvatures, vary_thicknesses)
-from .solves import (ChiefRayAngle, ChiefRayHeight, Concentric, EdgeThickness, FNumber, MarginalRayAngle,
+from .solves import (ChiefRayAngle, ChiefRayHeight, Concentric, EdgeThickness, FNumber, Formula, MarginalRayAngle,
                      MarginalRayHeight, Pickup, Position, Solve, apply_solves, remove_solve, set_solve, solves,
                      solve_from_dict)
 from .operands import OPERAND_INFO, OPERANDS, Block, EvalContext, gaussian_quadrature, is_symmetric

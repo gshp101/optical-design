@@ -3,9 +3,10 @@
 One row per surface, Zemax-style columns (type, comment, radius, thickness,
 material, semi-diameter, conic, Par 1..8 whose meaning depends on the surface
 type).  Cells carry markers: ``V`` variable, a letter for a solve (``M``
-marginal ray, ``C`` chief ray, ``F`` F-number, ``P`` pickup, ...), ``U`` a
-fixed (user) semi-diameter.  Right-click a cell for variables, solves,
-surface type, stop and surface properties.
+marginal ray, ``C`` chief ray, ``F`` F-number, ``P`` pickup, ``=`` formula ...),
+``U`` a fixed (user) semi-diameter.  Right-click a cell (or Edit > Solve) for
+variables, solves, surface type, stop and surface properties.  Typing ``=2*T2``
+in a numeric cell makes it a formula of other cells.
 """
 
 from __future__ import annotations
@@ -159,6 +160,9 @@ class LensDataModel(QAbstractTableModel):
                 return E.format_number(s.semi_diameter) if role == Qt.DisplayRole else repr(s.semi_diameter)
             v = E.get_value(s, key)
             if role == Qt.EditRole:
+                ftext = E.formula_text(self.system, row, key)
+                if ftext is not None:
+                    return ftext
                 return "Infinity" if isinstance(v, float) and math.isinf(v) else repr(v)
             return E.format_number(v)
         if role == Qt.TextAlignmentRole:
@@ -230,7 +234,7 @@ class LensDataModel(QAbstractTableModel):
         if col == 1:
             return f | Qt.ItemIsEditable
         key = self.key(row, col)
-        if self.applies(row, key) and E.solve_on(self.system, row, key) is None:
+        if self.applies(row, key) and E.typeable(self.system, row, key):
             f |= Qt.ItemIsEditable
         return f
 
@@ -436,6 +440,7 @@ class LensDataEditor(QWidget):
         self.act_delete = act("Delete Surface", self.delete_surface, "Shift+Delete")
         self.act_delete_range = act("Delete Surfaces...", self.delete_surfaces_dialog, "Ctrl+Shift+Delete")
         self.act_variable = act("Toggle Variable", self.toggle_variable, "Ctrl+Shift+V")
+        self.act_solve = act("Solve...", lambda: self.set_solve_dialog(), "Ctrl+Shift+L")
         self.act_props = act("Surface Properties...", self.surface_properties, "Ctrl+Shift+P")
         self.act_material = act("Choose Material...", self.choose_material, "Ctrl+G")
 
@@ -566,10 +571,24 @@ class LensDataEditor(QWidget):
     def remove_solve(self, row, key):
         self.doc.modify(f"Remove solve S{row} {key}", lambda s: opt.remove_solve(s, row, E.cell_param(key)))
 
-    def set_solve_dialog(self, row, key, name):
+    def set_solve_dialog(self, row=None, key=None, name=None):
+        """Solve dialog for a cell (default: the current cell, with its current solve type)."""
+        if row is None or row is False or key is None:
+            row, key = self.current()
+        if not E.solves_for(self.doc.system, row, key):
+            self.statusMessage.emit("This cell cannot have a solve (choose a radius, thickness, conic, "
+                                    "material or Par cell)")
+            return
         current = E.solve_on(self.doc.system, row, key)
-        dlg = SolveDialog(name, row, key, current if type(current).__name__ == name else None, self)
+        if name is None:
+            name = type(current).__name__ if current is not None else ""
+        dlg = SolveDialog(name, row, key, current, self, system=self.doc.system)
         if dlg.exec() == QDialog.Accepted:
+            name = dlg.name
+            if not name:
+                if current is not None:
+                    self.remove_solve(row, key)
+                return
             values = dlg.values()
 
             def fn(s):
@@ -614,8 +633,8 @@ class LensDataEditor(QWidget):
                 a = m.addAction("Remove Variable" if is_var else
                                 ("Vary Glass (model nd, Vd)" if key == "material" else "Make Variable"))
                 a.triggered.connect(lambda: self.toggle_variable(row, key))
-            names = E.SOLVES_FOR.get(key, ["Pickup"] if key not in ("comment", "semi_diameter") else [])
-            if names and row not in (0,) and not (key == "thickness" and row == sys_.image_index):
+            names = E.solves_for(sys_, row, key)
+            if names:
                 sm = m.addMenu("Solve")
                 for n in names:
                     sm.addAction(E.SOLVE_TITLES[n] + "...").triggered.connect(
@@ -698,45 +717,106 @@ class DeleteSurfacesDialog(QDialog):
 
 @qt_owns_children
 class SolveDialog(QDialog):
-    """Parameters of one solve (fields taken from the solve class)."""
+    """Solve on one cell: a solve type ("Fixed" = none) and its parameters (fields taken from the
+    solve class). A formula solve shows the syntax and a live preview of the value."""
 
     INT_FIELDS = ("from_surface", "center_surface")
 
-    def __init__(self, name, row, key, current=None, parent=None):
+    def __init__(self, name, row, key, current=None, parent=None, system=None):
         super().__init__(parent)
-        self.setWindowTitle(f"{E.SOLVE_TITLES[name]} solve on surface {row} ({key})")
-        self.name, self.key = name, key
-        form = QFormLayout()
-        doc = (E.solve_class(name).__doc__ or "").strip()
-        lab = QLabel(" ".join(doc.split()))
-        lab.setWordWrap(True)
+        self.row, self.key, self.current, self.system = row, key, current, system
+        names = E.solves_for(system, row, key) if system is not None else [name]
+        self.type_box = QComboBox()
+        self.type_box.addItem("Fixed (no solve)", "")
+        for n in names:
+            self.type_box.addItem(E.SOLVE_TITLES[n], n)
+        self.type_box.setToolTip("How this cell gets its value: fixed (typed), or computed by a solve")
+        self.doc_label = QLabel()
+        self.doc_label.setWordWrap(True)
+        self.help_label = QLabel()
+        self.help_label.setWordWrap(True)
+        self.help_label.setStyleSheet("color: #555;")
+        self.preview = QLabel()
+        self.form_host = QWidget()
+        self.form = QFormLayout(self.form_host)
+        self.form.setContentsMargins(0, 0, 0, 0)
         self.edits = {}
+        bb = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        bb.accepted.connect(self._accept)
+        bb.rejected.connect(self.reject)
+        top = QFormLayout()
+        top.addRow("Solve type", self.type_box)
+        lay = QVBoxLayout(self)
+        lay.addLayout(top)
+        lay.addWidget(self.doc_label)
+        lay.addWidget(self.form_host)
+        lay.addWidget(self.preview)
+        lay.addWidget(self.help_label)
+        lay.addWidget(bb)
+        self.setMinimumWidth(440)
+        i = self.type_box.findData(name or "")
+        self.type_box.setCurrentIndex(max(0, i))
+        self.type_box.currentIndexChanged.connect(lambda _: self._build())
+        self._build()
+
+    @property
+    def name(self):
+        return self.type_box.currentData()
+
+    def _build(self):
+        name, row, key = self.name, self.row, self.key
+        while self.form.rowCount():
+            self.form.removeRow(0)
+        self.edits = {}
+        title = E.SOLVE_TITLES.get(name, "Solve") if name else "Solve"
+        self.setWindowTitle(f"{title} on surface {row} ({key})")
+        self.help_label.setVisible(name == "Formula")
+        self.preview.setVisible(name == "Formula")
+        if not name:
+            self.doc_label.setText("This cell is fixed: it keeps the value you type. Choose a solve type to "
+                                   "compute it from the rest of the lens instead.")
+            return
+        doc = (E.solve_class(name).__doc__ or "").strip()
+        self.doc_label.setText("This cell = a formula of other cells." if name == "Formula" else " ".join(doc.split()))
+        current = self.current if type(self.current).__name__ == name else None
         for f, default in E.solve_fields(name):
             if name == "Pickup" and key == "material" and f in ("scale", "offset", "from_param"):
                 continue
             v = getattr(current, f) if current is not None else default
             if name == "Pickup" and f == "from_surface" and v is None:
                 v = max(1, row - 1)
+            if name == "Formula" and f == "expression" and current is None and self.system is not None:
+                v = E.formula_default(self.system, row, key)
             ed = QLineEdit("" if v is None else str(v))
             if f == "from_param":
                 ed.setPlaceholderText(f"same as this cell ({key})")
             if f == "height" and name == "EdgeThickness":
                 ed.setPlaceholderText("larger semi-diameter")
-            form.addRow(f.replace("_", " ").capitalize(), ed)
+            if f == "expression":
+                ed.setPlaceholderText("e.g. 2*T2 - 0.5")
+                ed.textChanged.connect(self._preview)
+            self.form.addRow(f.replace("_", " ").capitalize(), ed)
             self.edits[f] = ed
-        bb = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
-        bb.accepted.connect(self._accept)
-        bb.rejected.connect(self.reject)
-        lay = QVBoxLayout(self)
-        lay.addWidget(lab)
-        lay.addLayout(form)
-        lay.addWidget(bb)
-        self.setMinimumWidth(380)
+        if name == "Formula":
+            self.help_label.setText(E.FORMULA_HELP)
+            self._preview()
+
+    def _preview(self):
+        if self.system is None or "expression" not in self.edits:
+            return
+        text = self.edits["expression"].text().strip().lstrip("=")
+        self.preview.setText(E.formula_preview(self.system, self.row, self.key, text))
 
     def values(self):
         out = {}
         for f, ed in self.edits.items():
             t = ed.text().strip()
+            if f == "expression":
+                t = t.lstrip("=").strip()
+                if not t:
+                    raise ValueError("type a formula, e.g. 2*T2")
+                out[f] = t
+                continue
             if not t:
                 if f == "from_surface":
                     raise ValueError("from surface is required")

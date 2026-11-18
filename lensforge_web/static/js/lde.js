@@ -1,6 +1,8 @@
 // Lens Data Editor: the surface spreadsheet (as lensforge_qt/lde.py).
 // One row per surface; cells carry markers: V variable, a letter for a solve (M, C, F, P ...), U a fixed
-// semi-diameter. Right-click a cell for variables, solves, surface type, stop and surface properties.
+// semi-diameter. Right-click a cell (press and hold on a touch screen) for variables, solves, surface
+// type, stop and surface properties; Edit > Solve opens the solve dialog for the selected cell. Typing
+// =2*T2 into a numeric cell makes it a formula of other cells (shown with an = marker).
 import { App, run, status, statusError, onState, cmd } from "./core.js";
 import { el, popupMenu, closePopups } from "./ui.js";
 import * as D from "./dialogs.js";
@@ -12,6 +14,7 @@ let cur = { row: 1, col: 3 };
 let anchor = null;          // shift-click range start (row)
 let rangeRows = null;       // [first, last] when several rows are selected
 let editing = null;         // {td, input, row, col, key, original}
+let tapEdit = null;         // touch: the selected cell pressed again; edited when the finger lifts (not a long press)
 
 export function init() {
   root = document.getElementById("lde");
@@ -19,6 +22,13 @@ export function init() {
   root.addEventListener("focusin", () => { App.focusScope = "lde"; });
   root.addEventListener("contextmenu", onContext);
   root.addEventListener("pointerdown", onPointer);
+  root.addEventListener("pointerup", (e) => {
+    const t = tapEdit;
+    tapEdit = null;
+    const td = e.target.closest("td[data-col]");
+    if (t && td && +td.dataset.row === t.row && +td.dataset.col === t.col && !editing) startEdit(t.row, t.col);
+  });
+  root.addEventListener("pointercancel", () => { tapEdit = null; });
   // Safari can drop the focus a click gave the sheet (the clicked cell is redrawn under the mouse):
   // take it back once the click is over, so typing reaches the selected cell
   root.addEventListener("click", () => { if (!editing && !root.contains(document.activeElement)) root.focus({ preventScroll: true }); });
@@ -145,9 +155,11 @@ function onPointer(e) {
   const row = +td.dataset.row, col = +td.dataset.col;
   // touch screens have no double-click and no keyboard until a text box has focus: a tap on the
   // cell that is already selected starts editing it (the on-screen keyboard opens)
+  // (when the finger lifts, so that pressing and holding opens the cell's menu instead)
+  tapEdit = null;
   if (e.pointerType === "touch" && !e.shiftKey && !rangeRows && cur.row === row && cur.col === col && editable(row, col)) {
     e.preventDefault();
-    startEdit(row, col);
+    tapEdit = { row, col };
     return;
   }
   if (e.shiftKey && anchor !== null) {
@@ -209,7 +221,7 @@ function editable(row, col) {
 export function startEdit(row, col, initial) {
   if (!editable(row, col)) {
     const c = cellInfo(row, col);
-    if (c && c.ro && col > 1) status("This cell is set by a solve: right-click > Solve > Remove Solve to type a value");
+    if (c && c.ro && col > 1) status("This cell is set by a solve: Edit > Solve (or right-click / press and hold the cell) to change it or make it fixed");
     return;
   }
   cur = { row, col };
@@ -328,8 +340,14 @@ async function onContext(e) {
   const td = e.target.closest("td[data-col]");
   if (!td) return;
   e.preventDefault();
+  tapEdit = null;
   if (editing) commitEdit();
   const row = +td.dataset.row, col = +td.dataset.col;
+  if (cur.row !== row || cur.col !== col) {
+    if (!(rangeRows && row >= rangeRows[0] && row <= rangeRows[1])) { rangeRows = null; anchor = row; }
+    cur = { row, col };
+    render();
+  }
   const items = await run("context_menu", { row, col });
   if (!items) return;
   const conv = (list) => list.map((it) => {
@@ -391,6 +409,11 @@ export async function deleteSurfacesDialog() {
   const [first, last] = selectedRows();
   const range = await D.deleteSurfacesDialog(first, last);
   if (range) return deleteRange(range[0], range[1]);
+}
+export async function solveCurrent() {
+  const { row, col, key } = current();
+  if (col < 3 || !key) { status("Select a radius, thickness, material, conic or Par cell first, then Edit > Solve"); return; }
+  return D.solveDialog(row, key, null);
 }
 export async function toggleVariable() {
   const { row, key } = current();

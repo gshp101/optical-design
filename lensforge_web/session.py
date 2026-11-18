@@ -386,7 +386,10 @@ class Session:
         if key == "material":
             parts.append("catalog glass (e.g. N-BK7, SCHOTT:N-SF6), model glass 'nd,vd', index, or MIRROR")
         out["tip"] = "\n".join(parts)
-        out["ro"] = x is not None  # a solved cell is not typed into
+        out["ro"] = not E.typeable(s, row, key)  # a solved cell is not typed into (a formula is: =...)
+        ftext = E.formula_text(s, row, key)
+        if ftext is not None:
+            out["e"] = ftext
         return out
 
     def _key(self, row, col):
@@ -475,8 +478,8 @@ class Session:
                 items.append({"label": "Remove Variable" if is_var else
                               ("Vary Glass (model nd, Vd)" if key == "material" else "Make Variable"),
                               "cmd": "toggle_variable", "args": [row, key]})
-            names = E.SOLVES_FOR.get(key, ["Pickup"] if key not in ("comment", "semi_diameter") else [])
-            if names and row != 0 and not (key == "thickness" and row == s.image_index):
+            names = E.solves_for(s, row, key)
+            if names:
                 sub = [{"label": E.SOLVE_TITLES[n] + "...", "cmd": "solve_dialog", "args": [row, key, n]}
                        for n in names]
                 if E.solve_on(s, row, key) is not None:
@@ -501,8 +504,21 @@ class Session:
         return items
 
     # -- solves ------------------------------------------------------------------------------
-    def solve_form(self, row, key, name):
-        current = E.solve_on(self.doc.system, row, key)
+    def solve_form(self, row, key=None, name=None):
+        """Fields of the solve dialog for a cell. ``name`` None: the cell's current solve (or Fixed);
+        "": Fixed (no solve)."""
+        s = self.doc.system
+        names = E.solves_for(s, row, key)
+        if not names:
+            raise ValueError(f"Surface {row} {key or 'this cell'} cannot have a solve")
+        current = E.solve_on(s, row, key)
+        if name is None:
+            name = type(current).__name__ if current is not None else ""
+        types = [["", "Fixed (no solve)"]] + [[n, E.SOLVE_TITLES[n]] for n in names]
+        if not name:
+            return {"title": f"Solve on surface {row} ({key})", "types": types, "name": "", "fields": [],
+                    "doc": "This cell is fixed: it keeps the value you type. Choose a solve type to compute it "
+                           "from the rest of the lens instead.", "help": ""}
         if type(current).__name__ != name:
             current = None
         fields = []
@@ -512,6 +528,8 @@ class Session:
             v = getattr(current, f) if current is not None else default
             if name == "Pickup" and f == "from_surface" and v is None:
                 v = max(1, row - 1)
+            if name == "Formula" and f == "expression" and current is None:
+                v = self._formula_default(row, key)
             ph = ""
             if f == "from_param":
                 ph = f"same as this cell ({key})"
@@ -520,12 +538,29 @@ class Session:
             fields.append({"name": f, "label": f.replace("_", " ").capitalize(), "value": "" if v is None else str(v),
                            "placeholder": ph})
         doc = " ".join((E.solve_class(name).__doc__ or "").split())
-        return {"title": f"{E.SOLVE_TITLES[name]} solve on surface {row} ({key})", "doc": doc, "fields": fields}
+        if name == "Formula":
+            doc = "This cell = a formula of other cells."
+        return {"title": f"{E.SOLVE_TITLES[name]} solve on surface {row} ({key})", "doc": doc, "fields": fields,
+                "types": types, "name": name, "help": E.FORMULA_HELP if name == "Formula" else ""}
+
+    def _formula_default(self, row, key):
+        """Starting formula of a new formula solve (the same cell of the surface before)."""
+        return E.formula_default(self.doc.system, row, key)
+
+    def solve_preview(self, row, key, text):
+        return E.formula_preview(self.doc.system, row, key, text)
 
     def set_solve(self, row, key, name, values):
+        if not name:
+            return self.remove_solve(row, key)
         out = {}
         for f, t in values.items():
             t = str(t).strip()
+            if f == "expression":
+                if not t:
+                    raise ValueError("type a formula, e.g. 2*T2")
+                out[f] = t[1:].strip() if t.startswith("=") else t
+                continue
             if not t:
                 if f == "from_surface":
                     raise ValueError("from surface is required")
@@ -541,6 +576,10 @@ class Session:
             opt.remove_variable(s, row, E.cell_param(key))
             opt.set_solve(s, E.make_solve(name, row, key, out))
         return self._modify(f"{E.SOLVE_TITLES[name]} solve on S{row} {key}", fn)
+
+    def cell_key(self, row, col):
+        """The key of an LDE cell (None for the surface number and type columns)."""
+        return self._key(row, col) if col >= 2 else None
 
     def remove_solve(self, row, key):
         return self._modify(f"Remove solve S{row} {key}", lambda s: opt.remove_solve(s, row, E.cell_param(key)))

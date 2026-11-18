@@ -8,7 +8,7 @@ import * as D from "./dialogs.js";
 import { openAnalysis, closeAll, tabAll, windows } from "./analysis.js";
 import { showMFE, showMCE, showShell, showUndoHistory, localShortcut } from "./editors.js";
 import { optimization, tolerancing, nsEditor, helpBrowser, customizeToolbar } from "./tools.js";
-import { el, esc, iconImg, message, confirmBox, popupMenu, closePopups, popupsOpen, topModal, download, pickFile, readText, onNewDocument } from "./ui.js";
+import { el, esc, iconImg, message, confirmBox, popupMenu, closePopups, popupsOpen, topModal, download, pickFile, readText, onNewDocument, installLongPress } from "./ui.js";
 
 const IS_MAC = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
 const plain = (html) => { const d = document.createElement("div"); d.innerHTML = html || ""; return d.textContent; };
@@ -153,6 +153,7 @@ function buildCommands() {
     "Edit > Delete Surface": () => lde.deleteSurface(),
     "Edit > Delete Surfaces": () => lde.deleteSurfacesDialog(),
     "Edit > Toggle Variable": () => lde.toggleVariable(),
+    "Edit > Solve": () => lde.solveCurrent(),
     "Edit > Choose Material": () => lde.chooseMaterial(lde.current().row),
     "Edit > Surface Properties": () => lde.surfaceProperties(lde.current().row),
     "Edit > Quick Focus (paraxial)": async () => { if (await run("quick_focus", {}, { priority: 0 }) !== undefined) status("Quick focus: image distance set for best paraxial focus"); },
@@ -550,6 +551,7 @@ async function boot() {
     doc.addEventListener("keydown", onKey);
     doc.addEventListener("focusin", () => { App.focusScope = null; }, true);
     doc.addEventListener("pointerdown", notePress, true);
+    installLongPress(doc);
   });
   setupDrop();
   window.addEventListener("pagehide", () => { clearTimeout(sessionTimer); saveSession(); });

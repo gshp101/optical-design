@@ -141,7 +141,37 @@ HELP = {
     "Edit > Toggle Variable": (
         "Make the selected cell a variable for optimisation, or fixed again.",
         "Marks the radius, thickness, conic or parameter in the current cell as an optimisation variable "
-        "('V' marker), or removes the variable. Right-click a cell for solves."),
+        "('V' marker), or removes the variable. For solves use Edit > Solve (Ctrl+Shift+L) or right-click "
+        "(long-press on a touch screen) a cell."),
+    "Edit > Solve": (
+        "Make the selected cell a solve: computed from other cells instead of typed (pickups, formulas, ray solves).",
+        "<p>Opens the Solve dialog for the selected cell. Choose the <b>Solve type</b>: <b>Fixed</b> (no "
+        "solve: the cell keeps the value you type) or one of the solves the cell allows, then fill in its "
+        "parameters. The same solves are on the cell's right-click menu (on an iPad or other touch screen, "
+        "press and hold the cell).</p>"
+        "<p><b>Thickness</b>: marginal ray height (height 0 on the last surface puts the image at paraxial "
+        "focus), chief ray height, edge thickness, position (a fixed total length from an earlier surface). "
+        "<b>Radius</b>: marginal or chief ray angle, F number, concentric with another surface. "
+        "<b>Any numeric cell</b> (radius, thickness, conic, Par columns): <b>Pickup</b> (scale times another "
+        "cell plus offset) and <b>Formula</b>. <b>Material</b>: pickup copies another surface's glass.</p>"
+        "<p><b>Formula</b> is a pickup from several cells, like a spreadsheet formula. You can also type it "
+        "straight into the cell: <code>=2*T2 - 0.5</code>, <code>=-(R1 + R2)/2</code>, "
+        "<code>=T(s-1) * N1 / N3</code>. Cells: <code>R3</code> radius, <code>C3</code> curvature, "
+        "<code>T3</code> thickness, <code>K3</code> conic, <code>SD3</code> semi-diameter, <code>N3</code> "
+        "refractive index after surface 3 (primary wavelength), <code>PAR3_2</code> Par 2 of surface 3, and "
+        "<code>PARAM(3, \"coefficients[1]\")</code> for any optimisation parameter. <code>R(s-1)</code>, "
+        "<code>T(s+1)</code>, <code>PAR(s, 2)</code> count from the formula's own surface <code>s</code>. "
+        "Maths: + - * / ** ( ), pi, sqrt, sin, cos, tan, asin, acos, atan, atan2, exp, log, log10, abs, min, "
+        "max, round, floor, ceil, hypot and <code>a if condition else b</code>. The dialog shows the value "
+        "the formula gives as you type. A formula cell shows '=' and its formula when you edit it; typing a "
+        "plain number makes it fixed again. Inserting or deleting surfaces renumbers the surfaces a "
+        "formula refers to (a formula that refers to a deleted surface is removed), and a formula that "
+        "would refer to itself through other pickups is refused.</p>"
+        "<p>Solves are re-applied after every edit and during optimisation, and are saved in the lens file. "
+        "A solved cell has a blue background and a letter: M marginal, C chief, F F number, S concentric, "
+        "E edge, T position, P pickup, = formula. Scripting: <code>opt.set_solve(lens, "
+        "opt.Formula(3, 'thickness', '2*T2 - 0.5'))</code>, <code>opt.set_solve(lens, opt.Pickup(4, "
+        "'radius', 2, scale=-1))</code>, <code>opt.remove_solve(lens, 3, 'thickness')</code>.</p>"),
     "Edit > Choose Material": (
         "Pick a glass or other material for the selected surface from a dialog.",
         "Opens the material picker: catalog glasses with a filterable table and an n-V glass map (hover a "
@@ -601,7 +631,9 @@ OVERVIEW = """
 <h2>lensforge help</h2>
 <p>lensforge is a sequential optical design program. The <b>Lens Data Editor</b> in the middle of the
 window is the lens: one row per surface, from the object to the image. Type radii, thicknesses and
-materials into the cells; right-click a cell for variables, solves and surface types.</p>
+materials into the cells; right-click a cell (press and hold on a touch screen) for variables, solves and
+surface types, or use Edit &gt; Solve. Type <code>=2*T2</code> in a cell to make it a formula of other
+cells.</p>
 <p>The menus hold every command:</p>
 <ul>
 <li><b>File</b>: open, save, insert lenses from files, system settings (aperture, fields, wavelengths),

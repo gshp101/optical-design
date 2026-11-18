@@ -5,24 +5,60 @@ import { el, esc, btn, select, numInput, check, tabs, dialog, message, confirmBo
 import * as store from "./storage.js";
 
 // ================================================================== solves
+// One dialog for every solve: the Solve type list ("Fixed" = no solve) rebuilds the fields below it.
+// name: the type to show first (null = the cell's current solve, or Fixed).
 export async function solveDialog(row, key, name) {
-  const form = await run("solve_form", { row, key, name });
+  let form = await run("solve_form", { row, key, name });
   if (!form) return;
-  await dialog({ title: form.title, width: 420 }, (win, done, bar) => {
-    win.body.append(el("div", { class: "note" }, form.doc));
+  await dialog({ title: form.title, width: 480 }, (win, done, bar) => {
+    let inputs = {};
+    const typeSel = select(form.types, form.name, async (v) => {
+      const f = await run("solve_form", { row, key, name: v });
+      if (f) { form = f; build(); }
+    }, { title: "How this cell gets its value: fixed (typed), or computed by a solve" });
+    const doc = el("div", { class: "note" });
     const grid = el("div", { class: "form" });
-    const inputs = {};
-    for (const f of form.fields) {
-      inputs[f.name] = el("input", { type: "text", value: f.value, placeholder: f.placeholder });
-      grid.append(el("label", {}, f.label), inputs[f.name]);
-    }
-    win.body.append(grid);
+    const preview = el("div", { class: "mono solve-preview" });
+    const help = el("div", { class: "note solve-help" });
+    let timer = null, token = 0;
+    const update = () => {
+      clearTimeout(timer);
+      const inp = inputs.expression;
+      if (!inp) return;
+      const my = ++token;
+      timer = setTimeout(async () => {
+        const r = await run("solve_preview", { row, key, text: inp.value.trim().replace(/^=/, "") }, { quiet: true });
+        if (my === token && r !== undefined) {
+          preview.textContent = r;
+          preview.classList.toggle("error", r.startsWith("Error"));
+        }
+      }, 150);
+    };
+    const build = () => {
+      win.setTitle?.(form.title);
+      doc.textContent = form.doc;
+      grid.replaceChildren(el("label", {}, "Solve type"), typeSel);
+      inputs = {};
+      for (const f of form.fields) {
+        inputs[f.name] = el("input", { type: "text", value: f.value, placeholder: f.placeholder || (f.name === "expression" ? "e.g. 2*T2 - 0.5" : ""),
+          spellcheck: false, autocomplete: "off", autocapitalize: "off" });
+        if (f.name === "expression") inputs[f.name].addEventListener("input", update);
+        grid.append(el("label", {}, f.label), inputs[f.name]);
+      }
+      help.textContent = form.help || "";
+      help.style.display = form.help ? "" : "none";
+      preview.textContent = "";
+      preview.style.display = inputs.expression ? "" : "none";
+      update();
+    };
+    win.body.append(grid, doc, preview, help);
+    build();
     const ok = async () => {
       const values = Object.fromEntries(Object.entries(inputs).map(([k, i]) => [k, i.value]));
-      try { await call("set_solve", { row, key, name, values }); done(true); }
+      try { await call("set_solve", { row, key, name: form.name, values }); done(true); }
       catch (e) { await message("Solve", esc(e.message)); }
     };
-    win.body.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); ok(); } });
+    win.body.addEventListener("keydown", (e) => { if (e.key === "Enter" && e.target.tagName === "INPUT") { e.preventDefault(); ok(); } });
     bar.append(btn("Cancel", () => done(null)), btn("OK", ok, { primary: true }));
   });
 }
