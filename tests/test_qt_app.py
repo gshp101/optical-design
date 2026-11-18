@@ -685,6 +685,25 @@ def test_input_rays_pattern_preview(win):
         d.reject()
 
 
+def test_material_dialog_map_names_optional(win):
+    from PySide6.QtCore import QSettings
+    from lensforge_qt.material_dialog import MaterialDialog
+    QSettings("lensforge", "lensforge-qt").remove("material/show_names")
+    s = win.doc.system
+    d = MaterialDialog(s, s.surfaces[1].material)
+    try:
+        d.filter.setText("bk7")
+        ax = d.figure.axes[0]
+        assert not d.show_names.isChecked() and not ax.texts   # names hidden by default
+        d.show_names.setChecked(True)
+        assert len(d.figure.axes[0].texts) == len(d._visible_rows())
+        d.show_names.setChecked(False)
+        assert not d.figure.axes[0].texts
+    finally:
+        QSettings("lensforge", "lensforge-qt").remove("material/show_names")
+        d.reject()
+
+
 def test_material_dialog(win):
     from lensforge_qt.material_dialog import MaterialDialog
     s = win.doc.system

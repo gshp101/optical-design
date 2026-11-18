@@ -6,8 +6,8 @@ from __future__ import annotations
 import numpy as np
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
 from matplotlib.figure import Figure
-from PySide6.QtCore import Qt
-from PySide6.QtWidgets import (QAbstractItemView, QComboBox, QDialog, QDialogButtonBox, QDoubleSpinBox,
+from PySide6.QtCore import QSettings, Qt
+from PySide6.QtWidgets import (QAbstractItemView, QCheckBox, QComboBox, QDialog, QDialogButtonBox, QDoubleSpinBox,
                                QFileDialog, QFormLayout, QHBoxLayout, QHeaderView, QLabel, QLineEdit,
                                QMessageBox, QPushButton, QRadioButton, QSplitter, QTableWidget, QTableWidgetItem,
                                QTabWidget, QVBoxLayout, QWidget)
@@ -79,14 +79,26 @@ class MaterialDialog(QDialog):
         split.addWidget(self.canvas)
         split.setStretchFactor(0, 1)
         split.setStretchFactor(1, 1)
+        # glass names on the map: off by default (they cover the points and the selected-glass ring)
+        self.show_names = QCheckBox("Show names on map")
+        self.show_names.setToolTip("Label every glass on the glass map (hidden by default: the labels cover the points)")
+        self.show_names.setChecked(QSettings("lensforge", "lensforge-qt").value("material/show_names", False, type=bool))
+        self.show_names.toggled.connect(self._names_toggled)
+        bottom = QHBoxLayout()
+        bottom.addWidget(QLabel("Click a glass on the map (Abbe diagram) or in the table; double-click to choose."), 1)
+        bottom.addWidget(self.show_names)
         lay = QVBoxLayout(w)
         lay.addLayout(top)
         lay.addWidget(split, 1)
-        lay.addWidget(QLabel("Click a glass on the map (Abbe diagram) or in the table; double-click to choose."))
+        lay.addLayout(bottom)
         self.catalog.currentIndexChanged.connect(lambda _: self._fill_table())
         self.filter.textChanged.connect(lambda _: self._fill_table())
         self._reload_catalogs()
         return w
+
+    def _names_toggled(self, on):
+        QSettings("lensforge", "lensforge-qt").setValue("material/show_names", bool(on))
+        self._draw_map(getattr(self, "_highlight", None))
 
     def _reload_catalogs(self):
         self.rows = catalog_rows(self.system.library)
@@ -119,17 +131,20 @@ class MaterialDialog(QDialog):
         self._draw_map()
 
     def _draw_map(self, highlight=None):
+        self._highlight = highlight
         self.figure.clear()
         ax = self.figure.add_subplot(111)
         rows = self._visible_rows()
         if rows:
             vd = np.array([r[4] for r in rows])
             nd = np.array([r[3] for r in rows])
-            ax.scatter(vd, nd, s=14, color="C0")
-            for r in rows:
-                ax.annotate(r[2], (r[4], r[3]), fontsize=6, color="0.35", xytext=(2, 2), textcoords="offset points")
+            ax.scatter(vd, nd, s=14, color="C0", zorder=3)
+            if self.show_names.isChecked():
+                for r in rows:
+                    ax.annotate(r[2], (r[4], r[3]), fontsize=6, color="0.35", xytext=(2, 2), textcoords="offset points",
+                                zorder=2)
         if highlight is not None:
-            ax.scatter([highlight[1]], [highlight[0]], s=90, facecolors="none", edgecolors="crimson", lw=2)
+            ax.scatter([highlight[1]], [highlight[0]], s=90, facecolors="none", edgecolors="crimson", lw=2, zorder=4)
         ax.set_xlabel("Abbe number Vd")
         ax.set_ylabel("index nd")
         ax.invert_xaxis()
