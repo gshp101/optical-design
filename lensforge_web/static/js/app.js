@@ -395,6 +395,7 @@ function buildShortcuts() {
 
 function onKey(e) {
   if (e.defaultPrevented) return;
+  if (toSheet(e)) return;
   const k = keyName(e);
   if (!k) return;
   if (k === "Esc") {
@@ -417,6 +418,22 @@ function onKey(e) {
   e.preventDefault();
   closeMenus();
   cmd(id);
+}
+
+// A key that lands on the page itself (nothing has focus, as after Safari drops the focus a click gave a
+// spreadsheet) goes to the spreadsheet last used, so typing still reaches its selected cell.
+let lastPress = null;   // the sheet last pressed, or "elsewhere" (then the keys are not for a sheet)
+const notePress = (e) => { lastPress = Object.values(App.sheets).find((s) => s.contains(e.target)) || "elsewhere"; };
+function toSheet(e) {
+  const doc = e.target && e.target.ownerDocument;
+  if (!doc || (e.target !== doc.body && e.target !== doc.documentElement)) return false;
+  const sheet = App.sheets[App.focusScope];
+  if (!sheet || !sheet.isConnected || (lastPress && lastPress !== sheet) || sheet.ownerDocument !== doc || topModal() || popupsOpen()) return false;
+  sheet.focus({ preventScroll: true });
+  const copy = new KeyboardEvent(e.type, e);
+  sheet.dispatchEvent(copy);   // the sheet's own key handler, then onKey again (now from the sheet) for shortcuts
+  if (copy.defaultPrevented) e.preventDefault();
+  return true;
 }
 
 // ================================================================== status bar, title
@@ -527,10 +544,12 @@ async function boot() {
   document.addEventListener("keydown", onKey);
   // editors claim the keyboard scope in their own focusin handlers, which run after this capture one
   document.addEventListener("focusin", () => { App.focusScope = null; }, true);
+  document.addEventListener("pointerdown", notePress, true);
   // an editor in its own tab (Open in New Tab) keeps the menu shortcuts and its own (Ins, Shift+Del, F1 ...)
   onNewDocument((doc) => {
     doc.addEventListener("keydown", onKey);
     doc.addEventListener("focusin", () => { App.focusScope = null; }, true);
+    doc.addEventListener("pointerdown", notePress, true);
   });
   setupDrop();
   window.addEventListener("pagehide", () => { clearTimeout(sessionTimer); saveSession(); });

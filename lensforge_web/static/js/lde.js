@@ -19,6 +19,10 @@ export function init() {
   root.addEventListener("focusin", () => { App.focusScope = "lde"; });
   root.addEventListener("contextmenu", onContext);
   root.addEventListener("pointerdown", onPointer);
+  // Safari can drop the focus a click gave the sheet (the clicked cell is redrawn under the mouse):
+  // take it back once the click is over, so typing reaches the selected cell
+  root.addEventListener("click", () => { if (!editing && !root.contains(document.activeElement)) root.focus({ preventScroll: true }); });
+  App.sheets.lde = root;
   root.addEventListener("dblclick", (e) => {
     const td = e.target.closest("td[data-col]");
     if (td && !editing) startEdit(+td.dataset.row, +td.dataset.col);

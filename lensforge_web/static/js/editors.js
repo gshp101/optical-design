@@ -101,6 +101,12 @@ class Sheet {
     this.element.addEventListener("focusin", () => { App.focusScope = scope; });
     this.element.addEventListener("keydown", (e) => this.key(e));
     this.element.addEventListener("pointerdown", (e) => this.pointer(e));
+    // Safari can drop the focus a click gave the sheet (the cell is redrawn under the mouse): take it back
+    this.element.addEventListener("click", () => {
+      const doc = this.element.ownerDocument;
+      if (!this.editing && !this.element.contains(doc.activeElement)) this.element.focus({ preventScroll: true });
+    });
+    if (scope) App.sheets[scope] = this.element;
     this.element.addEventListener("dblclick", (e) => { const td = e.target.closest("td[data-c]"); if (td) this.edit(+td.dataset.r, +td.dataset.c); });
     this.element.addEventListener("contextmenu", (e) => {
       const td = e.target.closest("td[data-c], th[data-c]");
