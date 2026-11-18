@@ -46,7 +46,7 @@ from .zernike import evaluate_zernike, fit_zernike, zernike_coefficients, zernik
 from .field import (chromatic_focal_shift, distortion, field_curvature, grid_distortion, lateral_color,
                     longitudinal_aberration, pupil_aberration)
 from .illumination import relative_illumination, vignetting
-from .geometry import (footprint, full_field_spot, interferogram, layout, surface_profiles, surface_sag,
+from .geometry import (footprint, full_field_spot, interferogram, layout, ray_paths, surface_profiles, surface_sag,
                        through_focus_spot)
 from .polarization import diattenuation, fresnel, polarization_pupil_map, polarization_trace, transmission
 from .report import cardinal_points, dispersion, format_ray_table, ray_trace_table, system_report
@@ -64,7 +64,7 @@ __all__ = [
     "chromatic_focal_shift", "distortion", "field_curvature", "grid_distortion", "lateral_color",
     "longitudinal_aberration", "pupil_aberration",
     "relative_illumination", "vignetting",
-    "footprint", "full_field_spot", "interferogram", "layout", "surface_profiles", "surface_sag",
+    "footprint", "full_field_spot", "interferogram", "layout", "ray_paths", "surface_profiles", "surface_sag",
     "through_focus_spot",
     "diattenuation", "fresnel", "polarization_pupil_map", "polarization_trace", "transmission",
     "cardinal_points", "dispersion", "format_ray_table", "ray_trace_table", "system_report", "metrics",
