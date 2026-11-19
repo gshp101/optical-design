@@ -269,7 +269,10 @@ def _fan_plot(fig, res, opts, system, kind="ray"):
     for k, (f, r) in enumerate(res):
         a1 = fig.add_subplot(n, 2, 2 * k + 1)
         a2 = fig.add_subplot(n, 2, 2 * k + 2, sharey=a1)
-        (P.ray_fan if kind == "ray" else P.opd_fan)(r, [a1, a2])
+        if kind == "ray":
+            P.ray_fan(r, [a1, a2], units=system.units)
+        else:
+            P.opd_fan(r, [a1, a2])
         a1.set_ylabel(_field_title(system, f), fontsize=8)
         if k:
             a1.set_title("")
@@ -521,7 +524,7 @@ def _mtf_plot(fig, res, opts, system):
     r0 = res[0][1]
     if "diffraction_limit_tangential" in r0:
         ax.plot(r0["freq"], r0["diffraction_limit_tangential"], color="k", lw=0.8, label="Diff. limit")
-    ax.set_xlabel("spatial frequency (cycles/mm)")
+    ax.set_xlabel(f"spatial frequency (cycles/{system.units})")
     ax.set_ylabel("modulus of the OTF")
     ax.set_ylim(0, 1.02)
     ax.set_xlim(left=0)
@@ -554,14 +557,14 @@ def _tfm_plot(fig, res, opts, system):
         ax.plot(r["focus"], r["tangential"], color=c, label=f"F{f + 1} T")
         ax.plot(r["focus"], r["sagittal"], "--", color=c, label=f"F{f + 1} S")
     ax.set_xlabel(f"focus shift ({system.units})")
-    ax.set_ylabel(f"MTF at {opts.get('frequency', 50):g} cycles/mm")
+    ax.set_ylabel(f"MTF at {opts.get('frequency', 50):g} cycles/{system.units}")
     ax.set_ylim(0, 1.02)
     ax.grid(alpha=0.3)
     ax.legend(fontsize=7, ncol=2)
 
 
 register(AnalysisSpec("through_focus_mtf", "Through Focus MTF", "PSF & MTF", _tfm_compute, _tfm_plot,
-                      [Setting("frequency", "Frequency (cycles/mm)", "float", 50.0, minimum=0.01, maximum=1e5),
+                      [Setting("frequency", "Frequency (cycles per lens unit)", "float", 50.0, minimum=0.01, maximum=1e5),
                        FIELD_ALL, WAVE_ALL, Setting("steps", "Steps", "int", 21, minimum=3, maximum=101),
                        Setting("method", "Method", "choice", "fft", [("FFT", "fft"), ("Geometric", "geometric")]),
                        PUPIL_N, IMAGE_N]))
@@ -574,7 +577,7 @@ def _mvf_compute(system, f1=10.0, f2=30.0, f3=50.0, wave=-1, method="fft", pupil
 
 
 register(AnalysisSpec("mtf_vs_field", "MTF vs Field", "PSF & MTF", _mvf_compute,
-                      lambda fig, r, o, s: P.mtf_vs_field(r, fig.add_subplot(111)),
+                      lambda fig, r, o, s: P.mtf_vs_field(r, fig.add_subplot(111), units=s.units),
                       [Setting("f1", "Frequency 1", "float", 10.0, minimum=0, maximum=1e5),
                        Setting("f2", "Frequency 2", "float", 30.0, minimum=0, maximum=1e5),
                        Setting("f3", "Frequency 3", "float", 50.0, minimum=0, maximum=1e5), WAVE_ALL,

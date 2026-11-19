@@ -160,7 +160,7 @@ export async function tolerancing() {
   const stopB = stopButton();
   const worstB = btn("Load Worst Monte Carlo Lens", () => run("load_worst_monte_carlo"), { disabled: true });
   const runBox = el("fieldset", {}, el("legend", {}, "Analysis"), el("div", { class: "form" },
-    el("label", {}, "Criterion"), criterion, el("label", {}, "MTF frequency (cycles/mm)"), freq, el("label", {}, "Compensator"), comp,
+    el("label", {}, "Criterion"), criterion, el("label", {}, `MTF frequency (cycles/${setup.units || "mm"})`), freq, el("label", {}, "Compensator"), comp,
     el("label", {}, "Monte Carlo trials"), trials, el("label", {}, "Distribution"), dist, el("label", {}, "Seed"), seed,
     el("div", { class: "full row" }, sensB, mcB, stopB), el("div", { class: "full" }, progress)));
   const plot = el("img", { style: { width: "100%", flex: "1", minHeight: "120px", objectFit: "contain", border: "1px solid var(--border-soft)" }, alt: "" });

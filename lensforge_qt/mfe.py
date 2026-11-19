@@ -377,7 +377,7 @@ class MeritWizard(QDialog):
         f.addRow("Reference", self.reference)
         f.addRow("Rings", self.rings)
         f.addRow("Arms", self.arms)
-        f.addRow("MTF frequency (cycles/mm)", self.freq)
+        f.addRow(f"MTF frequency (cycles/{system.units})", self.freq)
         for name, label in (("glass_min", "Glass min centre"), ("glass_max", "Glass max centre"),
                             ("glass_edge", "Glass min edge"), ("air_min", "Air min centre"),
                             ("air_max", "Air max centre"), ("air_edge", "Air min edge")):

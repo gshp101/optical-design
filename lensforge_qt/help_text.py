@@ -507,9 +507,11 @@ ANALYSIS_HELP = {
     "sag": ("Sag profile of a surface.",
             "Plots the sag (z) of one surface against height, or its departure from the best-fit sphere."),
     "ray_fan": ("Transverse ray aberration against pupil coordinate.",
-                "Plots ey against py (tangential) and ex against px (sagittal) for each field and wavelength."),
+                "Plots ey against py (tangential) and ex against px (sagittal) for each field and wavelength. "
+                "Ray errors are in lens units (shown in the plot titles); pupil coordinates are normalised."),
     "opd_fan": ("Optical path difference against pupil coordinate.",
-                "Plots the wavefront error in waves along the tangential and sagittal pupil axes."),
+                "Plots the wavefront error in waves (at each wavelength) along the tangential and sagittal "
+                "normalised pupil axes."),
     "spot": ("Spot diagram: ray intercepts on the image for each field.",
              "Shows ray intercepts per field and wavelength with RMS and GEO radii and the Airy disc; pattern "
              "and density are set in Input Rays."),
@@ -533,13 +535,15 @@ ANALYSIS_HELP = {
                   " PSF pixel size (in um) samples the PSF more finely than Nyquist; 0 keeps Nyquist." + _PSF_ZOOM),
     "mtf": ("Modulation transfer function.",
             "Tangential and sagittal MTF against spatial frequency for each field, with the diffraction limit "
-            "(FFT, Huygens or geometric)." + _SAMPLING +
+            "(FFT, Huygens or geometric). Spatial frequency is in cycles per lens unit (cycles/mm for a "
+            "lens in mm, cycles/in for one in inches)." + _SAMPLING +
             " For the geometric method the pupil sampling is the ray grid. Input Rays does not affect the MTF."),
     "through_focus_mtf": ("MTF through focus at one frequency.",
-                          "MTF at a chosen spatial frequency against defocus, to find the best focus and depth."
+                          "MTF at a chosen spatial frequency (cycles per lens unit) against defocus, to find the best "
+                          "focus and depth."
                           + _SAMPLING),
     "mtf_vs_field": ("MTF against field.",
-                     "Tangential and sagittal MTF at chosen frequencies across the field." + _SAMPLING),
+                     "Tangential and sagittal MTF at chosen frequencies (cycles per lens unit) across the field." + _SAMPLING),
     "encircled_energy": ("Fraction of energy inside a radius.",
                          "Encircled, ensquared or line energy against distance for each field, from diffraction or geometric rays."
                          + _SAMPLING + " For the geometric method the pupil sampling is the ray grid."),

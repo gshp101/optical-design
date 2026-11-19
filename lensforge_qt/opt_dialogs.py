@@ -301,7 +301,7 @@ class ToleranceDialog(QDialog):
         self.freq = QDoubleSpinBox()
         self.freq.setRange(0.1, 1e5)
         self.freq.setValue(30)
-        self.freq.setSuffix(" cycles/mm")
+        self.freq.setSuffix(f" cycles/{doc.system.units}")
         self.comp = QComboBox()
         for lab, k in COMPENSATORS:
             self.comp.addItem(lab, k)

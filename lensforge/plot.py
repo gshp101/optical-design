@@ -73,14 +73,18 @@ def point_source(result, ax=None, scale=1.0, relative=True):
     return ax
 
 
-def ray_fan(result, axes=None):
+def ray_fan(result, axes=None, units=None):
+    """Transverse ray fan.  ``units`` (lens unit name, e.g. "mm") labels the error axis."""
     if axes is None:
         _, axes = _plt().subplots(1, 2, figsize=(8, 3.5), sharey=True)
     for w, ey, ex in zip(result["wavelengths"], result["ey"], result["ex"]):
         axes[0].plot(result["p"], ey, label=_wl_label(w))
         axes[1].plot(result["p"], ex)
-    axes[0].set_title("Tangential ey vs py")
-    axes[1].set_title("Sagittal ex vs px")
+    u = f" ({units})" if units else ""
+    axes[0].set_title(f"Tangential ey{u} vs py")
+    axes[1].set_title(f"Sagittal ex{u} vs px")
+    axes[0].set_xlabel("py (normalised pupil)", fontsize=8)
+    axes[1].set_xlabel("px (normalised pupil)", fontsize=8)
     axes[0].legend(fontsize=7)
     for a in axes:
         a.axhline(0, color="0.6", lw=0.5)
@@ -93,8 +97,10 @@ def opd_fan(result, axes=None):
     for w, wy, wx in zip(result["wavelengths"], result["wy"], result["wx"]):
         axes[0].plot(result["p"], wy, label=_wl_label(w))
         axes[1].plot(result["p"], wx)
-    axes[0].set_title("Tangential OPD (waves)")
-    axes[1].set_title("Sagittal OPD (waves)")
+    axes[0].set_title("Tangential OPD (waves) vs py")
+    axes[1].set_title("Sagittal OPD (waves) vs px")
+    axes[0].set_xlabel("py (normalised pupil)", fontsize=8)
+    axes[1].set_xlabel("px (normalised pupil)", fontsize=8)
     axes[0].legend(fontsize=7)
     return axes
 
@@ -161,13 +167,14 @@ def psf(result, ax=None, log=False, zoom=1):
     return ax
 
 
-def mtf(result, ax=None, diffraction=True):
+def mtf(result, ax=None, diffraction=True, units=None):
+    """MTF curves; ``units`` (lens unit name) labels the frequency axis, e.g. cycles/mm."""
     ax = _ax(ax, figsize=(6, 4))
     l1, = ax.plot(result["freq"], result["tangential"], label="T")
     ax.plot(result["freq"], result["sagittal"], "--", color=l1.get_color(), label="S")
     if diffraction and "diffraction_limit_tangential" in result:
         ax.plot(result["freq"], result["diffraction_limit_tangential"], color="k", lw=0.8, label="diffraction limit")
-    ax.set_xlabel("spatial frequency (cycles per lens unit)")
+    ax.set_xlabel(f"spatial frequency (cycles/{units or 'lens unit'})")
     ax.set_ylabel("modulus of the OTF")
     ax.set_ylim(0, 1.02)
     ax.legend(fontsize=8)
@@ -184,10 +191,10 @@ def through_focus_mtf(result, ax=None):
     return ax
 
 
-def mtf_vs_field(result, ax=None):
+def mtf_vs_field(result, ax=None, units=None):
     ax = _ax(ax, figsize=(6, 4))
     for k, f in enumerate(result["frequencies"]):
-        l, = ax.plot(result["field"], result["tangential"][:, k], label=f"T {f:g}")
+        l, = ax.plot(result["field"], result["tangential"][:, k], label=f"T {f:g} cycles/{units or 'unit'}")
         ax.plot(result["field"], result["sagittal"][:, k], "--", color=l.get_color(), label=f"S {f:g}")
     ax.set_xlabel("normalised field")
     ax.set_ylabel("MTF")

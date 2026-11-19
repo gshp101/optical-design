@@ -990,7 +990,7 @@ class Session:
     def wizard_info(self):
         mc = getattr(self.doc.system, "multiconfig", None)
         n = mc.n_configs if mc is not None else 1
-        return {"configs": n}
+        return {"configs": n, "units": self.doc.system.units}
 
     def mfe_wizard(self, kw, keep=True):
         kw = dict(kw)
@@ -1220,7 +1220,8 @@ class Session:
 
     # ======================================================================== Tolerancing
     def tolerance_setup(self):
-        return {"criteria": [[k, lab] for lab, k in CRITERIA], "compensators": [[k, lab] for lab, k in COMPENSATORS],
+        return {"units": self.doc.system.units,
+                "criteria": [[k, lab] for lab, k in CRITERIA], "compensators": [[k, lab] for lab, k in COMPENSATORS],
                 "distributions": DISTRIBUTIONS, "types": list(opt.tolerance.TOLERANCE_TYPES),
                 "wizard": [["fringes", "Power (fringes)", 2.0, 2], ["thickness", "Thickness", 0.05, 4],
                            ["surface_decenter", "Surface decenter", 0.01, 4],

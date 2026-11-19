@@ -65,7 +65,7 @@ PARAM_HELP: Dict[str, str] = {
                    "lenses. RSCE / RSCH / GEOS take rings only (a hexapolar grid).",
     "symmetric": "RAYS / OPDS: trace only half the pupil. Left out: decided automatically from the lens "
                  "(symmetric about the y-z plane with no x fields).",
-    "freq": "Spatial frequency in cycles per mm.",
+    "freq": "Spatial frequency in cycles per lens unit (cycles/mm for a lens in mm).",
     "fraction": "EERA: the energy fraction, 0 to 1 (0.8 = radius holding 80% of the energy).",
     "param": "PARV: a lens parameter by name, e.g. 'curvature', 'thickness', 'conic', 'glass.nd', "
              "'glass.vd', an aspheric term such as 'coefficients[1]' or an XY polynomial term such as 'terms[3]'.",
