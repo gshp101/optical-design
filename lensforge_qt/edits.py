@@ -19,6 +19,8 @@ from lensforge import surfaces as S
 from lensforge import optimize as opt
 from lensforge.materials import ConstantIndex, Material, ModelGlass
 from lensforge.optimize.variables import GLASS_PARAMS
+# the "Par n" columns of the lens data editor live in the core, so formula solves can refer to them
+from lensforge.optimize.formula import N_PAR, parameter_columns  # noqa: F401
 
 # ---------------------------------------------------------------------------
 # Surface types and their parameter columns
@@ -35,35 +37,6 @@ SURFACE_TYPES = {
     "PARAXIAL": ("Paraxial", S.Paraxial),
     "COORDBRK": ("Coordinate Break", S.CoordinateBreak),
 }
-
-N_PAR = 8  # number of "Par n" columns in the lens data editor
-
-_ORD = ["2nd", "4th", "6th", "8th", "10th", "12th", "14th", "16th"]
-
-
-def parameter_columns(surface) -> List[Tuple[str, str]]:
-    """(label, parameter name) for the Par 1..N_PAR columns of ``surface``."""
-    k = surface.kind
-    if k == "EVENASPH":
-        return [(f"{_ORD[i]} Order Term", f"coefficients[{i}]") for i in range(N_PAR)]
-    if k == "ODDASPH":
-        return [(f"Order {i + 1} Term", f"coefficients[{i}]") for i in range(N_PAR)]
-    if k == "TOROIDAL":
-        return [("Radius X", "radius_x")] + [(f"{_ORD[i]} Order Term", f"coefficients[{i}]") for i in range(N_PAR - 1)]
-    if k == "XYPOLY":
-        return [("Norm Radius", "norm_radius")]
-    if k == "BINARY2":
-        return ([("Diffract Order", "diffraction_order"), ("Norm Radius", "norm_radius")]
-                + [(f"Coeff p^{2 * (i + 1)}", f"coefficients[{i}]") for i in range(N_PAR - 2)])
-    if k == "DGRATING":
-        return [("Lines/um", "lines_per_um"), ("Diff Order", "diffraction_order")]
-    if k == "PARAXIAL":
-        return [("Focal Length", "focal_length")]
-    if k == "COORDBRK":
-        return [("Decenter X", "decenter_x"), ("Decenter Y", "decenter_y"), ("Tilt About X", "tilt_x"),
-                ("Tilt About Y", "tilt_y"), ("Tilt About Z", "tilt_z"), ("Order", "order")]
-    return []
-
 
 def has_radius(surface) -> bool:
     return hasattr(surface, "curvature") and not surface.is_coordinate_break
@@ -187,8 +160,20 @@ def format_params(params: dict) -> str:
 # ---------------------------------------------------------------------------
 
 def set_cell(system, index: int, key: str, text: str):
-    """Set one lens data editor cell from typed text."""
+    """Set one lens data editor cell from typed text.
+
+    Text starting with ``=`` in a numeric cell makes it a formula solve (``=2*T2``, as in a
+    spreadsheet); typing a plain value in a formula cell removes the formula."""
     s = system.surfaces[index]
+    if isinstance(text, str) and text.strip().startswith("=") and key not in ("comment", "material"):
+        if "Formula" not in solves_for(system, index, key):
+            raise ValueError(f"surface {index} {key} cannot have a formula")
+        opt.remove_variable(system, index, cell_param(key))
+        opt.set_solve(system, opt.Formula(index, key, text.strip()[1:].strip()))
+        return
+    x = solve_on(system, index, key)
+    if x is not None and type(x).__name__ == "Formula":
+        opt.remove_solve(system, index, cell_param(key))
     if key == "comment":
         s.comment = text
         return
@@ -366,6 +351,18 @@ def variable_on(system, index: int, key: str):
     return None
 
 
+def typeable(system, index: int, key: str) -> bool:
+    """False for a cell set by a solve (other than a formula, which is typed as =...)."""
+    x = solve_on(system, index, key)
+    return x is None or type(x).__name__ == "Formula"
+
+
+def formula_text(system, index: int, key: str):
+    """``=expression`` for a cell with a formula solve, else None (the text its editor starts with)."""
+    x = solve_on(system, index, key)
+    return f"={x.expression}" if x is not None and type(x).__name__ == "Formula" else None
+
+
 def solve_on(system, index: int, key: str):
     p = cell_param(key)
     for x in getattr(system, "solves", None) or []:
@@ -375,19 +372,70 @@ def solve_on(system, index: int, key: str):
 
 
 SOLVE_CODES = {"MarginalRayHeight": "M", "ChiefRayHeight": "C", "MarginalRayAngle": "M", "ChiefRayAngle": "C",
-               "FNumber": "F", "Concentric": "S", "EdgeThickness": "E", "Position": "T", "Pickup": "P"}
+               "FNumber": "F", "Concentric": "S", "EdgeThickness": "E", "Position": "T", "Pickup": "P",
+               "Formula": "="}
 
 #: solves available for each kind of cell (column key -> solve class names)
 SOLVES_FOR = {
-    "radius": ["MarginalRayAngle", "ChiefRayAngle", "FNumber", "Concentric", "Pickup"],
-    "thickness": ["MarginalRayHeight", "ChiefRayHeight", "EdgeThickness", "Position", "Pickup"],
+    "radius": ["MarginalRayAngle", "ChiefRayAngle", "FNumber", "Concentric", "Pickup", "Formula"],
+    "thickness": ["MarginalRayHeight", "ChiefRayHeight", "EdgeThickness", "Position", "Pickup", "Formula"],
     "material": ["Pickup"],
 }
+#: solves for any other numeric cell (conic, Par columns)
+OTHER_SOLVES = ["Pickup", "Formula"]
+
+
+def solves_for(system, row: int, key) -> list:
+    """Solve class names offered for a cell ([] if the cell cannot have a solve)."""
+    if key in (None, "comment", "semi_diameter", "type") or row == 0:
+        return []
+    if key == "thickness" and row == system.image_index:
+        return []
+    return list(SOLVES_FOR.get(key, OTHER_SOLVES))
 
 SOLVE_TITLES = {"MarginalRayHeight": "Marginal ray height", "ChiefRayHeight": "Chief ray height",
                 "MarginalRayAngle": "Marginal ray angle", "ChiefRayAngle": "Chief ray angle",
                 "FNumber": "F number", "Concentric": "Concentric with surface", "EdgeThickness": "Edge thickness",
-                "Position": "Position", "Pickup": "Pickup"}
+                "Position": "Position", "Pickup": "Pickup", "Formula": "Formula"}
+
+#: shown in the solve dialogs for a formula solve (Qt and web)
+FORMULA_HELP = (
+    "Type a formula of other cells, like a spreadsheet. Cells: R3 radius, C3 curvature, T3 thickness, "
+    "K3 conic, SD3 semi-diameter, N3 index after surface 3, PAR3_2 Par 2 of surface 3. "
+    "R(s-1), T(s+1), PAR(s, 2) count from this surface (s), so they keep pointing at the same "
+    "neighbour when surfaces are inserted. Maths: + - * / ** ( ), pi, sqrt, sin, cos, tan, asin, acos, "
+    "atan, atan2, exp, log, abs, min, max, round and 'a if condition else b'. "
+    "Examples: 2*T2 - 0.5, -(R1 + R2)/2, T(s-2) * N1 / N3.")
+
+
+def formula_default(system, row: int, key: str) -> str:
+    """Starting formula for a cell: a pickup of the same cell one surface back (as a formula)."""
+    letter = {"radius": "R", "curvature": "C", "thickness": "T", "conic": "K"}.get(key)
+    if letter and row > 1:
+        return f"{letter}(s-1)"
+    cols = [p for _, p in parameter_columns(system.surfaces[row])]
+    if key in cols and row > 1:
+        return f"PAR(s-1, {cols.index(key) + 1})"
+    try:
+        return format_number(get_value(system.surfaces[row], key))
+    except Exception:
+        return "0"
+
+
+def formula_preview(system, row: int, key: str, text: str) -> str:
+    """Value a formula would give the cell, or why it cannot be used, for the solve dialogs."""
+    from lensforge.optimize import formula as F
+    try:
+        F.references(system, text, row)
+        v = F.evaluate(system, text, row)
+    except ValueError as e:
+        return f"Error: {e}"
+    c = system.copy()
+    try:
+        opt.set_solve(c, opt.Formula(row, key, text))
+    except ValueError as e:
+        return f"Error: {e}"
+    return f"= {format_number(v)}"
 
 
 def solve_class(name):
@@ -407,12 +455,14 @@ def solve_fields(name) -> list:
 
 def make_solve(name, index: int, key: str, values: dict):
     cls = solve_class(name)
-    if name == "Pickup":
-        return cls(surface=index, param=key if key != "radius" else "radius", **values)
+    if name in ("Pickup", "Formula"):
+        return cls(surface=index, param=key, **values)
     return cls(surface=index, **values)
 
 
 def describe_solve(x) -> str:
+    if type(x).__name__ == "Formula":
+        return f"Formula solve: = {x.expression}"
     vals = {k: v for k, v in vars(x).items() if k not in ("surface", "param")}
     return f"{SOLVE_TITLES.get(type(x).__name__, type(x).__name__)} solve: " + ", ".join(
         f"{k}={format_number(v) if isinstance(v, float) else v}" for k, v in vals.items())

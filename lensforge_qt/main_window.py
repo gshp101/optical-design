@@ -197,7 +197,7 @@ class MainWindow(QMainWindow):
         m.addAction(self.a_undo_view)
         m.addSeparator()
         for a in (self.lde.act_insert, self.lde.act_insert_after, self.lde.act_delete, self.lde.act_delete_range,
-                  self.lde.act_variable,
+                  self.lde.act_variable, self.lde.act_solve,
                   self.lde.act_material, self.lde.act_props):
             m.addAction(a)
         m.addSeparator()

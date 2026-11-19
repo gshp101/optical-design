@@ -314,6 +314,47 @@ function closePopupsOutside(e) {
   }
 }
 document.addEventListener("pointerdown", closePopupsOutside);
+
+// ------------------------------------------------------------------ long press = right-click (touch)
+// Safari on iPad never sends a contextmenu event: pressing and holding a finger on anything that has a
+// right-click menu (Lens Data Editor cells, editor sheets, the toolbar, window tabs) opens that menu.
+export const LONG_PRESS_MS = 500;
+export function installLongPress(doc) {
+  let timer = null, start = null, firedAt = 0;
+  const cancel = () => { clearTimeout(timer); timer = null; };
+  doc.addEventListener("pointerdown", (e) => {
+    cancel();
+    if (e.pointerType !== "touch" && e.pointerType !== "pen") return;
+    if (e.target.closest("input, textarea, select, .menu-popup")) return;
+    start = { x: e.clientX, y: e.clientY, target: e.target };
+    timer = setTimeout(() => {
+      timer = null;
+      firedAt = Date.now();
+      const v = doc.defaultView;
+      // (what was pressed may have been redrawn since: send the event to what is under the finger now)
+      const target = doc.elementFromPoint(start.x, start.y) || (start.target.isConnected ? start.target : null);
+      if (!target) return;
+      target.dispatchEvent(new v.MouseEvent("contextmenu", { bubbles: true, cancelable: true, clientX: start.x,
+        clientY: start.y, screenX: start.x, screenY: start.y, button: 2, buttons: 0, view: v }));
+    }, LONG_PRESS_MS);
+  }, true);
+  doc.addEventListener("pointermove", (e) => {
+    if (timer && start && Math.hypot(e.clientX - start.x, e.clientY - start.y) > 10) cancel();
+  }, true);
+  for (const type of ["pointerup", "pointercancel"]) doc.addEventListener(type, cancel, true);
+  doc.addEventListener("scroll", cancel, true);
+  // a browser that has its own long-press menu event (Android): use that one, not a second menu
+  doc.addEventListener("contextmenu", (e) => {
+    if (!e.isTrusted) return;
+    if (timer) { cancel(); return; }
+    if (Date.now() - firedAt < 1500) { e.preventDefault(); e.stopImmediatePropagation(); }
+  }, true);
+  // lifting the finger after a long press is not a tap on what is under it (the menu that just opened)
+  doc.addEventListener("click", (e) => {
+    if (Date.now() - firedAt < 800) { e.preventDefault(); e.stopImmediatePropagation(); firedAt = 0; }
+  }, true);
+}
+installLongPress(document);
 for (const type of ["pointerdown", "keydown", "focusin"]) document.addEventListener(type, () => { hostDoc = document; }, true);
 
 // ------------------------------------------------------------------ pop-out tabs

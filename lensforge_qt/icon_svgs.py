@@ -104,6 +104,8 @@ ICONS = {
                                + f'<path d="M1.5 9.5v10" stroke="{RED}" stroke-width="1.6"/>'),
     "Edit > Toggle Variable": ('<rect x="3" y="5" width="18" height="14" rx="2" fill="#fff"/>'
                                + letter(12, 16.5, "V", ORANGE, 11)),
+    "Edit > Solve": ('<rect x="2.5" y="5" width="19" height="14" rx="2" fill="#fff"/>'
+                     + letter(8.5, 16, "f", PURPLE, 11, "normal") + letter(16, 16.3, "=", PURPLE, 12)),
     "Edit > Choose Material": (f'<path d="M3 20L10 4l7 16z" fill="{GLASS}"/>'
                                f'<path d="M14 11l8-2" stroke="{RED}"/><path d="M14.5 12.5l7.5 0" stroke="{GREEN}"/>'
                                '<path d="M15 14l7 2" stroke="#3b6fd8"/>'),
