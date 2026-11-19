@@ -217,3 +217,23 @@ def test_qt_solve_dialog(qtbot):
     assert dlg.values() == {"expression": "T1*2"}
     dlg.type_box.setCurrentIndex(dlg.type_box.findData("Pickup"))
     assert "from_surface" in dlg.edits
+
+
+def test_qt_solve_dialog_grows_with_its_fields(qtbot):
+    pytest.importorskip("PySide6")
+    pytest.importorskip("pytestqt")
+    from PySide6.QtWidgets import QApplication
+    from lensforge_qt.lde import SolveDialog
+    dlg = SolveDialog("", 3, "thickness", None, system=lens())
+    qtbot.addWidget(dlg)
+    dlg.show()
+    QApplication.processEvents()
+    fixed = dlg.height()
+    for name in ("Pickup", "Formula"):
+        dlg.type_box.setCurrentIndex(dlg.type_box.findData(name))
+        qtbot.wait(20)
+        lay = dlg.layout()
+        # every row fits: the dialog is at least as tall as its layout needs at this width
+        assert dlg.height() >= lay.totalHeightForWidth(dlg.width()) - 1, name
+        assert dlg.height() > fixed
+        assert "``" not in dlg.doc_label.text()
