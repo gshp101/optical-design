@@ -53,6 +53,10 @@ def mtf_from_psf(psf: dict, frequencies=None, max_freq=None):
 
     Without ``frequencies`` the native grid (0 .. cutoff) is returned;
     otherwise values are interpolated.  Phase (PTF, radians) is included.
+    Frequencies at or above the cutoff are 0.  A PSF pixel coarser than
+    Nyquist cannot represent frequencies up to the cutoff: the MTF is then
+    aliased, frequencies past the grid's Nyquist limit are NaN and the result
+    carries a warning.
     """
     f, O, Q = otf_from_psf(psf)
     n = f.size
@@ -60,6 +64,11 @@ def mtf_from_psf(psf: dict, frequencies=None, max_freq=None):
     pos = np.abs(pos)
     lam_min = min(psf["wavelengths"]) * psf["wavelength_scale"]
     cutoff = 2 * max(abs(psf["na"][0]), abs(psf["na"][1])) / lam_min
+    nyquist = 1.0 / (2.0 * psf["dx"])
+    warnings = list(psf.get("warnings", []))
+    if nyquist < cutoff * (1 - 1e-6):
+        warnings.append(f"PSF pixel {psf['dx']:.4g} is coarser than Nyquist ({1 / (2 * cutoff):.4g}): "
+                        f"the MTF is aliased and ends at {nyquist:.4g} instead of the cutoff {cutoff:.4g}")
     t = O[: pos.size, 0]
     s = O[0, : pos.size]
     tq, sq = Q[: pos.size, 0], Q[0, : pos.size]
@@ -69,14 +78,18 @@ def mtf_from_psf(psf: dict, frequencies=None, max_freq=None):
         T, S, TQ, SQ = t[m], s[m], tq[m], sq[m]
     else:
         fr = np.asarray(frequencies, float)
+        far = np.abs(fr) > pos[-1] * (1 + 1e-9)
+        past = np.where(np.abs(fr) >= cutoff, 0.0, np.nan)
 
         def it(v):
-            return np.interp(fr, pos, v.real) + 1j * np.interp(fr, pos, v.imag)
+            out = np.interp(np.abs(fr), pos, v.real) + 1j * np.interp(np.abs(fr), pos, v.imag)
+            return np.where(far, past, out)
         T, S, TQ, SQ = it(t), it(s), it(tq), it(sq)
     return {"freq": fr, "tangential": np.abs(T), "sagittal": np.abs(S),
             "tangential_phase": np.angle(T), "sagittal_phase": np.angle(S),
             "diffraction_limit_tangential": np.abs(TQ), "diffraction_limit_sagittal": np.abs(SQ),
-            "field": psf["field"], "wavelengths": psf["wavelengths"], "cutoff": cutoff, "method": psf["method"]}
+            "field": psf["field"], "wavelengths": psf["wavelengths"], "cutoff": cutoff, "method": psf["method"],
+            "warnings": warnings}
 
 
 def fft_mtf(system, field=0, wavelengths=None, pupil_n: int = 64, frequencies=None, max_freq=None,
