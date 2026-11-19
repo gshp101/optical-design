@@ -9,7 +9,7 @@ Seidel sums during one evaluation of a merit function.
 Common parameters: ``surf`` / ``surf2`` (surface indices), ``wave`` (index into
 the system wavelengths; default primary), ``hx, hy, px, py`` (normalised field
 and pupil coordinates), ``field`` (field index or (hx, hy) tuple), ``freq``
-(cycles/mm).  ``OPERAND_INFO`` lists every operand with a one-line description.
+(cycles per lens unit, i.e. cycles/mm for mm lenses).  ``OPERAND_INFO`` lists every operand with a one-line description.
 """
 
 from __future__ import annotations
@@ -435,7 +435,7 @@ def _strh(ctx, field=0, wave=None, **kw):
     return M.strehl_ratio(ctx.system, field, _waves(wave), **kw)
 
 
-@operand("MTFT", "Tangential MTF at freq (cycles/mm)")
+@operand("MTFT", "Tangential MTF at freq (cycles per lens unit)")
 def _mtft(ctx, freq, field=0, wave=None, **kw):
     return M.mtf_tangential(ctx.system, freq, field, _waves(wave), **kw)
 

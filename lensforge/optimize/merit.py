@@ -295,7 +295,7 @@ def default_merit(system, kind: str = "spot", reference: str = "centroid", rings
     """Default merit function (the "optimisation wizard").
 
     ``kind``: "spot" (RMS transverse ray error), "wavefront" (RMS OPD, waves)
-    or "mtf" (1 - average MTF at ``frequency`` cycles/mm for each field).
+    or "mtf" (1 - average MTF at ``frequency`` cycles per lens unit for each field).
     ``reference``: "centroid" or "chief".  Pupil sampling is Gaussian
     quadrature with ``rings`` x ``arms`` rays per field and wavelength (half
     pupil if the system is symmetric).  Rows are weighted by the field
@@ -353,7 +353,7 @@ def _image_quality_rows(mf, system, kind, reference, rings, arms, frequency, fie
                    wavelengths=None if wavelengths is None else list(wavelengths), symmetric=sym)
         elif kind == "mtf":
             if frequency is None:
-                raise ValueError("kind='mtf' needs a frequency (cycles per mm)")
+                raise ValueError("kind='mtf' needs a frequency (cycles per lens unit)")
             mf.add("MTFA", 1.0, w, freq=frequency, field=i)
         else:
             raise ValueError("kind must be 'spot', 'wavefront' or 'mtf'")

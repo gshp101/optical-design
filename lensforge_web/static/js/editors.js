@@ -393,7 +393,7 @@ async function meritWizard() {
     const rings = numInput(3, { min: 1, max: 20, step: 1 }), arms = numInput(6, { min: 4, max: 36, step: 1 });
     const freq = numInput(30, { min: 0.1, max: 10000, step: 1 });
     const g = el("div", { class: "form" }, el("label", {}, "Optimise for"), kind, el("label", {}, "Reference"), ref,
-      el("label", {}, "Rings"), rings, el("label", {}, "Arms"), arms, el("label", {}, "MTF frequency (cycles/mm)"), freq);
+      el("label", {}, "Rings"), rings, el("label", {}, "Arms"), arms, el("label", {}, `MTF frequency (cycles/${info.units || "mm"})`), freq);
     const bounds = {};
     const defaults = { glass_min: 2, glass_max: 20, glass_edge: 1, air_min: 0.5, air_max: 1000, air_edge: 0.5 };
     for (const [name, label] of [["glass_min", "Glass min centre"], ["glass_max", "Glass max centre"], ["glass_edge", "Glass min edge"],

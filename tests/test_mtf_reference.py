@@ -89,3 +89,19 @@ def test_live_optiland_comparison(lens):
         s = np.interp(FREQ, np.asarray(ref.freq_sag[k]), np.asarray(ref.mtf[k][1]))
         assert np.abs(m["tangential"] - t).max() < 0.01
         assert np.abs(m["sagittal"] - s).max() < 0.01
+
+
+def test_plot_axes_carry_lens_units():
+    from matplotlib.figure import Figure
+    from lensforge_qt.analyses import REGISTRY
+    s = cooke()
+    s.units = "in"
+    for key, want in (("mtf", "cycles/in"), ("ray_fan", "(in)"), ("opd_fan", "(waves)")):
+        spec = REGISTRY[key]
+        opts = {st.name: st.default for st in spec.settings if not st.plot_only}
+        if key == "mtf":
+            opts["pupil_n"] = 16
+        fig = Figure()
+        spec.plot(fig, spec.compute(s, **opts), opts, s)
+        text = " ".join(a.get_xlabel() + " " + a.get_title() for a in fig.axes)
+        assert want in text, (key, text)
