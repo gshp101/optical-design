@@ -125,6 +125,16 @@ function placeWindow(w, width, height) {
   w.style.top = Math.max(10, (vh - (height ? H : 400)) / 3 + (n % 6) * 24) + "px";
 }
 
+/** Move a window up (and limit its height) so all of it is on screen, above the on-screen keyboard too. */
+export function keepInView(w) {
+  const v = w.ownerDocument.defaultView;
+  const vv = v.visualViewport;
+  const H = vv ? vv.height : v.innerHeight;
+  w.style.maxHeight = Math.max(160, H - 20) + "px";
+  const r = w.getBoundingClientRect();
+  if (r.bottom > H - 10) w.style.top = Math.max(10, H - 10 - r.height) + "px";
+}
+
 function makeDraggable(w, handle) {
   handle.addEventListener("pointerdown", (e) => {
     if (e.target.closest("button")) return;

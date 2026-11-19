@@ -331,3 +331,8 @@ table.sheet td.combo.editing::after { display: none; }
 .solve-preview { margin: 6px 0; padding: 4px 6px; background: #eef6ee; border: 1px solid var(--border-soft); }
 .solve-preview.error { background: #fbeceb; color: #a1261d; }
 .solve-help { margin-top: 6px; }
+/* the solve dialog grows with its fields (Safari would squeeze the body of an auto-height window and hide
+   them behind the buttons), up to the visible height, then scrolls */
+.window.solve-dialog { max-height: calc(100% - 20px); }
+.window.solve-dialog > .win-body { flex: 1 1 auto; }
+.window.solve-dialog > .win-body > * { flex-shrink: 0; }

@@ -537,9 +537,7 @@ class Session:
                 ph = "larger semi-diameter"
             fields.append({"name": f, "label": f.replace("_", " ").capitalize(), "value": "" if v is None else str(v),
                            "placeholder": ph})
-        doc = " ".join((E.solve_class(name).__doc__ or "").split())
-        if name == "Formula":
-            doc = "This cell = a formula of other cells."
+        doc = E.solve_doc(name, key)
         return {"title": f"{E.SOLVE_TITLES[name]} solve on surface {row} ({key})", "doc": doc, "fields": fields,
                 "types": types, "name": name, "help": E.FORMULA_HELP if name == "Formula" else ""}
 

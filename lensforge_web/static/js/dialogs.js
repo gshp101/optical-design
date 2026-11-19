@@ -1,7 +1,7 @@
 // Dialogs of the File and Edit menus and the Lens Data Editor (as the Qt dialogs of lensforge_qt).
 import { App, run, call, status, statusError } from "./core.js";
 import { el, esc, btn, select, numInput, check, tabs, dialog, message, confirmBox, prompt, openWindow,
-  download, pickFile, copyText, fmtDate, fmtSize, svgURL } from "./ui.js";
+  download, pickFile, copyText, fmtDate, fmtSize, svgURL, keepInView } from "./ui.js";
 import * as store from "./storage.js";
 
 // ================================================================== solves
@@ -10,8 +10,16 @@ import * as store from "./storage.js";
 export async function solveDialog(row, key, name) {
   let form = await run("solve_form", { row, key, name });
   if (!form) return;
-  await dialog({ title: form.title, width: 480 }, (win, done, bar) => {
+  await dialog({ title: form.title, width: 520, className: "solve-dialog" }, (win, done, bar) => {
     let inputs = {};
+    // the window grows with the fields of the chosen type; keep it on screen (and above the keyboard)
+    const fit = () => keepInView(win.element);
+    const vv = win.element.ownerDocument.defaultView.visualViewport;
+    if (vv) {
+      vv.addEventListener("resize", fit);
+      const stop = new MutationObserver(() => { if (!win.element.isConnected) { vv.removeEventListener("resize", fit); stop.disconnect(); } });
+      stop.observe(win.element.parentNode, { childList: true });
+    }
     const typeSel = select(form.types, form.name, async (v) => {
       const f = await run("solve_form", { row, key, name: v });
       if (f) { form = f; build(); }
@@ -50,6 +58,7 @@ export async function solveDialog(row, key, name) {
       preview.textContent = "";
       preview.style.display = inputs.expression ? "" : "none";
       update();
+      fit();
     };
     win.body.append(grid, doc, preview, help);
     build();

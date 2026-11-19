@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import math
 
-from PySide6.QtCore import QAbstractTableModel, QModelIndex, QRect, QStringListModel, Qt, Signal
+from PySide6.QtCore import QAbstractTableModel, QModelIndex, QRect, QStringListModel, Qt, QTimer, Signal
 from PySide6.QtGui import QAction, QColor, QFont, QKeySequence
 from PySide6.QtWidgets import (QAbstractItemView, QCheckBox, QComboBox, QCompleter, QDialog, QDialogButtonBox,
                                QFormLayout, QHBoxLayout, QHeaderView, QLabel, QLineEdit, QMenu, QMessageBox,
@@ -753,7 +753,7 @@ class SolveDialog(QDialog):
         lay.addWidget(self.preview)
         lay.addWidget(self.help_label)
         lay.addWidget(bb)
-        self.setMinimumWidth(440)
+        self.setMinimumWidth(480)
         i = self.type_box.findData(name or "")
         self.type_box.setCurrentIndex(max(0, i))
         self.type_box.currentIndexChanged.connect(lambda _: self._build())
@@ -775,9 +775,9 @@ class SolveDialog(QDialog):
         if not name:
             self.doc_label.setText("This cell is fixed: it keeps the value you type. Choose a solve type to "
                                    "compute it from the rest of the lens instead.")
+            QTimer.singleShot(0, self._fit)
             return
-        doc = (E.solve_class(name).__doc__ or "").strip()
-        self.doc_label.setText("This cell = a formula of other cells." if name == "Formula" else " ".join(doc.split()))
+        self.doc_label.setText(E.solve_doc(name, key))
         current = self.current if type(self.current).__name__ == name else None
         for f, default in E.solve_fields(name):
             if name == "Pickup" and key == "material" and f in ("scale", "offset", "from_param"):
@@ -800,6 +800,25 @@ class SolveDialog(QDialog):
         if name == "Formula":
             self.help_label.setText(E.FORMULA_HELP)
             self._preview()
+        # the new rows' widgets are shown on the next pass of the event loop: measure after that
+        QTimer.singleShot(0, self._fit)
+
+    def _fit(self):
+        """Grow (or shrink) the dialog to what the chosen solve type needs: a QDialog keeps its size when
+        rows are added, which hid the fields and the formula help behind the buttons."""
+        lay = self.layout()
+        self.form.activate()
+        self.form_host.updateGeometry()
+        lay.invalidate()
+        lay.activate()
+        w = max(self.width(), self.minimumWidth())
+        h = lay.totalHeightForWidth(w) if lay.hasHeightForWidth() else lay.totalSizeHint().height()
+        h = max(h, lay.totalMinimumSize().height())
+        screen = self.screen().availableGeometry() if self.screen() else None
+        if screen is not None:
+            h = min(h, screen.height() - 40)
+        self.setMinimumHeight(min(h, lay.totalMinimumSize().height()))
+        self.resize(w, h)
 
     def _preview(self):
         if self.system is None or "expression" not in self.edits:

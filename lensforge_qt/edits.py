@@ -398,6 +398,35 @@ SOLVE_TITLES = {"MarginalRayHeight": "Marginal ray height", "ChiefRayHeight": "C
                 "FNumber": "F number", "Concentric": "Concentric with surface", "EdgeThickness": "Edge thickness",
                 "Position": "Position", "Pickup": "Pickup", "Formula": "Formula"}
 
+#: what each solve does, as the solve dialogs (Qt and web) explain it
+SOLVE_DOCS = {
+    "MarginalRayHeight": "Sets this thickness so the marginal ray has the given height on the next surface. "
+                         "Height 0 on the surface before the image puts the image at paraxial focus; a pupil "
+                         "zone above 0 (e.g. 0.7) uses that real ray instead.",
+    "ChiefRayHeight": "Sets this thickness so the chief ray has the given height on the next surface "
+                      "(0 puts the next surface at an image of the stop).",
+    "MarginalRayAngle": "Sets this radius so the marginal ray leaves the surface with the given slope (tan u').",
+    "ChiefRayAngle": "Sets this radius so the chief ray leaves the surface with the given slope "
+                     "(0 on the last surface makes image space telecentric).",
+    "FNumber": "Sets this radius (usually the last one) so the lens has the given paraxial working F-number.",
+    "Concentric": "Sets this radius so its centre of curvature is at the vertex of the given surface.",
+    "EdgeThickness": "Sets this thickness so the edge thickness to the next surface is the given value, at "
+                     "the given height (empty: the larger semi-diameter of the two surfaces).",
+    "Position": "Sets this thickness so the next surface is the given length from an earlier surface "
+                "(for example a fixed total track).",
+    "Pickup": "This cell = scale x (a cell of another surface) + offset. From param names that cell "
+              "(radius, thickness, conic, ...); empty means the same column as this cell.",
+    "Formula": "This cell = a formula of other cells.",
+}
+
+
+def solve_doc(name: str, key: str = "") -> str:
+    """Explanation of a solve type for the solve dialogs."""
+    if name == "Pickup" and key == "material":
+        return "This material = the material of another surface."
+    return SOLVE_DOCS.get(name) or " ".join((solve_class(name).__doc__ or "").split())
+
+
 #: shown in the solve dialogs for a formula solve (Qt and web)
 FORMULA_HELP = (
     "Type a formula of other cells, like a spreadsheet. Cells: R3 radius, C3 curvature, T3 thickness, "
