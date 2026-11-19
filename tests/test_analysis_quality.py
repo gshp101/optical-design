@@ -91,6 +91,42 @@ def test_small_defocus_strehl_marechal():
     assert lf.strehl(t, 0, method="huygens") == pytest.approx(lf.strehl(t, 0), abs=0.01)
 
 
+def _defocus_otf(s, w020):
+    """Hopkins' closed form for the OTF of a circular pupil with W020 waves of defocus
+    (s = frequency / cutoff): 4/(pi a) * int_0^sqrt(1-s^2) sin(a (sqrt(1-y^2) - s)) dy, a = 8 pi W020 s."""
+    if s >= 1:
+        return 0.0
+    b = math.sqrt(1 - s * s)
+    if w020 == 0 or s == 0:
+        return 2 / math.pi * (math.acos(s) - s * b)
+    a = 8 * math.pi * w020 * s
+    x, wt = np.polynomial.legendre.leggauss(200)
+    y = 0.5 * b * (x + 1)
+    return 4 / (math.pi * a) * 0.5 * b * float(np.sum(wt * np.sin(a * (np.sqrt(1 - y * y) - s))))
+
+
+@pytest.mark.parametrize("w020", [0.25, 0.5, 1.0])
+def test_defocused_mtf_matches_hopkins(w020):
+    s = ideal()
+    na = abs(lf.pupil_function(s, 0, n=16).na_y)
+    d = defocused(s, 2 * w020 * LAM * 1e-3 / na**2)
+    q = np.linspace(0.05, 0.95, 19)
+    m = lf.fft_mtf(d, 0, [LAM], pupil_n=64, frequencies=q * 2 * na / (LAM * 1e-3))
+    ref = np.abs([_defocus_otf(v, w020) for v in q])
+    assert np.abs(m["tangential"] - ref).max() < 0.006
+    assert np.abs(m["sagittal"] - ref).max() < 0.006
+
+
+def test_mtf_past_cutoff_and_coarse_psf_pixel():
+    s = ideal()
+    m = lf.fft_mtf(s, 0, [LAM], pupil_n=32, frequencies=[50, 500, 1000])
+    assert m["tangential"][1:].tolist() == [0.0, 0.0] and not m["warnings"]
+    p = lf.fft_psf(s, 0, [LAM], pupil_n=32, dx=0.01)  # Nyquist is ~0.0029 mm
+    m = lf.mtf_from_psf(p, [10, 100, 200])
+    assert np.isnan(m["tangential"][1]) and m["tangential"][2] == 0.0
+    assert "coarser than Nyquist" in m["warnings"][0]
+
+
 def test_through_focus_mtf_peaks_at_focus():
     tf = lf.through_focus_mtf(ideal(), 50, 0, steps=9)
     assert np.argmax(tf["tangential"]) == 4

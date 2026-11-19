@@ -528,6 +528,8 @@ def _mtf_plot(fig, res, opts, system):
     ax.grid(alpha=0.3)
     ax.legend(fontsize=7, ncol=2)
     ax.set_title(f"{opts.get('method', 'fft').upper()} MTF")
+    for w in dict.fromkeys(w for _, r in res for w in r.get("warnings", [])):
+        _legend_note(fig, w)
 
 
 register(AnalysisSpec("mtf", "MTF", "PSF & MTF", _mtf_compute, _mtf_plot,
