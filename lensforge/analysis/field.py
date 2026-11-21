@@ -13,8 +13,15 @@ import math
 import numpy as np
 
 from ..paraxial import ParaxialAnalysis
-from ..raytrace import trace_rays
+from ..raytrace import trace_rays as _trace_rays
 from .common import resolve_wavelengths
+
+
+def trace_rays(*args, **kw):
+    """Chief-ray field analyses follow the true chief ray (through the stop centre)
+    at every field fraction, so the fields' vignetting factors are not applied."""
+    kw.setdefault("vignetting", False)
+    return _trace_rays(*args, **kw)
 
 _EPS_FIELD = 1e-4
 _EPS_PUPIL = 1e-4

@@ -46,11 +46,31 @@ class Field:
     x: float = 0.0
     y: float = 0.0
     weight: float = 1.0
-    # vignetting factors (pupil compression / shift), as in common design codes
+    # vignetting factors (pupil decentre / compression / rotation), as in common design codes:
+    # a ray at normalised pupil (px, py) is traced at
+    #   R(van) . (px (1 - vcx), py (1 - vcy)) + (vdx, vdy)
+    # with R(van) a counter-clockwise rotation by ``van`` degrees (see lensforge.vignetting_factors)
     vdx: float = 0.0
     vdy: float = 0.0
     vcx: float = 0.0
     vcy: float = 0.0
+    van: float = 0.0
+
+    @property
+    def vignetted(self) -> bool:
+        """True when any vignetting factor is non-zero."""
+        return any((self.vdx, self.vdy, self.vcx, self.vcy, self.van))
+
+    def vignette_pupil(self, px, py):
+        """Map normalised pupil coordinates through this field's vignetting factors."""
+        if not self.vignetted:
+            return px, py
+        u = np.asarray(px, dtype=float) * (1.0 - self.vcx)
+        v = np.asarray(py, dtype=float) * (1.0 - self.vcy)
+        if self.van:
+            c, s = math.cos(math.radians(self.van)), math.sin(math.radians(self.van))
+            u, v = c * u - s * v, s * u + c * v
+        return u + self.vdx, v + self.vdy
 
 
 @dataclass
@@ -175,6 +195,28 @@ class OpticalSystem:
     def normalized_field(self, index: int):
         f = self.fields[index]
         return f.x / self.max_field, f.y / self.max_field
+
+    def field_at(self, hx: float, hy: float) -> Optional[Field]:
+        """The defined field whose normalised coordinates are (hx, hy), or None.
+
+        Vignetting factors belong to defined fields; rays traced at any other
+        field point are not vignetted by them."""
+        m = self.max_field
+        for f in self.fields:
+            if abs(f.x / m - hx) < 1e-9 and abs(f.y / m - hy) < 1e-9:
+                return f
+        return None
+
+    def set_vignetting(self, fields=None, **kw):
+        """Compute vignetting factors so each field's beam passes every surface
+        aperture (see :func:`lensforge.vignetting_factors.set_vignetting`)."""
+        from .vignetting_factors import set_vignetting
+        return set_vignetting(self, fields, **kw)
+
+    def clear_vignetting(self, fields=None, keep_angle: bool = False):
+        """Reset the vignetting factors to zero (see :func:`lensforge.vignetting_factors.clear_vignetting`)."""
+        from .vignetting_factors import clear_vignetting
+        return clear_vignetting(self, fields, keep_angle=keep_angle)
 
     @property
     def wavelength_scale(self) -> float:

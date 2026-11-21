@@ -233,8 +233,11 @@ class RayGenerator:
     """Builds object-space rays for normalised field and pupil coordinates,
     with paraxial or real ray aiming."""
 
-    def __init__(self, system, wavelength: Optional[float] = None, aiming: Optional[str] = None):
+    def __init__(self, system, wavelength: Optional[float] = None, aiming: Optional[str] = None,
+                 vignetting: bool = True):
         self.system = system
+        # apply the fields' vignetting factors (VDX/VDY/VCX/VCY/VAN) to the pupil coordinates
+        self.vignetting = vignetting
         self.wavelength = system.primary if wavelength is None else wavelength
         # pupils are defined at the primary wavelength
         self.par = ParaxialAnalysis(system)
@@ -347,6 +350,13 @@ class RayGenerator:
             ax, ay = ax - dx, ay - dy
         return ax, ay
 
+    def vignette(self, hx, hy, px, py):
+        """Pupil coordinates after the vignetting factors of the defined field at (hx, hy)."""
+        if not self.vignetting:
+            return px, py
+        f = self.system.field_at(hx, hy)
+        return (px, py) if f is None else f.vignette_pupil(px, py)
+
     def rays(self, hx, hy, px, py):
         hx, hy, px, py = np.broadcast_arrays(*(_as_array(v) for v in (hx, hy, px, py)))
         P = np.empty(px.shape + (3,))
@@ -359,7 +369,8 @@ class RayGenerator:
         for k, (fx, fy) in enumerate(uniq):
             m = inv == k
             spec = self.object_spec(fx, fy)
-            ax, ay = self.aim(spec, px[m], py[m])
+            qx, qy = self.vignette(fx, fy, px[m], py[m])
+            ax, ay = self.aim(spec, qx, qy)
             P[m], D[m], opl0[m] = self._rays_from_aim(spec, ax, ay)
         return P, D, opl0
 
@@ -399,18 +410,21 @@ class RayGenerator:
 
 
 def trace_rays(system, hx=0.0, hy=0.0, px=0.0, py=0.0, wavelength=None, aiming=None,
-               apertures: bool = True, last: Optional[int] = None) -> TraceResult:
+               apertures: bool = True, last: Optional[int] = None, vignetting: bool = True) -> TraceResult:
     """Trace rays given normalised field (hx, hy) and pupil (px, py) coordinates.
 
     All four inputs broadcast against each other.  ``wavelength`` in um
-    (default: primary).
+    (default: primary).  At a defined field point the pupil coordinates go
+    through that field's vignetting factors unless ``vignetting=False``.
     """
-    gen = RayGenerator(system, wavelength, aiming)
+    gen = RayGenerator(system, wavelength, aiming, vignetting)
     P, D, opl0 = gen.rays(hx, hy, px, py)
     return trace(system, P, D, gen.wavelength, opl0, apertures=apertures, last=last)
 
 
 def chief_ray(system, hx=0.0, hy=0.0, wavelength=None, **kw) -> TraceResult:
+    """The ray through the centre of the stop (vignetting factors are not applied)."""
+    kw.setdefault("vignetting", False)
     return trace_rays(system, hx, hy, 0.0, 0.0, wavelength, **kw)
 
 

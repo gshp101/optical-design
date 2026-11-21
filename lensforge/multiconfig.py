@@ -60,6 +60,7 @@ MC_OPERANDS = {
     "FVDY": ("field", "Vignetting decentre y of the field"),
     "FVCX": ("field", "Vignetting compression x of the field"),
     "FVCY": ("field", "Vignetting compression y of the field"),
+    "FVAN": ("field", "Vignetting angle of the field (degrees)"),
     "WAVE": ("wave", "Wavelength in micrometres"),
     "WLWT": ("wave", "Wavelength weight"),
     "PRWV": (None, "Primary wavelength (index, counting from 0)"),
@@ -68,7 +69,7 @@ MC_OPERANDS = {
 
 _SURFACE_ATTR = {"THIC": "thickness", "CRVT": "curvature", "CONN": "conic", "SDIA": "semi_diameter"}
 _FIELD_ATTR = {"XFIE": "x", "YFIE": "y", "FLWT": "weight", "FVDX": "vdx", "FVDY": "vdy", "FVCX": "vcx",
-               "FVCY": "vcy"}
+               "FVCY": "vcy", "FVAN": "van"}
 _WAVE_ATTR = {"WAVE": "value", "WLWT": "weight"}
 
 

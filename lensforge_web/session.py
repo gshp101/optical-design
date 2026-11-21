@@ -42,7 +42,8 @@ from lensforge_qt import ns_table as NT  # noqa: E402
 from lensforge_qt import rays as R  # noqa: E402
 from lensforge_qt.analyses import REGISTRY  # noqa: E402
 from lensforge_qt.commands import sample_list  # noqa: E402
-from lensforge_qt.help_text import OVERVIEW  # noqa: E402
+from lensforge_qt.help_text import (CLEAR_VIGNETTING_TIP, FIELD_TIPS, OVERVIEW,  # noqa: E402
+                                     SET_VIGNETTING_TIP)
 from lensforge_qt.icon_svgs import APP_ICON, ns_svg  # noqa: E402
 from lensforge_qt.opt_runner import (ALGORITHMS, COMPENSATORS, CRITERIA, DISTRIBUTIONS,  # noqa: E402
                                      StopRequested, run_optimization, watched_criterion)
@@ -76,7 +77,7 @@ WAVE_PRESETS = {
     "Nd:YAG (1.064)": ([1.064], 0), "NIR 0.8 / 0.85 / 0.9": ([0.8, 0.85, 0.9], 1),
     "SWIR 1.0 / 1.3 / 1.55": ([1.0, 1.3, 1.55], 1), "LWIR 8 / 10 / 12": ([8.0, 10.0, 12.0], 1),
 }
-FIELD_ATTRS = ["x", "y", "weight", "vdx", "vdy", "vcx", "vcy"]
+FIELD_ATTRS = ["x", "y", "weight", "vdx", "vdy", "vcx", "vcy", "van"]
 APERTURE_KINDS = [("None", None, ()), ("Circular aperture", "CIRCULAR", ("r_max", "r_min", "dx", "dy")),
                   ("Circular obscuration", "OBSCURATION", ("radius", "dx", "dy")),
                   ("Rectangular aperture", "RECTANGULAR", ("half_x", "half_y", "dx", "dy")),
@@ -727,9 +728,12 @@ class Session:
             "waves": [[f"{w.value:.10g}", E.format_number(w.weight, 10)] for w in s.wavelengths],
             "primary": s.primary_wavelength, "name": s.name, "units": s.units, "notes": s.notes,
             "presets": {k: [[f"{w:g}" for w in v[0]], v[1]] for k, v in WAVE_PRESETS.items()},
+            "field_tips": FIELD_TIPS, "set_vignetting_tip": SET_VIGNETTING_TIP,
+            "clear_vignetting_tip": CLEAR_VIGNETTING_TIP,
         }
 
-    def apply_system_settings(self, d):
+    def _system_values(self, d):
+        """The System Explorer's settings (as sent by the page) checked and converted."""
         def num(t, default):
             t = str(t).strip()
             return default if not t else E.parse_number(t, allow_inf=False)
@@ -743,15 +747,31 @@ class Session:
         value = E.parse_number(str(d["aperture_value"]), allow_inf=False)
         if value <= 0:
             raise ValueError("the aperture value must be positive")
-        vals = dict(aperture_type=d["aperture_type"], aperture_value=value, ray_aiming=d["ray_aiming"],
+        return dict(aperture_type=d["aperture_type"], aperture_value=value, ray_aiming=d["ray_aiming"],
                     field_type=d["field_type"], fields=fields, wavelengths=waves,
                     primary_wavelength=max(0, min(int(d.get("primary", 0)), len(waves) - 1)),
                     name=d.get("name", ""), units=d.get("units", "mm"), notes=d.get("notes", ""))
+
+    def apply_system_settings(self, d):
+        vals = self._system_values(d)
 
         def fn(s):
             for k, v in vals.items():
                 setattr(s, k, v)
         return self._modify("System settings", fn)
+
+    def compute_vignetting(self, d):
+        """Set Vignetting in the Fields tab: factors for the dialog's (unapplied) settings.
+
+        Returns the field rows with new VDX..VAN and the fields no ray gets through
+        (1-based); the lens itself is not changed."""
+        vals = self._system_values(d)
+        work = self.doc.system.copy()
+        for k, v in vals.items():
+            setattr(work, k, v)
+        res = work.set_vignetting()
+        return {"fields": [[E.format_number(getattr(f, a), 10) for a in FIELD_ATTRS] for f in work.fields],
+                "lost": [i + 1 for i, v in res.items() if v is None]}
 
     # ======================================================================== Input Rays
     def input_rays(self):
@@ -1457,8 +1477,8 @@ SESSION = None
 READ_ONLY = {"state", "menus", "help_data", "about", "samples", "lens_text", "suggested_name", "lens_info",
              "session_dump", "prescription", "describe_deletion", "context_menu", "can_vary", "solve_form",
              "surface_properties", "material_search", "catalog_rows", "material_dialog", "material_preview",
-             "squash", "system_settings", "input_rays", "pupil_pattern", "analysis_specs", "run_analysis",
-             "forget_analysis",
+             "squash", "system_settings", "compute_vignetting", "input_rays", "pupil_pattern", "analysis_specs",
+             "run_analysis", "forget_analysis",
              "mfe_evaluate", "operands", "operand_names", "operand_menu", "wizard_info", "script_example", "opt_info",
              "history_plot", "tolerance_setup", "default_tolerances", "insert_preview", "inspect", "ns_info",
              "ns_text", "ns_trace"}

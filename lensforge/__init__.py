@@ -32,6 +32,7 @@ from . import samples
 from . import nonseq
 from .io import load, save, load_zmx
 from .multiconfig import MC_OPERANDS, MCRow, MultiConfig, config_systems
+from .vignetting_factors import clear_vignetting, set_vignetting, vignetting_limits
 from .compose import delete_surfaces, insert_lens, lens_surfaces, reverse_surfaces, scale_surface, scale_system
 
 __version__ = "0.3.0"
