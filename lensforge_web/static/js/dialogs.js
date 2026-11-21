@@ -317,17 +317,26 @@ export async function systemExplorer(tab = 0) {
       el("label", {}, "Ray Aiming"), aiming);
     // fields
     const fieldType = select(d.field_types, d.field_type);
-    const fTable = editTable(["X", "Y", "Weight", "VDX", "VDY", "VCX", "VCY"], d.fields);
+    const fTable = editTable(["X", "Y", "Weight", "VDX", "VDY", "VCX", "VCY", "VAN"], d.fields, { tips: d.field_tips });
     const fPage = el("div", { style: { display: "flex", flexDirection: "column", gap: "6px", flex: "1", minHeight: "0" } },
       el("div", { class: "row" }, el("label", {}, "Field Type"), fieldType),
       fTable.element,
-      el("div", { class: "row" }, btn("Add Field", () => fTable.add(["0", "0", "1", "0", "0", "0", "0"])),
+      el("div", { class: "row" }, btn("Add Field", () => fTable.add(["0", "0", "1", "0", "0", "0", "0", "0"])),
         btn("Remove Field", () => fTable.removeSelected()),
         btn("Equal-Area Fields...", () => {
           const ys = fTable.values().map((r) => Math.abs(parseFloat(r[1]) || 0));
           const ymax = Math.max(...ys, 0) || 1;
-          fTable.set(Array.from({ length: 5 }, (_, k) => ["0", String(+(ymax * Math.sqrt(k / 4)).toPrecision(6)), "1", "0", "0", "0", "0"]));
-        })));
+          fTable.set(Array.from({ length: 5 }, (_, k) => ["0", String(+(ymax * Math.sqrt(k / 4)).toPrecision(6)), "1", "0", "0", "0", "0", "0"]));
+        }),
+        btn("Set Vignetting", async () => {
+          try {
+            const r = await call("compute_vignetting", { d: collect() });
+            fTable.set(r.fields);
+            if (r.lost.length) await message("Set Vignetting", `No ray of field ${r.lost.join(", ")} gets through the lens; its vignetting factors were cleared.`);
+          } catch (e) { await message("Set Vignetting", `Could not compute the vignetting factors: ${esc(e.message)}`); }
+        }, { title: d.set_vignetting_tip }),
+        btn("Clear Vignetting", () => fTable.set(fTable.values().map((r) => [r[0], r[1], r[2], "0", "0", "0", "0", "0"])),
+          { title: d.clear_vignetting_tip })));
     // wavelengths
     let primary = d.primary;
     const wTable = editTable(["Wavelength (um)", "Weight", "Primary"], d.waves.map((w, i) => [...w, i === primary ? "primary" : ""]), { readonly: [2] });
@@ -349,11 +358,13 @@ export async function systemExplorer(tab = 0) {
     const notes = el("textarea", { rows: 8 }, d.notes);
     const gPage = el("div", { class: "form" }, el("label", {}, "Lens Title"), name, el("label", {}, "Lens Units"), units, el("label", {}, "Notes"), notes);
     const t = tabs([["Aperture", apPage], ["Fields", fPage], ["Wavelengths", wPage], ["General", gPage]], tab);
+    function collect() {
+      return { aperture_type: apType.value, aperture_value: apValue.value, ray_aiming: aiming.value, field_type: fieldType.value,
+        fields: fTable.values(), waves: wTable.values().map((r) => [r[0], r[1]]), primary, name: name.value, units: units.value, notes: notes.value };
+    }
     win.body.append(t.element);
     const apply = async () => {
-      const data = { aperture_type: apType.value, aperture_value: apValue.value, ray_aiming: aiming.value, field_type: fieldType.value,
-        fields: fTable.values(), waves: wTable.values().map((r) => [r[0], r[1]]), primary, name: name.value, units: units.value, notes: notes.value };
-      try { await call("apply_system_settings", { d: data }); return true; }
+      try { await call("apply_system_settings", { d: collect() }); return true; }
       catch (e) { await message("System Explorer", esc(e.message)); return false; }
     };
     bar.append(btn("OK", async () => { if (await apply()) done(true); }, { primary: true }), btn("Apply", apply), btn("Cancel", () => done(null)));
@@ -361,9 +372,9 @@ export async function systemExplorer(tab = 0) {
 }
 
 /** An editable table of text cells. */
-export function editTable(headers, data, { readonly = [] } = {}) {
+export function editTable(headers, data, { readonly = [], tips = {} } = {}) {
   const tbody = el("tbody");
-  const table = el("table", { class: "grid" }, el("thead", {}, el("tr", {}, ...headers.map((h) => el("th", {}, h)))), tbody);
+  const table = el("table", { class: "grid" }, el("thead", {}, el("tr", {}, ...headers.map((h) => el("th", tips[h] ? { title: tips[h] } : {}, h)))), tbody);
   const wrap = el("div", { class: "table-wrap" }, table);
   let sel = -1;
   const t = { element: wrap };

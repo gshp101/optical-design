@@ -13,8 +13,9 @@ from .field import _field_xy
 def _projected_solid_angle(system, hx, hy, wavelength, n):
     v = -1.0 + (np.arange(n) + 0.5) * 2.0 / n
     X, Y = np.meshgrid(v, v)
-    r = trace_rays(system, hx, hy, X.ravel(), Y.ravel(), wavelength=wavelength, apertures=False)
-    ra = trace_rays(system, hx, hy, X.ravel(), Y.ravel(), wavelength=wavelength)
+    r = trace_rays(system, hx, hy, X.ravel(), Y.ravel(), wavelength=wavelength, apertures=False,
+                   vignetting=False)
+    ra = trace_rays(system, hx, hy, X.ravel(), Y.ravel(), wavelength=wavelength, vignetting=False)
     L = r.direction[:, 0].reshape(X.shape)
     M = r.direction[:, 1].reshape(X.shape)
     dp = 2.0 / n
@@ -47,7 +48,10 @@ def relative_illumination(system, wavelength=None, n_fields: int = 21, axis: str
 
 
 def vignetting(system, wavelength=None, n_fields: int = 21, axis: str = "y", sampling: int = 48):
-    """Fraction of a uniformly filled entrance pupil that reaches the image, vs field."""
+    """Fraction of a uniformly filled entrance pupil that reaches the image, vs field.
+
+    Measures clipping by the surface apertures themselves, so the fields'
+    vignetting factors are not applied."""
     wl = system.primary if wavelength is None else wavelength
     h = np.linspace(0, 1, n_fields)
     v = -1.0 + (np.arange(sampling) + 0.5) * 2.0 / sampling
@@ -58,7 +62,7 @@ def vignetting(system, wavelength=None, n_fields: int = 21, axis: str = "y", sam
     first_surface = []
     for i, f in enumerate(h):
         a, b = _field_xy(f, axis)
-        r = trace_rays(system, a, b, px, py, wavelength=wl)
+        r = trace_rays(system, a, b, px, py, wavelength=wl, vignetting=False)
         frac[i] = r.valid.mean()
         bad = r.error_surface[~r.valid]
         first_surface.append(np.unique(bad).tolist())

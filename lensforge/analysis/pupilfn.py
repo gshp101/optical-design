@@ -80,7 +80,7 @@ def pupil_function(system, field=0, wavelength=None, n: int = 64, reference=None
     X, Y = np.meshgrid(v, v)
     inside = X**2 + Y**2 <= 1.0
     px, py = X[inside], Y[inside]
-    gen = RayGenerator(system, wavelength)
+    gen = RayGenerator(system, wavelength, vignetting=False)
     P, D, o = gen.rays(np.full(px.size + 1, hx), np.full(px.size + 1, hy),
                        np.append(px, 0.0), np.append(py, 0.0))
     res = trace(system, P, D, wavelength, o)

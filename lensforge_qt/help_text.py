@@ -16,6 +16,16 @@ from typing import Optional, Tuple
 
 from .analyses import REGISTRY
 
+# Fields tab of the System Explorer (Qt and web): column header and button tooltips
+FIELD_TIPS = {"VDX": "Vignetting decentre x (fraction of the pupil radius)",
+              "VDY": "Vignetting decentre y (fraction of the pupil radius)",
+              "VCX": "Vignetting compression x (0 = none, 0.3 = pupil 30% narrower)",
+              "VCY": "Vignetting compression y (0 = none, 0.3 = pupil 30% narrower)",
+              "VAN": "Vignetting angle in degrees: rotates the compressed pupil counter-clockwise"}
+SET_VIGNETTING_TIP = ("Compute VDX/VDY/VCX/VCY for every field so its whole ray bundle gets through all surface "
+                      "apertures and fixed semi-diameters (VAN sets the axes of the compression)")
+CLEAR_VIGNETTING_TIP = "Set the vignetting factors and angle of every field back to zero"
+
 #: menu path -> (summary, details)
 HELP = {
     # ------------------------------------------------------------------ File
@@ -65,12 +75,35 @@ HELP = {
         "reverse=True, copy_semi_diameters=True)</code>."),
     "File > System Explorer": (
         "Set the aperture, fields, wavelengths and general system options.",
-        "Opens the System Explorer: aperture type and value, field type and field points, wavelengths and "
+        "Opens the System Explorer: aperture type and value, field type and field points (with their "
+        "vignetting factors, which Set Vignetting computes and Clear Vignetting resets), wavelengths and "
         "weights with the primary wavelength, units, ray aiming and notes."),
     "File > Fields": (
-        "Edit the field points.",
-        "Opens the System Explorer on the Fields tab: field type (angle, object height, image height) and "
-        "the x/y field points with weights."),
+        "Edit the field points and their vignetting factors.",
+        "Opens the System Explorer on the Fields tab: the field type (angle in degrees, object height, "
+        "paraxial or real image height) and the x/y field points with weights."
+        "<p><b>Vignetting factors.</b> Each field has VDX / VDY (decentre of the pupil, as fractions of its "
+        "radius), VCX / VCY (compression: 0 = none, 0.3 = 30% narrower) and <b>VAN</b>, the vignetting "
+        "angle in degrees, which rotates the compressed pupil counter-clockwise about its centre so a field "
+        "off the y axis can be compressed along its own direction. A ray at pupil coordinates (Px, Py) of "
+        "that field is traced at R(VAN)&middot;(Px(1&minus;VCX), Py(1&minus;VCY)) + (VDX, VDY). Spot "
+        "diagrams, ray fans, layouts, geometric MTF, the optimizer's ray operands and automatic "
+        "semi-diameters use the factors, so every ray drawn or counted gets through the lens. Diffraction "
+        "analyses (PSF, FFT MTF, wavefront), field curvature / distortion, relative illumination and the "
+        "Vignetting plot trace the full pupil and let the apertures clip it, and the factors only apply "
+        "at the defined field points.</p>"
+        "<p><b>Set Vignetting</b> computes VDX, VDY, VCX and VCY for every field, at the primary "
+        "wavelength, from the settings in the dialog: it finds the top, bottom, left and right edges of "
+        "the part of the pupil whose rays pass every surface aperture and every fixed semi-diameter "
+        "(automatic semi-diameters never clip), along the axes set by each field's VAN, centres the pupil "
+        "on them and then compresses it until rays all round its rim get through too. Fields that are not "
+        "clipped get zeros. <b>Clear Vignetting</b> sets all five factors, VAN included, back to zero. "
+        "Both fill the table only; OK or Apply writes it to the lens as one undo step.</p>"
+        "<p>From Python: <code>lens.set_vignetting()</code> (or "
+        "<code>lf.set_vignetting(lens, fields=[2, 3], angle='auto', strict=True)</code>; "
+        "<code>angle='auto'</code> lines VAN up with each field's direction) and "
+        "<code>lens.clear_vignetting()</code>. Zemax files bring their VDXN / VDYN / VCXN / VCYN / VANN "
+        "factors with them, and the Multi-Configuration Editor's FVAN operand varies the angle.</p>"),
     "File > Wavelengths": (
         "Edit the wavelengths.",
         "Opens the System Explorer on the Wavelengths tab: wavelengths in micrometres, weights, presets "
@@ -309,7 +342,7 @@ HELP = {
         "THIC thickness, CRVT curvature, CONN conic, GLSS material, SDIA semi-diameter ('auto' for "
         "automatic), PARM any other surface parameter named in the Param column (an aspheric term "
         "coefficients[0], decenter_y, tilt_x, focal_length ...), STPS stop surface, APER aperture value, "
-        "XFIE / YFIE field x / y, FLWT field weight, FVDX / FVDY / FVCX / FVCY vignetting factors, WAVE "
+        "XFIE / YFIE field x / y, FLWT field weight, FVDX / FVDY / FVCX / FVCY / FVAN vignetting factors, WAVE "
         "wavelength, WLWT wavelength weight, PRWV primary wavelength, MOFF an unused row.</p>"
         "<p><b>Current configuration.</b> The Lens Data Editor, the status bar and every analysis show the "
         "current configuration (its column is shaded and its header starred). Double-click a configuration "

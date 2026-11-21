@@ -147,7 +147,7 @@ def huygens_psf(system, field=0, wavelengths=None, pupil_n: int = 48, image_n: i
     psf = np.zeros(X.size)
     perfect = np.zeros(X.size)
     for pf, w in zip(pfs, wts):
-        gen = RayGenerator(system, pf.wavelength)
+        gen = RayGenerator(system, pf.wavelength, vignetting=False)
         px, py = PX[inside], PY[inside]
         P, D, o = gen.rays(np.full(px.size, hx), np.full(px.size, hy), px, py)
         res = trace(system, P, D, pf.wavelength, o)

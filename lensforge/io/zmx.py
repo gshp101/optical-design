@@ -3,8 +3,8 @@
 Supported: STANDARD, EVENASPH, ODDASPH, TOROIDAL, PARAXIAL, DGRATING, COORDBRK surfaces;
 CURV, DISZ, GLAS (catalog name, model glass, MIRROR), CONI, PARM, DIAM, STOP,
 circular apertures/obscurations (CLAP/OBSC); aperture ENPD/FNUM/OBNA/FLOA;
-fields XFLN/YFLN/FTYP/FWGN; wavelengths WAVM/PWAV; UNIT.  Unknown keywords are
-ignored and listed in ``system.notes``.
+fields XFLN/YFLN/FTYP/FWGN and vignetting VDXN/VDYN/VCXN/VCYN/VANN; wavelengths WAVM/PWAV;
+UNIT.  Unknown keywords are ignored and listed in ``system.notes``.
 """
 
 from __future__ import annotations
@@ -13,6 +13,10 @@ import math
 
 from .. import surfaces as S
 from ..system import Field, OpticalSystem, Wavelength
+
+
+# per-field vignetting factors (decentre, compression, angle)
+_VIGNETTING_KEYS = {"VDXN": "vdx", "VDYN": "vdy", "VCXN": "vcx", "VCYN": "vcy", "VANN": "van"}
 
 
 def _read_text(path):
@@ -95,6 +99,8 @@ def load_zmx(path_or_text: str, library=None) -> OpticalSystem:
             sysd["yfln"] = [float(v) for v in parts[1:]]
         elif key == "FWGN":
             sysd["fwgn"] = [float(v) for v in parts[1:]]
+        elif key in _VIGNETTING_KEYS:
+            sysd[key] = [float(v) for v in parts[1:]]
         elif key == "WAVM":
             sysd["waves"][int(parts[1])] = (float(parts[2]), float(parts[3]) if len(parts) > 3 else 1.0)
         elif key == "PWAV":
@@ -151,6 +157,9 @@ def load_zmx(path_or_text: str, library=None) -> OpticalSystem:
     n = max(len(ys), 1)
     fields = [Field(xs[i] if i < len(xs) else 0.0, ys[i] if i < len(ys) else 0.0, ws[i] if i < len(ws) else 1.0)
               for i in range(n)]
+    for key, attr in _VIGNETTING_KEYS.items():
+        for f, v in zip(fields, sysd.get(key, [])):
+            setattr(f, attr, v)
     # Zemax stores 12 field slots; keep only the populated leading ones
     used = [f for i, f in enumerate(fields) if i == 0 or f.x or f.y]
     lens.field_type = ftyp

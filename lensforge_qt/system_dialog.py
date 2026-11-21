@@ -9,11 +9,12 @@ from __future__ import annotations
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (QAbstractItemView, QComboBox, QDialog, QDialogButtonBox, QFormLayout, QHBoxLayout,
                                QHeaderView, QLineEdit, QMessageBox, QPlainTextEdit, QPushButton, QTableWidget,
-                               QTableWidgetItem, QTabWidget, QVBoxLayout, QWidget, QLabel)
+                               QTableWidgetItem, QTabWidget, QVBoxLayout, QWidget, QLabel, QApplication)
 
 from lensforge.system import APERTURE_TYPES, FIELD_TYPES, Field, Wavelength
 
 from . import edits as E
+from .help_text import CLEAR_VIGNETTING_TIP, FIELD_TIPS, SET_VIGNETTING_TIP
 from .ownership import qt_owns_children
 
 APERTURE_LABELS = {"EPD": "Entrance Pupil Diameter", "IMAGE_FNUM": "Image Space F/#",
@@ -32,8 +33,9 @@ WAVE_PRESETS = {
     "SWIR 1.0 / 1.3 / 1.55": ([1.0, 1.3, 1.55], 1),
     "LWIR 8 / 10 / 12": ([8.0, 10.0, 12.0], 1),
 }
-FIELD_COLUMNS = ["X", "Y", "Weight", "VDX", "VDY", "VCX", "VCY"]
-FIELD_ATTRS = ["x", "y", "weight", "vdx", "vdy", "vcx", "vcy"]
+FIELD_COLUMNS = ["X", "Y", "Weight", "VDX", "VDY", "VCX", "VCY", "VAN"]
+FIELD_ATTRS = ["x", "y", "weight", "vdx", "vdy", "vcx", "vcy", "van"]
+NEW_FIELD_ROW = ["0", "0", "1", "0", "0", "0", "0", "0"]
 
 
 def _table(headers):
@@ -100,15 +102,24 @@ class SystemExplorer(QDialog):
         top.addWidget(self.field_type, 1)
         lay.addLayout(top)
         self.field_table = _table(FIELD_COLUMNS)
+        for c, h in enumerate(FIELD_COLUMNS):
+            if h in FIELD_TIPS:
+                self.field_table.horizontalHeaderItem(c).setToolTip(FIELD_TIPS[h])
         lay.addWidget(self.field_table)
         row = QHBoxLayout()
         add = QPushButton("Add Field")
         rem = QPushButton("Remove Field")
         eq = QPushButton("Equal-Area Fields...")
-        add.clicked.connect(lambda: self._add_row(self.field_table, ["0", "0", "1", "0", "0", "0", "0"]))
+        self.set_vig = QPushButton("Set Vignetting")
+        self.clear_vig = QPushButton("Clear Vignetting")
+        self.set_vig.setToolTip(SET_VIGNETTING_TIP)
+        self.clear_vig.setToolTip(CLEAR_VIGNETTING_TIP)
+        add.clicked.connect(lambda: self._add_row(self.field_table, list(NEW_FIELD_ROW)))
         rem.clicked.connect(lambda: self._remove_rows(self.field_table))
         eq.clicked.connect(self._equal_area)
-        for b in (add, rem, eq):
+        self.set_vig.clicked.connect(self.set_vignetting)
+        self.clear_vig.clicked.connect(self.clear_vignetting)
+        for b in (add, rem, eq, self.set_vig, self.clear_vig):
             row.addWidget(b)
         row.addStretch(1)
         lay.addLayout(row)
@@ -202,7 +213,53 @@ class SystemExplorer(QDialog):
         self.field_table.setRowCount(0)
         for k in range(n):
             y = ymax * (k / (n - 1)) ** 0.5
-            self._add_row(self.field_table, ["0", f"{y:.6g}", "1", "0", "0", "0", "0"])
+            self._add_row(self.field_table, ["0", f"{y:.6g}", "1", "0", "0", "0", "0", "0"])
+
+    def _show_fields(self, fields):
+        for r, f in enumerate(fields):
+            for c, a in enumerate(FIELD_ATTRS):
+                if a in ("x", "y", "weight"):
+                    continue
+                it = self.field_table.item(r, c)
+                if it is None:
+                    it = QTableWidgetItem()
+                    self.field_table.setItem(r, c, it)
+                it.setText(E.format_number(getattr(f, a), 10))
+
+    def set_vignetting(self):
+        """Fill VDX/VDY/VCX/VCY from the settings in the dialog (applied with OK / Apply)."""
+        try:
+            vals = self.collect()
+        except ValueError as e:
+            QMessageBox.warning(self, "Set Vignetting", str(e))
+            return None
+        work = self.doc.system.copy()
+        for k, v in vals.items():
+            setattr(work, k, v)
+        QApplication.setOverrideCursor(Qt.WaitCursor)
+        try:
+            res = work.set_vignetting()
+        except Exception as e:  # noqa: BLE001 - shown to the user
+            QApplication.restoreOverrideCursor()
+            QMessageBox.warning(self, "Set Vignetting", f"Could not compute the vignetting factors: {e}")
+            return None
+        QApplication.restoreOverrideCursor()
+        self._show_fields(work.fields)
+        lost = [i + 1 for i, v in res.items() if v is None]
+        if lost:
+            QMessageBox.warning(self, "Set Vignetting", "No ray of field " + ", ".join(map(str, lost))
+                                + " gets through the lens; its vignetting factors were cleared.")
+        return res
+
+    def clear_vignetting(self):
+        for r in range(self.field_table.rowCount()):
+            for c, a in enumerate(FIELD_ATTRS):
+                if a not in ("x", "y", "weight"):
+                    it = self.field_table.item(r, c)
+                    if it is None:
+                        self.field_table.setItem(r, c, QTableWidgetItem("0"))
+                    else:
+                        it.setText("0")
 
     # -- load / apply -------------------------------------------------------------
     def load(self):
