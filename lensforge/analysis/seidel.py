@@ -9,6 +9,8 @@ CL axial colour, CT lateral colour.
     A = n i = n (u + y c),  Abar = n (ubar + ybar c),  H = n (ubar y - u ybar)
     S1 = -A^2 y d(u/n)        S2 = -A Abar y d(u/n)    S3 = -Abar^2 y d(u/n)
     S4 = -H^2 c d(1/n)        S5 = (Abar / A)(S3 + S4)  (evaluated in a form valid for A = 0)
+    (this H is the negative of Welford's Lagrange invariant n (u ybar - ubar y); the sums
+    themselves have Welford's signs, see tests/test_aberration_reference.py)
     CL = A y d(dn/n)          CT = Abar y d(dn/n)
     aspheric terms: dS1 = 8 b4 y^4 (n' - n), dS2 = dS1 (ybar/y), dS3 = dS1 (ybar/y)^2, dS5 = dS1 (ybar/y)^3
     with b4 the r^4 sag coefficient beyond the paraxial sphere.
@@ -23,7 +25,10 @@ lensforge OPD maps are referenced to the real chief ray, so they contain no
 W311 (distortion) tilt; compare W311 with :func:`lensforge.distortion` instead.
 
 Transverse (T*) and longitudinal (L*) third-order aberrations are image-space
-ray errors at full aperture / field (lens units).  Ideal ("paraxial")
+ray errors at full aperture / field (lens units), as in Zemax: with k = 1/(2 n'u'),
+TSPH = k S1, TSCO = k S2, TTCO = 3 k S2, TAST = k S3, TPFC = k S4,
+TSFC = TAST + TPFC, TTFC = 3 TAST + TPFC (so the tangential - sagittal separation
+is 2 TAST), TDIS = k S5, TAXC = 2 k CL, TLAC = 2 k CT; L* = -T* / u'.  Ideal ("paraxial")
 surfaces contribute nothing; diffractive phase terms and odd/XY polynomial
 departures are not included (listed under ``notes``).
 """
@@ -129,7 +134,7 @@ def seidel(system, wavelength=None):
 
     def trans(S):
         k = 1.0 / (2 * nu_img) if nu_img else math.nan
-        t = {"TSPH": k * S["S1"], "TTCO": 3 * k * S["S2"], "TSCO": k * S["S2"], "TAST": 2 * k * S["S3"],
+        t = {"TSPH": k * S["S1"], "TTCO": 3 * k * S["S2"], "TSCO": k * S["S2"], "TAST": k * S["S3"],
              "TPFC": k * S["S4"], "TSFC": k * (S["S3"] + S["S4"]), "TTFC": k * (3 * S["S3"] + S["S4"]),
              "TDIS": k * S["S5"], "TAXC": 2 * k * S["CL"], "TLAC": 2 * k * S["CT"]}
         lon = {"L" + key[1:]: -v / u_img for key, v in t.items() if key in ("TSPH", "TAST", "TPFC", "TSFC", "TTFC", "TAXC")}

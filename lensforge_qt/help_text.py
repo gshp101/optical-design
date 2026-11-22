@@ -672,7 +672,9 @@ ANALYSIS_HELP = {
                "Bar chart of the third-order spherical, coma, astigmatism, field curvature, distortion and "
                "colour contributions of each surface."),
     "seidel_text": ("Seidel aberration coefficients (table).",
-                    "Lists the Seidel sums per surface and in total."),
+                    "Lists the Seidel sums per surface and in total, with the third-order transverse and "
+                    "longitudinal aberrations in Zemax's definitions (TAST = S3 / (2 n'u'), so the "
+                    "tangential and sagittal foci are 2 TAST apart)."),
     "pupil_aberration": ("Pupil aberration.",
                          "Error of the real chief ray at the stop against field, compared with paraxial."),
     "relative_illumination": ("Relative illumination against field.",

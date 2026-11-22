@@ -13,8 +13,8 @@ Conventions that differ from Optiland (checked here rather than hidden):
 
 * Optiland's Seidel sums have the opposite sign (lensforge follows Zemax/Welford: S1 > 0 for an
   under-corrected positive lens).
-* lensforge's TAST is the tangential minus sagittal transverse field curvature (TTFC - TSFC = S3/(n'u'));
-  Optiland's TAC is half of that (S3/(2n'u')).
+* TAST: lensforge reported TTFC - TSFC = S3/(n'u') until November 2026; it now follows Optiland's TAC and
+  Zemax's TAST, S3/(2n'u'), so the tangential and sagittal foci are 2 TAST apart.
 * OPD fans of non-primary wavelengths: lensforge centres the reference sphere on the primary-wavelength
   chief ray, Optiland on each wavelength's own chief ray, so off axis they differ by a pure tilt.
 * Spot diagrams: both use 6 hexapolar rings but start each ring at a different angle, so the RMS radius
@@ -76,12 +76,13 @@ def test_seidel_sums_match_optiland(lens):
         np.testing.assert_allclose(_seidel_per_surface(r, k), -np.asarray(OPTILAND_SEIDEL_PER_SURFACE[k]),
                                    rtol=1e-7, atol=1e-12, err_msg=k)
     t, o = r["transverse"], OPTILAND_TRANSVERSE
-    for mine, theirs in (("TSPH", "TSC"), ("TSCO", "CC"), ("TPFC", "TPC"), ("TDIS", "DC"), ("TAXC", "TAchC"),
-                         ("TLAC", "TchC")):
+    for mine, theirs in (("TSPH", "TSC"), ("TSCO", "CC"), ("TAST", "TAC"), ("TPFC", "TPC"), ("TDIS", "DC"),
+                         ("TAXC", "TAchC"), ("TLAC", "TchC")):
         assert t[mine] == pytest.approx(o[theirs], rel=1e-7), mine
-    # transverse astigmatism: lensforge reports the T - S separation, Optiland half of it
-    assert t["TAST"] == pytest.approx(2 * o["TAC"], rel=1e-7)
-    assert t["TTFC"] - t["TSFC"] == pytest.approx(t["TAST"], rel=1e-9)
+    # Zemax's relations: the tangential and sagittal foci are 2 TAST apart
+    assert t["TTFC"] - t["TSFC"] == pytest.approx(2 * t["TAST"], rel=1e-9)
+    u = lf.ParaxialAnalysis(lens).marginal_ray[1][-1]
+    assert r["longitudinal"]["LAST"] == pytest.approx(-t["TAST"] / u, rel=1e-9)
     assert t["TSFC"] == pytest.approx(o["TAC"] + o["TPC"], rel=1e-7)
     assert t["TTFC"] == pytest.approx(3 * o["TAC"] + o["TPC"], rel=1e-7)
 
