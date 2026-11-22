@@ -102,15 +102,8 @@ def _bisect(passes, point, good, bad, iters=22):
     return good
 
 
-def _interval(passes, point, n=101):
-    """Passing interval [lo, hi] of t in [-1, 1] along the line t -> point(t), or None.
-
-    Takes the passing run that contains t = 0, else the longest one, and
-    refines both ends by bisection."""
-    t = np.linspace(-1.0, 1.0, n)
-    ok = passes(*point(t))
-    if not ok.any():
-        return None
+def _runs(ok):
+    """Index ranges (first, last) of the runs of True in ``ok``."""
     runs, start = [], None
     for k, v in enumerate(ok):
         if v and start is None:
@@ -119,42 +112,111 @@ def _interval(passes, point, n=101):
             runs.append((start, k - 1))
             start = None
     if start is not None:
-        runs.append((start, n - 1))
-    mid = n // 2
-    run = next((r for r in runs if r[0] <= mid <= r[1]), None) or max(runs, key=lambda r: r[1] - r[0])
+        runs.append((start, len(ok) - 1))
+    return runs
+
+
+def _chord(c, e):
+    """Range of t for which c + t e lies in the unit pupil (c inside it, e a unit vector)."""
+    ce = c[0] * e[0] + c[1] * e[1]
+    root = math.sqrt(max(ce * ce - (c[0] ** 2 + c[1] ** 2) + 1.0, 0.0))
+    return -ce - root, -ce + root
+
+
+def _interval(passes, c, e, n=101):
+    """Passing interval [lo, hi] of t along the pupil chord c + t e, or None.
+
+    Takes the passing run that contains t = 0 (the starting point c), else
+    the run nearest to it, and refines both ends by bisection."""
+    t0, t1 = _chord(c, e)
+    t = np.linspace(t0, t1, n)
+
+    def point(tt):
+        return c[0] + tt * e[0], c[1] + tt * e[1]
+
+    ok = passes(*point(t))
+    if not ok.any():
+        return None
+    runs = _runs(ok)
+    k0 = int(np.argmin(np.abs(t)))
+    run = next((r for r in runs if r[0] <= k0 <= r[1]), None) or \
+        min(runs, key=lambda r: min(abs(t[r[0]]), abs(t[r[1]])))
     good = [t[run[0]], t[run[1]]]
     bad = [t[run[0] - 1] if run[0] > 0 else t[0], t[run[1] + 1] if run[1] < n - 1 else t[-1]]
     lo, hi = _bisect(passes, point, good, bad)
     return float(lo), float(hi)
 
 
-def _rot(angle):
+def _axes(angle):
     c, s = math.cos(math.radians(angle)), math.sin(math.radians(angle))
-    return lambda u, v: (c * u - s * v, s * u + c * v)
+    return (c, s), (-s, c)  # the compressed x and y axes in the pupil
+
+
+def _start_point(passes, field, n=41):
+    """A pupil point whose ray gets through, as close as possible to the centre of
+    the field's current vignetted pupil, or None when no ray of the field passes.
+
+    Tries that centre, then points of the current vignetted pupil, then the
+    whole unit pupil, so factors that already let rays through are never lost."""
+    cx, cy = field.vignette_pupil(0.0, 0.0)
+    cx, cy = float(cx), float(cy)
+    r = math.hypot(cx, cy)
+    if r > 1.0:
+        cx, cy = cx / r, cy / r
+    if passes(cx, cy)[0]:
+        return cx, cy
+    v = np.linspace(-1.0, 1.0, n)
+    X, Y = np.meshgrid(v, v)
+    disk = X**2 + Y**2 <= 1.0
+    X, Y = X[disk], Y[disk]
+    for px, py in (field.vignette_pupil(X, Y), (X, Y)):
+        px, py = np.asarray(px, float), np.asarray(py, float)
+        inside = px**2 + py**2 <= 1.0 + 1e-12
+        px, py = px[inside], py[inside]
+        ok = passes(px, py)
+        if ok.any():
+            k = np.argmin(np.where(ok, (px - cx) ** 2 + (py - cy) ** 2, np.inf))
+            return float(px[k]), float(py[k])
+    return None
 
 
 def vignetting_limits(system, field: int, wavelength=None, angle: float = 0.0,
                       use_semi_diameters: bool = True, samples: int = 101, passes=None):
     """Unvignetted pupil range of one field along the axes of ``angle`` (degrees).
 
-    Returns ``(x_lo, x_hi, y_lo, y_hi)`` in the rotated pupil frame (fractions of
-    the pupil radius), or None when no ray of the field gets through."""
+    The search starts from the field's current vignetted pupil (its centre, or
+    the passing point of it nearest the centre) and follows the pupil chords
+    through it, so a field whose present factors let rays through always
+    gives a result.  Returns ``(x_lo, x_hi, y_lo, y_hi)`` in the rotated pupil
+    frame (fractions of the pupil radius), or None when no ray of the field
+    gets through."""
     passes = passes or _Passes(system, field, wavelength, use_semi_diameters)
-    rot = _rot(angle)
-    cu = 0.0
-    yr = xr = None
-    for _ in range(2):
-        yr = _interval(passes, lambda t: rot(np.full_like(t, cu), t), samples)
+    start = _start_point(passes, system.fields[field])
+    if start is None:
+        return None
+    ex, ey = _axes(angle)
+    c = start
+    for _ in range(12):
+        yr = _interval(passes, c, ey, samples)
         if yr is None:
             return None
-        cv = 0.5 * (yr[0] + yr[1])
-        xr = _interval(passes, lambda t: rot(t, np.full_like(t, cv)), samples)
+        m = 0.5 * (yr[0] + yr[1])
+        c = (c[0] + m * ey[0], c[1] + m * ey[1])
+        xr = _interval(passes, c, ex, samples)
         if xr is None:
             return None
-        if abs(0.5 * (xr[0] + xr[1]) - cu) < 1e-6:
-            break  # symmetric in x: the y range found at cu is final
-        cu = 0.5 * (xr[0] + xr[1])
-    return xr[0], xr[1], yr[0], yr[1]
+        m = 0.5 * (xr[0] + xr[1])
+        c = (c[0] + m * ex[0], c[1] + m * ex[1])
+        if abs(m) < 1e-7:
+            break  # the y range found through c is final
+    cu, cv = c[0] * ex[0] + c[1] * ex[1], c[0] * ey[0] + c[1] * ey[1]
+    a, b = 0.5 * (xr[1] - xr[0]), 0.5 * (yr[1] - yr[0])
+    return cu - a, cu + a, cv - b, cv + b
+
+
+def _rot(angle):
+    c, s = math.cos(math.radians(angle)), math.sin(math.radians(angle))
+    return lambda u, v: (c * u - s * v, s * u + c * v)
 
 
 def _fit_inside(passes, angle, cu, cv, a, b, n_rim=72, iters=14):
@@ -175,17 +237,16 @@ def _fit_inside(passes, angle, cu, cv, a, b, n_rim=72, iters=14):
         m = 0.5 * (lo + hi)
         lo, hi = (m, hi) if rim_ok(m, m) else (lo, m)
     ka = kb = lo
-    for _ in range(1):
-        for axis in (0, 1):
-            g, bd = (ka, 1.0) if axis == 0 else (kb, 1.0)
-            for _ in range(iters):
-                m = 0.5 * (g + bd)
-                ok = rim_ok(m, kb) if axis == 0 else rim_ok(ka, m)
-                g, bd = (m, bd) if ok else (g, m)
-            if axis == 0:
-                ka = g
-            else:
-                kb = g
+    for axis in (0, 1):
+        g, bd = (ka, 1.0) if axis == 0 else (kb, 1.0)
+        for _ in range(iters):
+            m = 0.5 * (g + bd)
+            ok = rim_ok(m, kb) if axis == 0 else rim_ok(ka, m)
+            g, bd = (m, bd) if ok else (g, m)
+        if axis == 0:
+            ka = g
+        else:
+            kb = g
     return ka * a, kb * b
 
 
@@ -212,9 +273,15 @@ def set_vignetting(system, fields: Optional[Iterable[int]] = None, wavelength=No
     and ``"auto"`` lines the compressed y axis up with each field's direction
     (VAN = -atan2(x, y), so fields on the y axis keep VAN = 0).
 
+    The search is iterative: it starts from each field's current factors
+    (the centre of its present vignetted pupil, or the nearest point of that
+    pupil whose ray gets through) and walks out to the clip boundary from
+    there, so a field whose current factors let rays through always gets new
+    factors, and pressing Set Vignetting again on a result changes nothing.
+
     Fields that are already unvignetted get zero factors.  Returns one entry
     per field index processed: a dict of the new factors, or None when no ray
-    of that field gets through (its factors are then cleared).
+    of that field gets through (its factors are then left as they were).
     """
     out = {}
     for i in _field_list(system, fields):
@@ -228,8 +295,7 @@ def set_vignetting(system, fields: Optional[Iterable[int]] = None, wavelength=No
         passes = _Passes(system, i, wavelength, use_semi_diameters)
         lim = vignetting_limits(system, i, wavelength, van, use_semi_diameters, samples, passes)
         if lim is None:
-            clear_vignetting(system, [i])
-            out[i] = None
+            out[i] = None  # keep the field's factors: nothing better was found
             continue
         x0, x1, y0, y1 = lim
         cu, cv = 0.5 * (x0 + x1), 0.5 * (y0 + y1)

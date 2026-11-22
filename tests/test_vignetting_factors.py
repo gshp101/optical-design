@@ -135,7 +135,7 @@ def test_field_with_no_passing_ray():
     s.surfaces[5].aperture = lf.CircularAperture(1e-4, dx=4.0)
     s.fields[2].vcy = 0.4
     res = s.set_vignetting(fields=[2])
-    assert res == {2: None} and not s.fields[2].vignetted
+    assert res == {2: None} and s.fields[2].vcy == 0.4  # left as it was, not cleared
 
 
 # ---------------------------------------------------------------------- files and multi-config
@@ -245,3 +245,49 @@ def test_qt_fields_tab_set_and_clear(qtbot, tmp_path):
         w.doc.undo_stack.setClean()
         w.close()
         w.deleteLater()
+
+
+# ---------------------------------------------------------------------- iterative Set Vignetting
+def off_centre_lens():
+    """Only an off-axis patch of the pupil (around px = -0.6) gets through: no ray on the line px = 0 passes."""
+    s = lf.load(ARDUCAM)
+    stop = s.stop_index
+    r_stop = lf.ParaxialAnalysis(s).stop_radius
+    s.surfaces[stop].aperture = lf.CircularAperture(0.3 * r_stop, dx=-0.6 * r_stop)
+    return s
+
+
+def test_set_vignetting_finds_an_off_centre_pupil_from_scratch():
+    s = off_centre_lens()
+    res = s.set_vignetting()
+    px, py = rim()
+    for i in range(len(s.fields)):
+        assert res[i] is not None, i
+        assert res[i]["vdx"] == pytest.approx(-0.6, abs=0.06) and res[i]["vcx"] > 0.6
+        assert _Passes(s, i, None, True)(*s.fields[i].vignette_pupil(px, py)).all(), i
+
+
+def test_set_vignetting_starts_from_the_current_factors():
+    s = off_centre_lens()
+    s.set_vignetting()
+    before = [dict(vars(f)) for f in s.fields]
+    # pressing it again on its own result changes nothing
+    s.set_vignetting()
+    for b, f in zip(before, s.fields):
+        for k in ("vdx", "vdy", "vcx", "vcy"):
+            assert getattr(f, k) == pytest.approx(b[k], abs=1e-5), k
+    # factors that let rays through always give new factors, even from a rough guess
+    for f in s.fields:
+        f.vdx, f.vdy, f.vcx, f.vcy = -0.5, 0.05, 0.9, 0.9
+    res = s.set_vignetting()
+    assert all(v is not None for v in res.values())
+    assert s.fields[0].vdx == pytest.approx(before[0]["vdx"], abs=2e-3)
+
+
+def test_hyperspectral_example_keeps_working_vignetting():
+    s = lf.load(os.path.join(HERE, "..", "examples", "output", "hyperspectral.lens.json"))
+    px, py = rim()
+    res = s.set_vignetting()
+    for i in range(len(s.fields)):
+        assert res[i] is not None, i
+        assert _Passes(s, i, None, True)(*s.fields[i].vignette_pupil(px, py)).all(), i

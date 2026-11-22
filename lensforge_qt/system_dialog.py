@@ -248,7 +248,7 @@ class SystemExplorer(QDialog):
         lost = [i + 1 for i, v in res.items() if v is None]
         if lost:
             QMessageBox.warning(self, "Set Vignetting", "No ray of field " + ", ".join(map(str, lost))
-                                + " gets through the lens; its vignetting factors were cleared.")
+                                + " gets through the lens; its vignetting factors were left as they were.")
         return res
 
     def clear_vignetting(self):
