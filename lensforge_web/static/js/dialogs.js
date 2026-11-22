@@ -332,7 +332,7 @@ export async function systemExplorer(tab = 0) {
           try {
             const r = await call("compute_vignetting", { d: collect() });
             fTable.set(r.fields);
-            if (r.lost.length) await message("Set Vignetting", `No ray of field ${r.lost.join(", ")} gets through the lens; its vignetting factors were cleared.`);
+            if (r.lost.length) await message("Set Vignetting", `No ray of field ${r.lost.join(", ")} gets through the lens; its vignetting factors were left as they were.`);
           } catch (e) { await message("Set Vignetting", `Could not compute the vignetting factors: ${esc(e.message)}`); }
         }, { title: d.set_vignetting_tip }),
         btn("Clear Vignetting", () => fTable.set(fTable.values().map((r) => [r[0], r[1], r[2], "0", "0", "0", "0", "0"])),
