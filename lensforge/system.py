@@ -73,6 +73,31 @@ class Field:
         return u + self.vdx, v + self.vdy
 
 
+def equal_area_fields(n: int, maximum: float, minimum: float = 0.0, full: bool = False) -> List[float]:
+    """Field values (y) that split the field between ``minimum`` and ``maximum`` into equal areas.
+
+    ``n`` values are spaced evenly in field squared, y_k^2 = min^2 + (max^2 - min^2) k / (n - 1),
+    so each zone between neighbouring fields covers the same image area.  With ``full`` the
+    negative values are added too (the half field mirrored, without a second zero), sorted
+    from -maximum to +maximum.
+    """
+    n = int(n)
+    lo, hi = float(minimum), float(maximum)
+    if n < 1:
+        raise ValueError("the number of fields must be at least 1")
+    if lo < 0 or hi < 0:
+        raise ValueError("the minimum and maximum field must not be negative")
+    if hi <= lo and not (n == 1 and hi == lo):
+        raise ValueError("the maximum field must be larger than the minimum field")
+    if n == 1:
+        ys = [hi]
+    else:
+        ys = [math.sqrt(lo * lo + (hi * hi - lo * lo) * k / (n - 1)) for k in range(n)]
+    if full:
+        ys = [-y for y in reversed(ys) if y != 0.0] + ys
+    return ys
+
+
 @dataclass
 class Wavelength:
     value: float  # micrometres
@@ -161,6 +186,12 @@ class OpticalSystem:
             else:
                 out.append(Field(*[float(a) for a in v]))
         self.fields = out
+
+    def set_equal_area_fields(self, n: int, maximum: float, minimum: float = 0.0, full: bool = False,
+                              kind: Optional[str] = None):
+        """Replace the fields by equal-area y fields (see :func:`equal_area_fields`); ``kind``
+        changes the field type too."""
+        self.set_fields(equal_area_fields(n, maximum, minimum, full), kind or self.field_type)
 
     def set_wavelengths(self, values: Sequence, primary: int = 0):
         self.wavelengths = [w if isinstance(w, Wavelength) else

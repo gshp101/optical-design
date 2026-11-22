@@ -323,10 +323,10 @@ export async function systemExplorer(tab = 0) {
       fTable.element,
       el("div", { class: "row" }, btn("Add Field", () => fTable.add(["0", "0", "1", "0", "0", "0", "0", "0"])),
         btn("Remove Field", () => fTable.removeSelected()),
-        btn("Equal-Area Fields...", () => {
-          const ys = fTable.values().map((r) => Math.abs(parseFloat(r[1]) || 0));
-          const ymax = Math.max(...ys, 0) || 1;
-          fTable.set(Array.from({ length: 5 }, (_, k) => ["0", String(+(ymax * Math.sqrt(k / 4)).toPrecision(6)), "1", "0", "0", "0", "0", "0"]));
+        btn("Equal-Area Fields...", async () => {
+          const ys = fTable.values().map((r) => parseFloat(r[1]) || 0);
+          const values = await equalAreaDialog(Math.max(...ys.map(Math.abs), 0) || 1, ys.some((y) => y < 0), d.equal_area_tips || {});
+          if (values) fTable.set(values.map((y) => ["0", y, "1", "0", "0", "0", "0", "0"]));
         }),
         btn("Set Vignetting", async () => {
           try {
@@ -368,6 +368,37 @@ export async function systemExplorer(tab = 0) {
       catch (e) { await message("System Explorer", esc(e.message)); return false; }
     };
     bar.append(btn("OK", async () => { if (await apply()) done(true); }, { primary: true }), btn("Apply", apply), btn("Cancel", () => done(null)));
+  });
+}
+
+/** Equal-Area Fields: number of fields in the half field, full field, maximum and minimum; resolves with
+ * the y values (table text) or null. */
+function equalAreaDialog(maximum, full, tips) {
+  return dialog({ title: "Equal-Area Fields", width: 440 }, (win, done, bar) => {
+    const count = el("input", { type: "number", min: 1, max: 100, step: 1, value: "5", title: tips.count });
+    const fullBox = check("Full field (positive and negative)", full, null, tips.full);
+    const maxIn = el("input", { type: "text", value: String(+maximum.toPrecision(10)), title: tips.maximum });
+    const minIn = el("input", { type: "text", value: "0", title: tips.minimum });
+    const preview = el("div", { class: "note" });
+    const args = () => ({ n: parseInt(count.value, 10) || 0, maximum: maxIn.value, minimum: minIn.value, full: fullBox.input.checked });
+    let token = 0;
+    const update = async () => {
+      const my = ++token;
+      try {
+        const ys = await call("equal_area_fields", args());
+        if (my === token) preview.textContent = "Fields: " + ys.join(", ");
+      } catch (e) { if (my === token) preview.textContent = e.message; }
+    };
+    for (const i of [count, maxIn, minIn]) i.addEventListener("input", update);
+    fullBox.input.addEventListener("change", update);
+    win.body.append(el("div", { class: "form" }, el("label", {}, "Fields in half field"), count, el("span"), fullBox,
+      el("label", {}, "Maximum field"), maxIn, el("label", {}, "Minimum field"), minIn), preview);
+    const ok = async () => {
+      try { done(await call("equal_area_fields", args())); }
+      catch (e) { await message("Equal-Area Fields", esc(e.message)); }
+    };
+    bar.append(btn("Cancel", () => done(null)), btn("OK", ok, { primary: true }));
+    update();
   });
 }
 
