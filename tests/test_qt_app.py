@@ -1135,6 +1135,61 @@ def test_insert_lens_menu_and_bad_file(win, tmp_path, monkeypatch):
     assert "File > Insert Lens" in [i for i, _, _ in win.toolbar_items]
 
 
+def _stock_dialog(win, tmp_path, at=1):
+    from lensforge_qt.stock_dialog import StockLensDialog
+    lib = lf.StockLibrary(lf.stock.demo_lenses(), path=str(tmp_path / "stock.json"))
+    return StockLensDialog(win.doc, at=at, library=lib, parent=win)
+
+
+def test_stock_lens_dialog_search_and_insert(win, tmp_path):
+    dlg = _stock_dialog(win, tmp_path)
+    assert dlg.table.rowCount() == len(dlg.library.lenses)
+    dlg.kind.setCurrentText("plano-convex")
+    dlg.efl_min.setText("40")
+    dlg.efl_max.setText("110")
+    dlg.dia_max.setText("30")
+    dlg.glass.setText("bk7")
+    assert [dlg.table.item(r, 0).text() for r in range(dlg.table.rowCount())] == ["LFD-PCX-25-50", "LFD-PCX-25-100"]
+    assert "2 part(s)" in dlg.count.text()
+    assert "LFD-PCX-25-50 (LensForge Demo)" in dlg.preview.toPlainText()
+    dlg.efl_min.setText("abc")
+    assert "not a number" in dlg.count.text()
+    dlg.efl_min.setText("40")
+    n0 = win.doc.system.num_surfaces
+    dlg.reverse.setChecked(True)
+    assert "reversed" in dlg.preview.toPlainText()
+    dlg.accept()
+    s = win.doc.system
+    assert s.num_surfaces == n0 + 2
+    assert s.surfaces[1].comment == s.surfaces[2].comment == "LFD-PCX-25-50 (LensForge Demo), reversed"
+    assert s.surfaces[1].curvature == 0.0 and s.surfaces[2].curvature < 0  # flat side first
+    win.doc.undo_stack.undo()
+    assert win.doc.system.num_surfaces == n0
+
+
+def test_stock_lens_dialog_import_and_remove(win, tmp_path):
+    p = tmp_path / "ACME OPTICS.ZMF"
+    lf.stock.write_zmf(str(p), lf.stock.demo_lenses()[:4])
+    dlg = _stock_dialog(win, tmp_path)
+    assert dlg.import_files([str(p)]) == 4
+    assert "Acme Optics" in [dlg.vendor.itemText(i) for i in range(dlg.vendor.count())]
+    dlg.vendor.setCurrentText("Acme Optics")
+    assert dlg.table.rowCount() == 4
+    assert os.path.exists(tmp_path / "stock.json")
+    assert dlg.remove_catalog("ACME OPTICS") == 4
+    assert dlg.vendor.currentText() == "All"
+
+
+def test_stock_lens_menu(win, monkeypatch):
+    from lensforge_qt import stock_dialog as M
+    monkeypatch.setattr(M.StockLensDialog, "exec", lambda self: 0)
+    monkeypatch.setattr(M, "_LIBRARY", lf.StockLibrary(lf.stock.demo_lenses()))
+    dlg = win.insert_stock_lens()
+    assert dlg.table.rowCount() > 0
+    assert "File > Insert Stock Lens" in [i for i, _, _ in win.toolbar_items]
+    assert win.a_insert_stock.shortcut().toString() == "Ctrl+Shift+I"
+
+
 def test_app_icon(win):
     from lensforge_qt import icons
     assert not win.windowIcon().isNull()
@@ -1570,7 +1625,7 @@ def test_no_child_widget_is_owned_by_python(win, tmp_path):
     from PySide6.QtCore import QObject
 
     from lensforge_qt import (insert_lens_dialog, inspect_window, lde, material_dialog, mfe, rays_dialog,
-                              system_dialog, toolbar_dialog)
+                              stock_dialog, system_dialog, toolbar_dialog)
     from lensforge_qt.ownership import python_owned_children
 
     for k in REGISTRY:
@@ -1586,6 +1641,7 @@ def test_no_child_widget_is_owned_by_python(win, tmp_path):
              inspect_window.InspectLensWindow(TRIPLET, win),
              rays_dialog.InputRaysDialog(win.doc, win),
              insert_lens_dialog.InsertLensDialog(win.doc, 1, "", win),
+             stock_dialog.StockLensDialog(win.doc, 1, "", lf.StockLibrary(lf.stock.demo_lenses()), win),
              mfe.MeritWizard(s, win), mfe.OperandList(win),
              lde.DeleteSurfacesDialog(s, 1, 1, win),
              lde.SurfacePropertiesDialog(s, 1, win)]

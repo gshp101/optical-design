@@ -40,6 +40,7 @@ from lensforge_qt import edits as E  # noqa: E402
 from lensforge_qt import mfe_help  # noqa: E402
 from lensforge_qt import ns_table as NT  # noqa: E402
 from lensforge_qt import rays as R  # noqa: E402
+from lensforge_qt import stock_table as ST  # noqa: E402
 from lensforge_qt.analyses import REGISTRY  # noqa: E402
 from lensforge_qt.commands import sample_list  # noqa: E402
 from lensforge_qt.help_text import (CLEAR_VIGNETTING_TIP, EQUAL_AREA_TIPS, FIELD_TIPS, OVERVIEW,  # noqa: E402
@@ -126,6 +127,7 @@ class Session:
         self.mc_result = None        # last Monte Carlo result (Load Worst)
         self._analysis_cache = {}    # window id -> (signature, result, system) for re-plotting only
         self.agf_names = []          # AGF catalogs loaded this session (name -> reloaded at start-up by the page)
+        self._stock = None           # stock lenses: demo parts + catalogs the page restores from IndexedDB
         # hooks the worker replaces: progress reports to the page and the Stop button's flag
         self.report = lambda data: None
         self.stop = _Never()
@@ -1381,6 +1383,49 @@ class Session:
         name = os.path.basename(filename or "lens")
         return self._modify(f"Insert lens {name}", lambda s: E.insert_lens(s, src, int(at), **o))
 
+    # ======================================================================== Insert Stock Lens
+    @property
+    def stock(self) -> lf.StockLibrary:
+        if self._stock is None:
+            self._stock = lf.StockLibrary(lf.stock.demo_lenses())
+        return self._stock
+
+    def stock_import(self, filename, b64):
+        """Add a .ZMF catalog or a part's .zmx (file bytes in base64). Returns what the page
+        stores in IndexedDB: one record per catalog the file added to."""
+        added = self.stock.import_data(filename, base64.b64decode(b64))
+        cats = sorted({x.catalog for x in added})
+        return {"added": len(added), "catalogs": cats,
+                "records": [{"name": c, "data": self.stock.to_dict([c])} for c in cats]}
+
+    def stock_restore(self, data):
+        return self.stock.load_dict(data)
+
+    def stock_remove(self, catalog):
+        return self.stock.remove_catalog(catalog)
+
+    def stock_info(self):
+        return {"vendors": self.stock.vendors, "kinds": list(lf.stock.KINDS), "columns": ST.COLUMNS,
+                "tips": ST.COLUMN_TIPS, "elements": [label for label, _ in ST.ELEMENT_CHOICES],
+                "catalogs": [c for c in self.stock.catalogs if c != lf.stock.DEMO_CATALOG],
+                "image_index": self.doc.system.image_index}
+
+    def stock_search(self, form):
+        try:
+            found, rows, msg = ST.search(self.stock, form)
+        except ValueError as e:
+            return {"error": str(e), "rows": [], "keys": []}
+        return {"rows": rows, "keys": [x.key for x in found],
+                "message": msg + f" in {len(self.stock.catalogs)} catalog(s)"}
+
+    def stock_preview(self, key, reverse=False, copy_semi_diameters=True):
+        return ST.preview(self.doc.system, self.stock.get(key), bool(reverse), bool(copy_semi_diameters))
+
+    def stock_insert(self, key, at, reverse=False, copy_semi_diameters=True):
+        part = self.stock.get(key)
+        what = f"Insert stock lens {part.part}" + (" (reversed)" if reverse else "")
+        return self._modify(what, lambda s: ST.insert(s, part, int(at), bool(reverse), bool(copy_semi_diameters)))
+
     def inspect(self, text, filename):
         try:
             s = self.doc.load_text(text, filename)
@@ -1495,6 +1540,7 @@ READ_ONLY = {"state", "menus", "help_data", "about", "samples", "lens_text", "su
              "run_analysis", "forget_analysis",
              "mfe_evaluate", "operands", "operand_names", "operand_menu", "wizard_info", "wizard_pupil", "script_example", "opt_info",
              "history_plot", "tolerance_setup", "default_tolerances", "insert_preview", "inspect", "ns_info",
+             "stock_import", "stock_restore", "stock_remove", "stock_info", "stock_search", "stock_preview",
              "ns_text", "ns_trace"}
 
 

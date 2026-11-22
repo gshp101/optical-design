@@ -81,6 +81,32 @@ HELP = {
         "current lens's rays. Clear apertures set in Surface Properties are copied either way. One undo step "
         "removes the whole insertion. From Python: <code>lf.insert_lens(lens, 'file.json', at=3, scale=0.5, "
         "reverse=True, copy_semi_diameters=True)</code>."),
+    "File > Insert Stock Lens": (
+        "Search stock lens catalogs by properties and insert a part, normal or reversed.",
+        "Search the stock lenses you imported by <b>part number or description</b>, <b>vendor</b>, <b>type</b> "
+        "(plano-convex, bi-concave, meniscus, cemented doublet, ...), <b>focal length</b> and <b>diameter</b> "
+        "ranges (leave either end empty), <b>glass</b> (part of a name, e.g. BK7) and number of <b>elements</b>. "
+        "The list updates as you type; pick a part to see its surfaces exactly as they will be inserted, with its "
+        "focal length and notes. <b>Insert before surface</b> chooses where it goes (the selected row by "
+        "default); <b>Reverse</b> turns the part round so light meets its back surface first; <b>Use the part's "
+        "semi-diameters</b> fixes the inserted semi-diameters at the part's clear apertures. Only the element "
+        "surfaces are inserted (not the maker's object, stop or image surfaces); the last one keeps the maker's "
+        "back distance as its thickness (reversed: the turned part's paraxial back focal distance). The <b>first and last inserted surfaces get the comment</b> "
+        "'part (vendor)', with ', reversed' for a reversed part. Variables, solves and merit operands on later "
+        "surfaces are renumbered, and one undo step removes the insertion."
+        "<p><b>Import Catalog...</b> adds a Zemax lens catalog (<code>.ZMF</code>) or a single part's "
+        "<code>.zmx</code> file. Lens makers (Thorlabs, Edmund Optics, Newport and others) publish a "
+        "<code>.zmx</code> file on each product page, and OpticStudio installs whole <code>.ZMF</code> "
+        "catalogs; LensForge does not ship them because the data is the makers' copyright, so download the "
+        "files you need. Imported catalogs are remembered (in <code>~/.lensforge/stock_lenses.json</code>, "
+        "shared with Python scripts) until <b>Remove Catalog...</b>. A few generic <b>LensForge Demo</b> parts "
+        "are always there to try the search. A glass that is in none of the loaded catalogs is replaced by a "
+        "common equivalent (Corning C79-80 by F_SILICA, BK7 by N-BK7) or by a model glass with the maker's nd "
+        "and vd, and the preview says so; surface types LensForge cannot model (such as Q-type aspheres) are "
+        "listed too."
+        "<p>From Python: <code>lib = lf.StockLibrary.default(); lib.import_file('THORLABS.ZMF'); "
+        "hits = lib.search(kind='plano-convex', efl=(45, 55), diameter=(20, 30), glass='BK7'); "
+        "lf.insert_stock_lens(lens, hits[0], at=3, reverse=True)</code>."),
     "File > System Explorer": (
         "Set the aperture, fields, wavelengths and general system options.",
         "Opens the System Explorer: aperture type and value, field type and field points (with their "

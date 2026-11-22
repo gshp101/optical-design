@@ -690,6 +690,150 @@ export async function insertLensDialog(at) {
   });
 }
 
+// ================================================================== Insert Stock Lens
+function pickBinary(accept) {
+  // a file from the computer as {name, b64} (ZMF catalogs are binary)
+  return new Promise((resolve) => {
+    const i = el("input", { type: "file", accept, multiple: true, style: { display: "none" } });
+    i.addEventListener("change", async () => {
+      const out = [];
+      for (const f of [...i.files]) {
+        const b = new Uint8Array(await f.arrayBuffer());
+        let bin = "";
+        for (let k = 0; k < b.length; k += 0x8000) bin += String.fromCharCode.apply(null, b.subarray(k, k + 0x8000));
+        out.push({ name: f.name, b64: btoa(bin) });
+      }
+      i.remove();
+      resolve(out);
+    });
+    i.addEventListener("cancel", () => { i.remove(); resolve([]); });
+    document.body.append(i);
+    i.click();
+  });
+}
+
+export async function importStockCatalog() {
+  const files = await pickBinary(".zmf,.ZMF,.zmx,.ZMX");
+  let n = 0;
+  for (const f of files) {
+    try {
+      const r = await call("stock_import", { filename: f.name, b64: f.b64 });
+      for (const rec of r.records) {
+        const old = await store.get("stock", rec.name);
+        // a catalog built up from single .zmx parts keeps its earlier parts
+        if (old && old.data && old.data.lenses) {
+          const keys = new Set(rec.data.lenses.map((x) => x.part));
+          rec.data.lenses = [...old.data.lenses.filter((x) => !keys.has(x.part)), ...rec.data.lenses];
+        }
+        await store.put("stock", { name: rec.name, data: rec.data, saved: Date.now() });
+      }
+      n += r.added;
+    } catch (e) { statusError(`${f.name}: ${e.message}`); }
+  }
+  if (n) status(`Imported ${n} stock lens(es); they are kept in this browser and loaded every time LensForge starts`);
+  return n;
+}
+
+export async function reloadStockCatalogs() {
+  let recs = [];
+  try { recs = await store.list("stock"); } catch (e) { return; }
+  for (const r of recs) {
+    try { await call("stock_restore", { data: r.data }); }
+    catch (e) { statusError(`Stored stock lens catalog ${r.name} could not be loaded: ${e.message}`); }
+  }
+}
+
+export async function stockLensDialog(at) {
+  let info = await run("stock_info");
+  if (!info) return;
+  const ima = info.image_index;
+  await dialog({ title: "Insert Stock Lens", width: 1000, height: 720, resizable: true }, (win, done, bar) => {
+    const text = el("input", { type: "text", placeholder: "part number or description" });
+    const vendor = select([["", "All"]], "");
+    const fillVendors = () => { const v = vendor.value; vendor.replaceChildren(...[["", "All"], ...info.vendors.map((x) => [x, x])].map(([a, b]) => el("option", { value: a }, b))); vendor.value = info.vendors.includes(v) ? v : ""; };
+    fillVendors();
+    const kind = select([["", "All"], ...info.kinds.map((k) => [k, k])], "");
+    const glass = el("input", { type: "text", placeholder: "e.g. N-BK7" });
+    const box = (ph) => el("input", { type: "text", placeholder: ph, style: { width: "7em" } });
+    const eflMin = box("min"), eflMax = box("max"), diaMin = box("min"), diaMax = box("max");
+    const elements = select(info.elements.map((e, i) => [i, e]), 0);
+    const where = numInput(Math.max(1, Math.min(at ?? ima, ima)), { min: 1, max: ima, step: 1 });
+    where.title = "The part's surfaces go in front of this surface of the current lens";
+    const reverse = check("Reverse (turn the part round: light meets its back surface first)", false);
+    const copySd = check("Use the part's semi-diameters", true, null,
+      "Checked: the inserted surfaces get the part's clear semi-diameters as fixed values.\nUnchecked: automatic semi-diameters sized by the current lens's rays.");
+    const tbody = el("tbody");
+    const table = el("table", { class: "grid" }, el("thead", {}, el("tr", {}, ...info.columns.map((c) => el("th", { title: info.tips[c] || "" }, c)))), tbody);
+    const wrap = el("div", { class: "table-wrap", style: { flex: "3", minHeight: "120px" } }, table);
+    const count = el("div", { class: "muted" });
+    const preview = el("pre", { class: "mono", style: { flex: "2", border: "1px solid var(--border)", padding: "6px", minHeight: "90px", overflow: "auto" } });
+    const note = el("div", { style: { whiteSpace: "pre-wrap" } });
+    const okBtn = btn("Insert", () => insert(), { primary: true });
+    const numeric = new Set(["EFL", "Diameter", "Thickness", "Elements"]);
+    let keys = [], selected = null, token = 0;
+    const form = () => ({ text: text.value, vendor: vendor.value, kind: kind.value, glass: glass.value, efl_min: eflMin.value,
+      efl_max: eflMax.value, dia_min: diaMin.value, dia_max: diaMax.value, elements: +elements.value });
+    const search = async () => {
+      const my = ++token;
+      const r = await run("stock_search", { form: form() }, { quiet: true });
+      if (my !== token || !r) return;
+      if (r.error) { count.innerHTML = `<span class="error-text">${esc(r.error)}</span>`; return; }
+      keys = r.keys;
+      count.textContent = r.message;
+      tbody.replaceChildren(...r.rows.map((row, i) => el("tr", { onclick: () => pick(i), ondblclick: () => { pick(i); insert(); } },
+        ...row.map((v, c) => el("td", { class: numeric.has(info.columns[c]) ? "num" : "" }, v)))));
+      pick(keys.length ? 0 : -1);
+    };
+    const pick = async (i) => {
+      [...tbody.children].forEach((tr, k) => tr.classList.toggle("sel", k === i));
+      selected = i >= 0 ? keys[i] : null;
+      await showPreview();
+    };
+    const showPreview = async () => {
+      if (!selected) { preview.textContent = ""; note.textContent = keys.length ? "Choose a part in the list." : "No part matches the search."; okBtn.disabled = true; return; }
+      const key = selected;
+      const r = await run("stock_preview", { key, reverse: reverse.input.checked, copy_semi_diameters: copySd.input.checked }, { quiet: true });
+      if (!r || key !== selected) return;
+      preview.textContent = r.text; note.textContent = r.info; okBtn.disabled = !r.ok;
+    };
+    const insert = async () => {
+      if (!selected) return;
+      try { await call("stock_insert", { key: selected, at: +where.value, reverse: reverse.input.checked, copy_semi_diameters: copySd.input.checked }); done(true); }
+      catch (e) { note.innerHTML = `<span class="error-text">Cannot insert: ${esc(e.message)}</span>`; }
+    };
+    const refreshInfo = async () => { info = await run("stock_info"); fillVendors(); await search(); };
+    const importBtn = btn("Import Catalog...", async () => { if (await importStockCatalog()) await refreshInfo(); },
+      { title: "Add a Zemax lens catalog (.ZMF) or one part's .zmx file from a lens maker" });
+    const removeBtn = btn("Remove Catalog...", async () => {
+      if (!info.catalogs.length) { await message("Remove Catalog", "No imported catalogs (the demo parts always stay)."); return; }
+      const name = await dialog({ title: "Remove Catalog", width: 420 }, (w2, done2, bar2) => {
+        const s = select(info.catalogs.map((c) => [c, c]), info.catalogs[0]);
+        w2.body.append(el("label", {}, "Catalog to forget:"), s);
+        bar2.append(btn("Cancel", () => done2(null)), btn("Remove", () => done2(s.value), { primary: true }));
+      });
+      if (!name) return;
+      await call("stock_remove", { catalog: name });
+      await store.remove("stock", name);
+      await refreshInfo();
+    }, { title: "Forget a catalog you imported" });
+    [text, glass, eflMin, eflMax, diaMin, diaMax].forEach((i) => i.addEventListener("input", search));
+    [vendor, kind, elements].forEach((i) => i.addEventListener("change", search));
+    [reverse, copySd].forEach((c) => c.input.addEventListener("change", showPreview));
+    const pair = (a, b) => el("div", { class: "row" }, a, "to", b);
+    win.body.style.display = "flex"; win.body.style.flexDirection = "column"; win.body.style.gap = "6px";
+    win.body.append(
+      el("div", { class: "row", style: { alignItems: "flex-start", gap: "24px" } },
+        el("div", { class: "form" }, el("label", {}, "Part / text:"), text, el("label", {}, "Vendor:"), vendor, el("label", {}, "Type:"), kind),
+        el("div", { class: "form" }, el("label", {}, "Focal length:"), pair(eflMin, eflMax), el("label", {}, "Diameter:"), pair(diaMin, diaMax),
+          el("label", {}, "Glass:"), glass, el("label", {}, "Elements:"), elements)),
+      wrap, count,
+      el("div", { class: "form" }, el("label", {}, "Insert before surface:"), where, el("span"), reverse, el("span"), copySd),
+      el("div", {}, "Surfaces to insert (in the order they will be inserted):"), preview, note);
+    bar.append(importBtn, removeBtn, btn("Close", () => done(null)), okBtn);
+    search();
+  });
+}
+
 // ================================================================== Inspect Lens File
 export async function inspectLens(openInEditor) {
   const src = await chooseLens({ title: "Inspect Lens File", okLabel: "Inspect", manage: false });
