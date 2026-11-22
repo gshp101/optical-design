@@ -135,6 +135,7 @@ function buildCommands() {
     "File > Import from Disk": importFromDisk,
     "File > Export to Disk": exportToDisk,
     "File > Insert Lens": () => D.insertLensDialog(lde.current().row),
+    "File > Insert Stock Lens": () => D.stockLensDialog(lde.current().row),
     "File > Inspect Lens File": () => D.inspectLens(async (src) => { if (await maybeSave()) await openSource(src); }),
     "File > System Explorer": () => D.systemExplorer(0),
     "File > Fields": () => D.systemExplorer(1),
@@ -531,6 +532,7 @@ async function boot() {
   Object.assign(App, { menus, specs, help, operandNames, operandMenu, info: { ...info, ...about } });
   D.examplesIndex().then((ex) => { App.examples = ex; });  // the Examples menu's entries
   await reloadCatalogs();
+  await D.reloadStockCatalogs();
   lde.init();
   onState((s, old) => {
     showState(s);

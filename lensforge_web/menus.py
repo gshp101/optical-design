@@ -28,6 +28,7 @@ SEP = None  # a separator in a menu list
 SHORTCUT_CHANGES = {
     "Ctrl+N": "Alt+N", "Ctrl+Shift+N": "Alt+Shift+N", "Ctrl+W": "Alt+W", "Ctrl+Shift+T": "Alt+Shift+T",
     "Ctrl+Shift+Del": "Alt+Shift+Del", "Ctrl+Shift+P": "Alt+Shift+P", "Ctrl+Shift+O": "Alt+Shift+O",
+    "Ctrl+Shift+I": "Alt+Shift+I",
 }
 
 
@@ -56,7 +57,8 @@ def menu_tree() -> List[dict]:
             _item("Save", "Ctrl+S"), _item("Save As", "Ctrl+Shift+S", dialog=True), SEP,
             _item("Import from Disk", "Ctrl+Alt+O", dialog=True), _item("Export to Disk", "Ctrl+Alt+S", dialog=True),
             SEP,
-            _item("Insert Lens", "Ctrl+I", dialog=True), _item("Inspect Lens File", "Ctrl+Shift+O", dialog=True),
+            _item("Insert Lens", "Ctrl+I", dialog=True), _item("Insert Stock Lens", "Ctrl+Shift+I", dialog=True),
+            _item("Inspect Lens File", "Ctrl+Shift+O", dialog=True),
             _item("System Explorer", "F2", dialog=True), _item("Fields", "F3", dialog=True),
             _item("Wavelengths", "F4", dialog=True), _item("Input Rays", "F5", dialog=True), SEP,
             _sub("Sample Lenses", [_item(name) for name, _ in sample_list()]),
@@ -145,6 +147,21 @@ WEB_HELP: Dict[str, Tuple[str, str]] = {
         "becomes the stop, unit conversion and whether to copy its semi-diameters. A preview shows the "
         "surfaces exactly as they will be inserted. Variables, solves and merit operands that refer to later "
         "surfaces are renumbered. One undo step."),
+    "File > Insert Stock Lens": (
+        "Search stock lens catalogs by properties and insert a part, normal or reversed.",
+        "Search the stock lenses by part number or description, vendor, type (plano-convex, bi-concave, "
+        "meniscus, cemented doublet, ...), focal length and diameter ranges (either end may be empty), glass "
+        "and number of elements; the list updates as you type. Pick a part to preview its surfaces as they will "
+        "be inserted. Choose the surface to insert in front of (the selected row by default), Reverse to turn "
+        "the part round, and whether to use the part's semi-diameters. Only the element surfaces are inserted "
+        "(the last keeps the maker's back distance, or the turned part's back focal distance when reversed); "
+        "the first and last get the comment 'part (vendor)' (', reversed' when reversed). Later variables, "
+        "solves and merit operands are renumbered; one undo step. Import Catalog adds a Zemax lens catalog "
+        "(.ZMF) or one part's .zmx file from your computer (lens makers publish these; LensForge does not ship "
+        "vendor data, which is the makers' copyright). Imported catalogs are kept in this browser's storage and "
+        "loaded again at start-up until Remove Catalog. Generic LensForge Demo parts are always available. "
+        "Glasses missing from the loaded catalogs are replaced by an equivalent or a model glass with the "
+        "maker's nd and vd, and the preview says so."),
     "File > Inspect Lens File": (
         "Show the system report of a lens without opening it.",
         "Choose a lens saved in this browser or a file from your computer; its full system report (first-order "

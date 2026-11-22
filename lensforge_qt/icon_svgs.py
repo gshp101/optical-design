@@ -64,6 +64,11 @@ ICONS = {
     "File > Insert Lens": (lens(8, 7, 2.4) + '<path d="M2 12h20" stroke="' + GREY + '" stroke-dasharray="2 2"/>'
                            + f'<path d="M17 4v9m-3.5-3.5L17 13l3.5-3.5" stroke="{GREEN}" stroke-width="2.2"/>'
                            + f'<path d="M14 19h6" stroke="{GREEN}" stroke-width="2.2"/>'),
+    # a catalog card (price-tag shape) with a plano-convex lens and its part-number lines
+    "File > Insert Stock Lens": ('<path d="M3 5h12l6 7-6 7H3z" fill="#fff"/>'
+                                 + '<circle cx="16.3" cy="12" r="1.3" fill="#fff"/>'
+                                 + f'<path d="M7 6.5c3 3 3 8 0 11z" fill="{GLASS}"/>'
+                                 + f'<path d="M10.5 9h2.5M10.5 12h2.5M10.5 15h2.5" stroke="{ORANGE}" stroke-width="1.6"/>'),
     "File > Inspect Lens File": (PAGE + '<path d="M8 7h5M8 10h3"/>'
                                  + f'<circle cx="13.5" cy="15" r="3.6" fill="{GLASS}"/>'
                                  + f'<path d="M16.2 17.7l4.3 4.3" stroke="{ORANGE}" stroke-width="2.6"/>'),

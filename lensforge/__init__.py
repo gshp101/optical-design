@@ -34,5 +34,7 @@ from .io import load, save, load_zmx
 from .multiconfig import MC_OPERANDS, MCRow, MultiConfig, config_systems
 from .vignetting_factors import clear_vignetting, set_vignetting, vignetting_limits
 from .compose import delete_surfaces, insert_lens, lens_surfaces, reverse_surfaces, scale_surface, scale_system
+from . import stock
+from .stock import StockLens, StockLibrary, insert_stock_lens, read_zmf
 
 __version__ = "0.3.0"

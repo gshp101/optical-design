@@ -92,6 +92,37 @@ def test_session_edit_undo_and_save_text():
     assert st["title"] == "my singlet" and st["path"] == "my singlet" and not st["modified"]
 
 
+def test_session_stock_lens_search_import_insert(tmp_path):
+    import base64
+
+    import lensforge as lf
+    s = Session()
+    call(s, "load_sample", name="Singlet")
+    info = call(s, "stock_info")["result"]
+    assert "plano-convex" in info["kinds"] and info["catalogs"] == []
+    r = call(s, "stock_search", form={"kind": "cemented doublet", "efl_min": "40", "efl_max": "60"})["result"]
+    assert [row[0] for row in r["rows"]] == ["LFD-ACH-25-50"]
+    assert "not a number" in call(s, "stock_search", form={"efl_min": "x"})["result"]["error"]
+    key = r["keys"][0]
+    p = call(s, "stock_preview", key=key, reverse=True)["result"]
+    assert p["ok"] and "reversed" in p["text"]
+    n0 = call(s, "state")["result"]["image_index"]
+    out = call(s, "stock_insert", key=key, at=1, reverse=True)
+    assert out["state"]["image_index"] == n0 + 3
+    rows = out["state"]["lde"]["rows"]
+    comments = [c["t"] for row in rows for c in row["cells"] if "reversed" in str(c.get("t", ""))]
+    assert len(comments) == 2
+    # import a ZMF (as the page sends it) and restore it in a new session
+    zmf = tmp_path / "ACME.ZMF"
+    lf.stock.write_zmf(str(zmf), lf.stock.demo_lenses()[:2])
+    imp = call(s, "stock_import", filename="ACME.ZMF", b64=base64.b64encode(zmf.read_bytes()).decode())["result"]
+    assert imp["added"] == 2 and imp["catalogs"] == ["ACME"]
+    t = Session()
+    assert call(t, "stock_restore", data=imp["records"][0]["data"])["result"] == 2
+    assert call(t, "stock_info")["result"]["vendors"][0] == "Acme"
+    assert call(t, "stock_remove", catalog="ACME")["result"] == 2
+
+
 def test_session_restore_round_trip():
     a = Session()
     call(a, "load_sample", name="Cemented Achromat")
@@ -218,6 +249,14 @@ def test_build_writes_a_complete_site(tmp_path):
     assert examples == example_index()
     assert any(x["folders"][:1] == ["Modern Lens Design (Smith)"] and len(x["folders"]) == 2 for x in examples)
     assert "Examples > Browse Examples" in menus.menu_data()["commands"]
+    # every lensforge_qt module the session imports is in the zip (the page cannot start otherwise)
+    import re
+    import zipfile
+    names = zipfile.ZipFile(os.path.join(out, "py/lensforge.zip")).namelist()
+    src = open(os.path.join(os.path.dirname(__file__), "..", "lensforge_web", "session.py")).read()
+    for mod in re.findall(r"from lensforge_qt(?:\.(\w+))? import (\w+)", src):
+        name = mod[0] or mod[1]
+        assert any(n.endswith(f"lensforge_qt/{name}.py") for n in names), name
 
 
 def test_operand_menus_list_every_operand_once():

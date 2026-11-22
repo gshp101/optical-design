@@ -1,7 +1,7 @@
-// Browser-local storage. Lens files, AGF catalogs and non-sequential scenes go in IndexedDB (no size
+// Browser-local storage. Lens files, AGF catalogs, stock lens catalogs and non-sequential scenes go in IndexedDB (no size
 // limit worth worrying about, unlike cookies at 4 KB); small settings (toolbar, recent files) in localStorage.
 const DB_NAME = "lensforge";
-const STORES = ["lenses", "catalogs", "scenes", "session"];
+const STORES = ["lenses", "catalogs", "scenes", "session", "stock"];
 let dbPromise = null;
 let memory = null;  // fallback when IndexedDB is unavailable (private windows of some browsers)
 
@@ -9,7 +9,7 @@ function db() {
   if (!dbPromise) {
     dbPromise = new Promise((resolve) => {
       let req;
-      try { req = indexedDB.open(DB_NAME, 1); } catch (e) { resolve(null); return; }
+      try { req = indexedDB.open(DB_NAME, 2); } catch (e) { resolve(null); return; }
       req.onupgradeneeded = () => {
         for (const s of STORES) if (!req.result.objectStoreNames.contains(s)) req.result.createObjectStore(s, { keyPath: "name" });
       };

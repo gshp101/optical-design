@@ -117,6 +117,9 @@ class MainWindow(QMainWindow):
         self.a_save_as = A("Save &As...", self.save_as, QKeySequence.SaveAs)
         self.a_insert_lens = A("&Insert Lens...", self.insert_lens, "Ctrl+I",
                                "Insert surfaces from a lens file, scaled and optionally reversed")
+        self.a_insert_stock = A("Insert &Stock Lens...", self.insert_stock_lens, "Ctrl+Shift+I",
+                                "Search vendor stock lens catalogs by focal length, diameter, type and glass, "
+                                "then insert a part (optionally reversed)")
         self.a_inspect = A("Ins&pect Lens File...", self.inspect_lens_dialog, "Ctrl+Shift+O",
                            "Show the system report of a lens file without opening it")
         self.a_agf = A("Load Glass Catalog (AGF)...", self.load_agf)
@@ -178,6 +181,7 @@ class MainWindow(QMainWindow):
             m.addAction(a)
         m.addSeparator()
         m.addAction(self.a_insert_lens)
+        m.addAction(self.a_insert_stock)
         m.addAction(self.a_inspect)
         for a in (self.a_sys, self.a_fields, self.a_waves, self.a_rays):
             m.addAction(a)
@@ -577,6 +581,14 @@ class MainWindow(QMainWindow):
         row, _ = self.lde.current()
         start = os.path.dirname(self.doc.path) if self.doc.path else self.settings.value("last_dir", EXAMPLES)
         dlg = InsertLensDialog(self.doc, at=max(1, row), start_dir=start, parent=self)
+        dlg.exec()
+        return dlg
+
+    def insert_stock_lens(self):
+        from .stock_dialog import StockLensDialog
+        row, _ = self.lde.current()
+        start = self.settings.value("stock_dir", "") or self.settings.value("last_dir", EXAMPLES)
+        dlg = StockLensDialog(self.doc, at=max(1, row), start_dir=start, parent=self)
         dlg.exec()
         return dlg
 
