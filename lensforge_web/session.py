@@ -1008,25 +1008,22 @@ class Session:
         return r
 
     def wizard_info(self):
-        mc = getattr(self.doc.system, "multiconfig", None)
+        """What the Merit Function Wizard needs: configurations, units, rows, surfaces, criteria and the
+        options that built the current default rows (``merit_function.wizard``)."""
+        s = self.doc.system
+        mc = getattr(s, "multiconfig", None)
         n = mc.n_configs if mc is not None else 1
-        return {"configs": n, "units": self.doc.system.units}
+        mf = getattr(s, "merit_function", None)
+        return {"configs": n, "units": s.units, "n_rows": len(mf.rows) if mf is not None else 0,
+                "n_surfaces": s.num_surfaces, "criteria": [[k, lab] for k, (op, lab) in opt.CRITERIA.items()],
+                "wizard": dict(mf.wizard) if mf is not None and mf.wizard else None,
+                "help": mfe_help.WIZARD}
 
     def mfe_wizard(self, kw, keep=True):
         kw = dict(kw)
         if kw.get("kind") != "mtf":
             kw.pop("frequency", None)
-
-        def fn(s):
-            new = opt.default_merit(s, **kw)
-            old = self._mf(s, True)
-            if keep:  # keep the user's rows that are not part of a default merit function
-                user = [r for r in old.rows if r.type not in ("RAYS", "OPDS", "MTFA", "CONF") and
-                        not (r.type == "BLNK" and r.comment.startswith("Default merit"))
-                        and r.type not in ("MNCG", "MXCG", "MNEG", "MNCA", "MXCA", "MNEA")]
-                new.rows = user + new.rows
-            s.merit_function = new
-        return self._modify("Default merit function", fn)
+        return self._modify("Default merit function", lambda s: opt.apply_default_merit(s, keep=keep, **kw))
 
     # ======================================================================== Multi-Configuration Editor
     def _mce(self):

@@ -1387,6 +1387,42 @@ def test_merit_wizard_covers_every_configuration(win, monkeypatch):
     assert sum(r.type == "CONF" for r in rows) == 3  # the old CONF rows were replaced, not kept
 
 
+def test_merit_wizard_options_round_trip_and_start_row(win, monkeypatch):
+    from lensforge_qt import mfe as mfe_mod
+    s = win.doc.system
+    s.merit_function = opt.MeritFunction()
+    s.merit_function.add("EFFL", 100.0, -1)
+    s.merit_function.add("TOTR", 0.0, 0.0)
+    dlg = mfe_mod.MeritWizard(s, win.mfe)
+    dlg.set_options({"kind": "spot_x", "optimization": "ptv", "reference": "unreferenced", "pupil": "rectangular",
+                     "grid": 9, "obscuration": 0.25, "field_weighting": "equal", "symmetric": False,
+                     "delete_vignetted": False, "glass_max_edge": 12.0, "boundary_surfaces": [1, 2],
+                     "start_at": 1})
+    assert not dlg.rings.isEnabled() and dlg.grid.isEnabled() and not dlg.keep.isEnabled()
+    kw, keep = dlg.options()
+    assert kw["kind"] == "spot_x" and kw["optimization"] == "ptv" and kw["grid"] == 9 and "rings" not in kw
+    assert kw["start_at"] == 1 and kw["boundary_surfaces"] == [1, 2] and kw["glass_max_edge"] == 12.0
+    assert kw["symmetric"] is False and kw["delete_vignetted"] is False
+    dlg.kind.setCurrentIndex(dlg.kind.findData("mtf"))
+    assert dlg.freq.isEnabled() and not dlg.optimization.isEnabled()
+    dlg.reset()
+    assert dlg.options()[0]["kind"] == "spot" and "start_at" not in dlg.options()[0]
+
+    def accept(d):
+        d.set_options({"kind": "wavefront", "pupil": "rectangular", "grid": 7, "start_at": 1})
+        return mfe_mod.QDialog.Accepted
+    monkeypatch.setattr(mfe_mod.MeritWizard, "exec", accept)
+    win.mfe.wizard()
+    mf = win.doc.system.merit_function
+    assert [r.type for r in mf.rows][:2] == ["EFFL", "BLNK"] and "TOTR" not in [r.type for r in mf.rows]
+    assert all(r.params["pupil"] == "rectangular" for r in mf.rows if r.type == "OPDS")
+    # the wizard reopens with the settings that built the rows
+    again = mfe_mod.MeritWizard(win.doc.system, win.mfe)
+    assert again.kind.currentData() == "wavefront" and again.grid.value() == 7 and again.start.isChecked()
+    again.show_help()
+    assert "Gaussian quadrature" in again._help.findChild(mfe_mod.QTextBrowser).toPlainText()
+
+
 # ---------------------------------------------------------------------------
 # Non-sequential editor and ghost analyses
 # ---------------------------------------------------------------------------

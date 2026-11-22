@@ -588,3 +588,109 @@ def test_nearest_glasses_from_one_maker():
     near = opt.nearest_glasses("N-BK7", lib, 3, catalogs=["OHARA"])
     assert near and all(lib.resolve(spec).catalog == "OHARA" for spec, *_ in near)
     assert all("BSL7" in spec for spec, *_ in near)  # S-BSL7, L-BSL7 and the obsolete BSL7
+
+
+# ---------------------------------------------------------------------------
+# Default merit function options (the Merit Function Wizard)
+# ---------------------------------------------------------------------------
+
+def test_default_merit_spot_components_add_up():
+    s = lf.samples.achromat()
+    r, x, y, xy = (opt.default_merit(s, k).value(s) for k in ("spot", "spot_x", "spot_y", "spot_xy"))
+    assert xy == pytest.approx(r, rel=1e-12)
+    assert x * x + y * y == pytest.approx(r * r, rel=1e-9)
+    assert 0 < x < r and 0 < y < r
+
+
+def test_default_merit_ptv_is_the_largest_ray_error():
+    s = mono_lens(epd=20.0)
+    mf = opt.default_merit(s, "spot", optimization="ptv", reference="chief", rings=4, arms=8, symmetric=False)
+    px, py, _ = opt.gaussian_quadrature(4, 8)
+    t = trace_rays(s, 0.0, 0.0, px, py)
+    assert mf.value(s) == pytest.approx(np.max(np.hypot(t.x, t.y)), rel=1e-9)
+    assert mf.value(s) > opt.default_merit(s, "spot", reference="chief", rings=4, arms=8).value(s)
+    # PTV wavefront = max - min of the piston-removed OPD
+    w = opt.default_merit(s, "wavefront", optimization="ptv", reference="unreferenced", symmetric=False)
+    W = lf.analysis.fans.opd(s, 0.0, 0.0, *opt.gaussian_quadrature(3, 6)[:2])
+    assert w.value(s) == pytest.approx(W.max() - W.min(), rel=1e-9)
+
+
+def test_default_merit_references():
+    s = lf.samples.achromat()
+    cen = opt.default_merit(s, "spot").value(s)
+    chief = opt.default_merit(s, "spot", reference="chief").value(s)
+    unref = opt.default_merit(s, "spot", reference="unreferenced").value(s)
+    assert chief >= cen * (1 - 1e-9)
+    assert unref > 10 * chief              # off-axis spots are far from the image origin
+    assert opt.default_merit(s, "wavefront", reference="unreferenced").value(s) >= \
+        opt.default_merit(s, "wavefront", reference="chief").value(s)
+
+
+def test_rectangular_array_and_obscuration_sampling():
+    px, py, w = opt.rectangular_array(8)
+    assert w.sum() == pytest.approx(1.0) and np.all(px**2 + py**2 <= 1 + 1e-12) and len(px) == 52
+    hx, hy, hw = opt.rectangular_array(7, symmetric=True)
+    assert np.all(hx >= 0) and hw.sum() == pytest.approx(1.0)
+    # the half-pupil weights reproduce the full-pupil mean of an even function
+    fx, fy, fw = opt.rectangular_array(7)
+    assert np.sum(hw * hy**2) == pytest.approx(np.sum(fw * fy**2), rel=1e-12)
+    gx, gy, gw = opt.gaussian_quadrature(3, 6, obscuration=0.4)
+    r2 = gx**2 + gy**2
+    assert r2.min() >= 0.16 and gw.sum() == pytest.approx(1.0)
+    assert np.sum(gw * r2) == pytest.approx((1 + 0.16) / 2, rel=1e-12)   # mean r^2 over the annulus
+    s = lf.samples.achromat()
+    gq = opt.default_merit(s, "spot", rings=6, arms=12).value(s)
+    ra = opt.default_merit(s, "spot", pupil="rectangular", grid=24).value(s)
+    assert ra == pytest.approx(gq, rel=0.03)
+
+
+def test_default_merit_weighting_delete_vignetted_and_angular():
+    s = lf.samples.achromat()
+    mf = opt.default_merit(s, "spot", field_weighting="equal", wavelength_weighting="equal", weight=3.0)
+    rays = [r for r in mf if r.type == "RAYS"]
+    assert [r.weight for r in rays] == [3.0] * len(s.fields)
+    assert all(r.params["equal_waves"] for r in rays)
+    # apertures smaller than the beam: deleting vignetted rays changes the value, ignoring apertures does not clip
+    s.surfaces[3].aperture = lf.CircularAperture(0.8 * opt.EvalContext(s).semi_diameters()[3])
+    mf_del = opt.default_merit(s, "spot")
+    mf_all = opt.default_merit(s, "spot", delete_vignetted=False)
+    assert all(r.params.get("apertures") is False for r in mf_all if r.type == "RAYS")
+    assert mf_del.value(s) != pytest.approx(mf_all.value(s), rel=1e-6)
+    assert opt.default_merit(s, "wavefront").evaluate(s).error is None   # vignetted OPD rays are left out
+    ang = opt.default_merit(lf.samples.achromat(), "angular")
+    assert [r.type for r in ang].count("ANGS") == 3 and ang.value(lf.samples.achromat()) > 0
+
+
+def test_default_merit_boundaries_over_a_surface_range():
+    s = lf.samples.achromat()
+    mf = opt.default_merit(s, "spot", glass_max_edge=30.0, air_max_edge=200.0, glass_max=10.0,
+                           boundary_surfaces=(1, 2), boundary_weight=5.0)
+    rows = {r.type: r for r in mf}
+    assert {"MXEG", "MXEA", "MXCG"} <= set(rows)
+    assert rows["MXEG"].params == {"surf": 1, "surf2": 2} and rows["MXEG"].weight == 5.0
+    assert mf.evaluate(s).error is None
+
+
+def test_apply_default_merit_start_at_keep_and_saved_settings():
+    s = lf.samples.achromat()
+    s.merit_function = opt.MeritFunction()
+    s.merit_function.add("EFFL", 100.0, -1)
+    s.merit_function.add("TOTR", 0.0, 0.0)
+    s.merit_function.add("RAYS", 0.0, 1.0, field=0)
+    mf = opt.apply_default_merit(s, start_at=1, kind="spot_y", pupil="rectangular", grid=8, glass_min=2.0)
+    assert [r.type for r in mf][:2] == ["EFFL", "BLNK"] and "TOTR" not in [r.type for r in mf]
+    assert mf.wizard == {"kind": "spot_y", "pupil": "rectangular", "grid": 8, "glass_min": 2.0,
+                         "start_at": 1, "keep": True}
+    # keep: own rows (EFFL) stay above, the old default rows are replaced
+    again = opt.apply_default_merit(s, kind="wavefront")
+    types = [r.type for r in again]
+    assert types[0] == "EFFL" and "RAYS" not in types and "MNCG" not in types and types.count("OPDS") == 3
+    # the settings are saved with the lens and rebuild the same rows
+    loaded = lf.io.jsonio.loads(lf.io.jsonio.dumps(s))
+    assert loaded.merit_function.wizard == again.wizard
+    rebuilt = opt.apply_default_merit(loaded, **loaded.merit_function.wizard)
+    assert [r.type for r in rebuilt] == types
+    with pytest.raises(ValueError):
+        opt.default_merit(s, "spot", reference="nowhere")
+    with pytest.raises(ValueError):
+        opt.default_merit(s, "mtf")

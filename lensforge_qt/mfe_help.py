@@ -17,6 +17,7 @@ from lensforge.optimize.operands import DEFAULT_BOUND, OPERAND_INFO, OPERANDS
 
 TOPIC_PREFIX = ":topic:"
 ROOT = TOPIC_PREFIX + "mfe"
+WIZARD = ROOT + "/wizard"
 
 #: group title -> operands, in the order they appear in the reference
 OPERAND_GROUPS: Dict[str, List[str]] = {
@@ -30,7 +31,7 @@ OPERAND_GROUPS: Dict[str, List[str]] = {
     "Real rays (one ray each)": [
         "REAX", "REAY", "REAZ", "REAR", "REAB", "RANG", "RAID", "RAED", "TRAX", "TRAY", "TRAR", "OPDC"],
     "Image quality": [
-        "RAYS", "OPDS", "RSCE", "RSCH", "GEOS", "RWCE", "STRH", "MTFT", "MTFS", "MTFA", "EERA", "ZERN", "DIST",
+        "RAYS", "OPDS", "ANGS", "RSCE", "RSCH", "GEOS", "RWCE", "STRH", "MTFT", "MTFS", "MTFA", "EERA", "ZERN", "DIST",
         "LACL", "RELI"],
     "Third-order (Seidel) aberrations": ["SPHA", "COMA", "ASTI", "FCUR", "DISW", "SEID"],
     "Non-sequential (stray light and ghosts)": ["NSDP", "NSRR"],
@@ -56,14 +57,28 @@ PARAM_HELP: Dict[str, str] = {
             "Left out: the primary wavelength for single-wavelength operands, and all wavelengths with their "
             "weights (polychromatic) for RSCE, RSCH, GEOS, STRH, MTF.., EERA, NSDP, NSRR (which also take a "
             "list of indices).",
-    "wavelengths": "For RAYS and OPDS: a list of wavelength indices, e.g. wavelengths=[1]. Left out: all "
+    "wavelengths": "For RAYS, OPDS and ANGS: a list of wavelength indices, e.g. wavelengths=[1]. Left out: all "
                    "wavelengths, weighted by their wavelength weights.",
-    "reference": "'centroid' (spot measured about its centroid; tilt removed for OPDS) or 'chief' (about the "
-                 "chief ray of the primary wavelength).",
-    "rings, arms": "Pupil sampling of RAYS / OPDS: Gaussian quadrature with rings x arms rays per field and "
-                   "wavelength. 3 x 6 is accurate for most lenses; raise rings for fast or strongly aberrated "
-                   "lenses. RSCE / RSCH / GEOS take rings only (a hexapolar grid).",
-    "symmetric": "RAYS / OPDS: trace only half the pupil. Left out: decided automatically from the lens "
+    "reference": "RAYS / ANGS: 'centroid' (errors measured about the centroid of the rays), 'chief' (about "
+                 "the chief ray of the primary wavelength) or 'unreferenced' (about the image-surface origin, "
+                 "or zero angle). OPDS: 'centroid' removes piston and tilt, 'chief' removes piston, "
+                 "'unreferenced' removes nothing.",
+    "rings, arms": "Pupil sampling of RAYS / OPDS / ANGS with pupil='gaussian': Gaussian quadrature with "
+                   "rings x arms rays per field and wavelength. 3 x 6 is accurate for most lenses; raise rings "
+                   "for fast or strongly aberrated lenses. RSCE / RSCH / GEOS take rings only (a hexapolar grid).",
+    "pupil": "RAYS / OPDS / ANGS: 'gaussian' (Gaussian quadrature, rings x arms) or 'rectangular' (a grid x "
+             "grid array of rays clipped to the pupil).",
+    "grid": "RAYS / OPDS / ANGS with pupil='rectangular': rays across the pupil diameter (6 = 6 x 6 array).",
+    "obscuration": "RAYS / OPDS / ANGS: leave out rays inside this fraction of the pupil radius (0 to 0.99), "
+                   "for lenses with a central obscuration.",
+    "component": "RAYS / ANGS: 'radial' (the distance from the reference), 'xy' (x and y separately; the same "
+                 "RMS, a different PTV), 'x' or 'y' only.",
+    "mode": "RAYS / OPDS / ANGS: 'rms' (root-mean-square over the pupil) or 'ptv' (the largest error; for "
+            "OPDS the wavefront's max - min).",
+    "apertures": "RAYS / OPDS / ANGS: False traces every ray ignoring surface apertures; True (default) "
+                 "leaves out vignetted rays.",
+    "equal_waves": "RAYS / OPDS / ANGS: True weights every wavelength equally instead of by its weight.",
+    "symmetric": "RAYS / OPDS / ANGS: trace only half the pupil. Left out: decided automatically from the lens "
                  "(symmetric about the y-z plane with no x fields).",
     "freq": "Spatial frequency in cycles per lens unit (cycles/mm for a lens in mm).",
     "fraction": "EERA: the energy fraction, 0 to 1 (0.8 = radius holding 80% of the energy).",
@@ -160,6 +175,8 @@ Variables and Solves) and run <b>Tools &gt; Optimization</b>.</p>
 <li><a href="help:mfe/weights">Weights</a>: positive, zero and negative weights, and how to balance them.</li>
 <li><a href="help:mfe/coordinates">Field and pupil coordinates (Hx, Hy, Px, Py)</a>: which ray an
 operand traces, ray heights on surfaces.</li>
+<li><a href="help:mfe/wizard">The Merit Function Wizard</a>: every option of the default merit
+function (RMS / PTV, criteria, references, pupil integration, weighting, boundaries, start row).</li>
 <li><a href="help:mfe/operands">Operand reference</a>: every operand with its parameters.</li>
 <li><a href="help:mfe/example">Example: minimise the RMS spot size</a>: a complete merit function,
 step by step.</li>
@@ -204,10 +221,11 @@ hard constraints.</td></tr>
 <ul>
 <li><b>Add Row</b> (Ctrl+Shift+A) adds a BLNK row at the end; <b>Insert Row</b> (Insert) adds one above
 the selected row; <b>Delete Rows</b> (Shift+Delete) deletes the selected rows.</li>
-<li><b>Wizard...</b> writes a default image-quality merit function: one RAYS (RMS spot), OPDS (RMS
-wavefront) or MTFA row per field, weighted by the field weights, plus optional glass and air
-thickness limits. With <i>Keep my other operands</i> ticked, your own rows stay above the new
-ones.</li>
+<li><b>Wizard...</b> writes a default image-quality merit function: one RAYS (spot), OPDS
+(wavefront), ANGS (angular) or MTFA row per field, RMS or PTV, with a choice of reference, pupil
+sampling and weighting, plus optional glass and air thickness limits. With <i>Keep my other
+operands</i> ticked your own rows stay above the new ones; <i>Start at row</i> keeps the rows above
+that row and replaces the rest. See <a href="help:mfe/wizard">The Merit Function Wizard</a>.</li>
 <li><b>Operands...</b> lists every operand with a description and a filter; Insert puts the chosen
 one above the selected row.</li>
 <li><b>Clear</b> removes all rows (undoable). <b>Help</b> opens these pages; F1 in the editor does
@@ -216,6 +234,111 @@ the same.</li>
 <p>Below the table: the merit function value, and the error of the first row that failed (for
 example a ray that misses a surface). Note that row numbers in error messages count from 0, like
 the a / b row references.</p>
+"""
+
+
+_WIZARD = """
+<h2>The Merit Function Wizard</h2>
+<p>The <b>Wizard...</b> button of the Merit Function Editor writes a <i>default merit function</i>:
+one image-quality row per field (RAYS, OPDS, ANGS or MTFA), headed by a BLNK row that says what it
+measures, plus optional thickness boundaries. The wizard remembers its settings with the lens, so it
+opens with the options that built the current rows. <b>Reset</b> puts every option back to its
+default; <b>Help</b> (or F1) opens this page.</p>
+
+<h3>Image quality</h3>
+<table border='1' cellspacing='0' cellpadding='3'>
+<tr><td><b>Optimisation type</b></td><td><b>RMS</b>: the root-mean-square error over the pupil, the
+usual choice; smooth, so the optimiser converges well. <b>PTV</b> (peak to valley): the largest ray
+error of the field (for spot: the distance of the farthest ray from the reference), or the
+wavefront's maximum minus minimum. Use PTV to control the worst ray, typically after an RMS
+optimisation, since it gives the optimiser one number per field.</td></tr>
+<tr><td><b>Criterion</b></td><td><b>Spot radius</b>: transverse ray error on the image surface, in
+lens units (RAYS). <b>Spot X</b> / <b>Spot Y</b>: only the x or y component, for example for a
+slit spectrograph or a line sensor. <b>Spot X + Y</b>: x and y separately (the same RMS as Spot
+radius; the PTV is the larger of the x and y extremes). <b>Wavefront</b>: OPD in waves (OPDS), for
+near-diffraction-limited lenses. <b>Angular</b> (radius, X, Y, X + Y): image-space ray angles in
+radians (ANGS), for afocal systems such as telescopes and beam expanders, where the image is at
+infinity. <b>MTF</b>: 1 &minus; the average of tangential and sagittal MTF at the chosen frequency
+(MTFA, target 1); RMS only, and the reference and pupil options do not apply.</td></tr>
+<tr><td><b>Reference</b></td><td><b>Centroid</b>: errors about the centroid of the rays (for
+wavefront: piston and tilt removed), which ignores image position and lateral colour.
+<b>Chief ray</b>: about the primary-wavelength chief ray (wavefront: piston removed), which also
+penalises lateral colour and coma-like asymmetry. <b>Unreferenced</b>: about the origin of the image
+surface (zero angle for Angular; for wavefront the OPD as traced, nothing removed), so the image
+position itself is targeted, for example to hold a spot on axis.</td></tr>
+<tr><td><b>MTF frequency</b></td><td>Cycles per lens unit (cycles/mm for a lens in mm), for the MTF
+criterion only.</td></tr>
+</table>
+
+<h3>Pupil integration</h3>
+<table border='1' cellspacing='0' cellpadding='3'>
+<tr><td><b>Gaussian quadrature</b></td><td>Rays on <b>Rings</b> radii and <b>Arms</b> azimuths chosen
+so that the RMS of smooth aberrations is integrated exactly with very few rays (Forbes 1988). 3 rings
+x 6 arms is accurate for most lenses; add rings for fast or strongly aberrated lenses. Best for
+unvignetted round pupils.</td></tr>
+<tr><td><b>Rectangular array</b></td><td>A <b>Grid</b> x Grid array of equally weighted rays
+clipped to the pupil. Needs more rays than Gaussian quadrature for the same accuracy but copes better
+with heavy vignetting and odd-shaped pupils.</td></tr>
+<tr><td><b>Obscuration</b></td><td>Leaves out the rays inside this fraction of the pupil radius (0 to
+0.99), for lenses with a central obscuration such as a Cassegrain. With Gaussian quadrature the rings
+are placed in the annulus.</td></tr>
+</table>
+
+<h3>Weighting and rays</h3>
+<table border='1' cellspacing='0' cellpadding='3'>
+<tr><td><b>Fields</b></td><td><b>Field weights</b>: each field's row gets its weight from the Fields
+dialog (fields of weight 0 are left out). <b>Equal</b>: every field gets weight 1.</td></tr>
+<tr><td><b>Wavelengths</b></td><td><b>Wavelength weights</b>: the rays of each wavelength count by its
+weight in the Wavelengths dialog. <b>Equal</b>: every wavelength counts the same.</td></tr>
+<tr><td><b>Overall weight</b></td><td>Multiplies the weight of every image-quality row, to balance
+them against your own rows and the boundaries.</td></tr>
+<tr><td><b>Assume axial symmetry</b></td><td><b>Yes</b> traces only half the pupil (x &ge; 0), which
+halves the work for lenses symmetric about the y-z plane. <b>No</b> traces the whole pupil.
+<b>Automatic</b> checks the lens at every evaluation (no x fields, no x decentres or tilts, no XY
+polynomial surfaces), which stays right while tolerancing perturbs the lens.</td></tr>
+<tr><td><b>Delete vignetted rays</b></td><td>Ticked (the usual choice): rays that surface apertures
+stop are left out of the merit function. Cleared: every ray is traced ignoring apertures, so the
+optimiser also improves rays that are clipped now but may not be once the apertures change.</td></tr>
+</table>
+
+<h3>Thickness boundaries</h3>
+<p>Each ticked limit adds a one-sided boundary row checked on every surface of its kind:
+<b>Glass</b> min centre / max centre / min edge / max edge (MNCG, MXCG, MNEG, MXEG) and <b>Air</b>
+min centre / max centre / min edge / max edge (MNCA, MXCA, MNEA, MXEA), in lens units. A boundary
+row adds nothing while it is satisfied. <b>Only surfaces</b> limits the check to a range of surfaces
+(for example to leave a cover glass or a long back focus alone). <b>Boundary weight</b> is the weight
+of these rows; a weight of 1 is usually enough, raise it if a limit is still broken after
+optimising.</p>
+
+<h3>Rows</h3>
+<ul>
+<li><b>Configurations</b> (multi-configuration lenses): ticked, the image-quality rows are repeated
+for every configuration, each group headed by a CONF row; cleared, only the configuration shown is
+used.</li>
+<li><b>Start at row</b>: the rows above this row (as numbered in the editor) stay exactly as they
+are, and this row and everything below it are replaced by the default rows. Use it to keep a block
+of your own constraints at the top.</li>
+<li><b>Keep my other operands</b> (when Start at row is off): your own rows stay, above the new
+default rows; the old default rows (RAYS, OPDS, ANGS, MTFA, CONF, the thickness boundaries and the
+"Default merit" BLNK row) are replaced. Cleared: the whole merit function is replaced.</li>
+</ul>
+
+<h3>From Python</h3>
+<pre>
+from lensforge import optimize as opt
+mf = opt.default_merit(lens, "spot", optimization="ptv", reference="chief",
+                       pupil="rectangular", grid=8, obscuration=0.3,
+                       field_weighting="equal", delete_vignetted=False,
+                       glass_min=2.0, glass_max_edge=25.0, air_min=0.5,
+                       boundary_surfaces=(1, 6))
+lens.merit_function = mf          # or keep rows 0-2 and replace the rest:
+opt.apply_default_merit(lens, start_at=3, kind="wavefront", rings=4)
+print(lens.merit_function.wizard) # the options, saved with the lens
+</pre>
+<p>Criteria (<code>kind</code>): <code>spot</code>, <code>spot_x</code>, <code>spot_y</code>,
+<code>spot_xy</code>, <code>wavefront</code>, <code>angular</code>, <code>angular_x</code>,
+<code>angular_y</code>, <code>angular_xy</code>, <code>mtf</code> (with <code>frequency=</code>).
+Every option is described in <code>help(opt.default_merit)</code>.</p>
 """
 
 _VALUE = """
@@ -502,6 +625,7 @@ _PAGES = [
     (ROOT + "/value", "How the merit function is computed", lambda: _VALUE),
     (ROOT + "/weights", "Weights", lambda: _WEIGHTS),
     (ROOT + "/coordinates", "Field and pupil coordinates (Hx, Hy, Px, Py)", lambda: _COORDS),
+    (WIZARD, "The Merit Function Wizard (default merit function)", lambda: _WIZARD),
     (ROOT + "/operands", "Operand reference", _operands_html),
     (ROOT + "/example", "Example: minimise the RMS spot size", lambda: _EXAMPLE),
 ]

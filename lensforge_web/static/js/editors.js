@@ -320,7 +320,7 @@ export function showMFE() {
       toolbarButton("Add Row", "Add a blank row at the end.", () => mfeAdd(), "Ctrl+Shift+A"),
       toolbarButton("Insert Row", "Insert a blank row above the selected row.", () => mfeInsert(), "Insert"),
       toolbarButton("Delete Rows", "Delete the selected rows.", () => mfeDelete(), "Shift+Del"), el("span", { class: "sep" }),
-      toolbarButton("Wizard...", "Write a default RMS spot, wavefront or MTF merit function, with optional thickness limits.", () => meritWizard()),
+      toolbarButton("Wizard...", "Write a default merit function: RMS or PTV spot, wavefront, angular or MTF, with pupil sampling, weighting and thickness boundary options.", () => meritWizard()),
       toolbarButton("Operands...", "List every operand with its description and insert one.", () => operandList()),
       toolbarButton("Clear", "Remove every row (undoable).", () => run("mfe_clear")), el("span", { class: "sep" }),
       toolbarButton("Help", "Merit Function Editor help: columns, weights, ray coordinates, every operand and a worked example (F1).", () => cmd("__help:" + App.help.root)));
@@ -385,39 +385,138 @@ export async function showMerit() {
 }
 onState((s, old) => { if (!old || s.revision !== old.revision) showMerit(); });
 
+const WIZ_BOUNDS = [["glass_min", "Min centre", 2], ["glass_max", "Max centre", 20], ["glass_edge", "Min edge", 1], ["glass_max_edge", "Max edge", 30],
+  ["air_min", "Min centre", 0.5], ["air_max", "Max centre", 1000], ["air_edge", "Min edge", 0.5], ["air_max_edge", "Max edge", 1000]];
+
+/** The Merit Function Wizard (lensforge.optimize.apply_default_merit), as MeritWizard in lensforge_qt/mfe.py.
+ *  Opens with the options saved with the lens (merit_function.wizard); Reset restores the defaults. */
 async function meritWizard() {
   const info = await run("wizard_info");
-  await dialog({ title: "Merit Function Wizard", width: 460 }, (win, done, bar) => {
-    const kind = select([["spot", "RMS spot radius"], ["wavefront", "RMS wavefront"], ["mtf", "MTF (1 - average MTF)"]], "spot");
-    const ref = select([["centroid", "Centroid"], ["chief", "Chief ray"]], "centroid");
-    const rings = numInput(3, { min: 1, max: 20, step: 1 }), arms = numInput(6, { min: 4, max: 36, step: 1 });
+  if (!info) return;
+  await dialog({ title: "Merit Function Wizard", width: 760, help: () => wizardHelp(info.help) }, (win, done, bar) => {
+    const lastSurf = Math.max(1, info.n_surfaces - 3);
+    const optimization = select([["rms", "RMS"], ["ptv", "PTV (peak to valley)"]], "rms");
+    optimization.title = "RMS: root-mean-square error over the pupil (the usual choice).\nPTV: the largest error (spot) or max - min (wavefront).";
+    const kind = select(info.criteria.map(([k, lab]) => [k, k === "mtf" ? "MTF (1 - average MTF)" : lab]), "spot");
+    kind.title = "What is minimised: transverse ray error (spot), OPD (wavefront), image-space ray angle (angular, for afocal systems) or 1 - MTF.\nX / Y use only that component; X + Y uses both separately.";
+    const ref = select([["centroid", "Centroid"], ["chief", "Chief ray"], ["unreferenced", "Unreferenced"]], "centroid");
+    ref.title = "What the errors are measured from: the centroid of the rays (tilt removed for wavefront), the chief ray, or nothing (spot: the image-surface origin; wavefront: OPD as traced).";
     const freq = numInput(30, { min: 0.1, max: 10000, step: 1 });
-    const g = el("div", { class: "form" }, el("label", {}, "Optimise for"), kind, el("label", {}, "Reference"), ref,
-      el("label", {}, "Rings"), rings, el("label", {}, "Arms"), arms, el("label", {}, `MTF frequency (cycles/${info.units || "mm"})`), freq);
+    const pupil = select([["gaussian", "Gaussian quadrature"], ["rectangular", "Rectangular array"]], "gaussian");
+    pupil.title = "Gaussian quadrature: few rays on rings and arms, very accurate for smooth aberrations.\nRectangular array: a grid x grid array of rays, better for vignetted or odd-shaped pupils.";
+    const rings = numInput(3, { min: 1, max: 20, step: 1 }), arms = numInput(6, { min: 4, max: 36, step: 1 });
+    const grid = numInput(6, { min: 2, max: 40, step: 1 });
+    const obsc = numInput(0, { min: 0, max: 0.99, step: 0.05 });
+    obsc.title = "Leave out rays inside this fraction of the pupil radius (central obscuration).";
+    const fieldW = select([["system", "Field weights (Fields dialog)"], ["equal", "Equal"]], "system");
+    const waveW = select([["system", "Wavelength weights (Wavelengths dialog)"], ["equal", "Equal"]], "system");
+    const weight = numInput(1, { min: 0.0001, max: 1e6, step: 0.1 });
+    weight.title = "Scales the weight of every image-quality row.";
+    const sym = select([["auto", "Automatic (from the lens)"], ["yes", "Yes: trace half the pupil"], ["no", "No: trace the whole pupil"]], "auto");
+    sym.title = "Assume the lens is symmetric about the y-z plane, so only half the pupil is traced. Automatic checks the lens at every evaluation.";
+    const vig = check("Delete vignetted rays", true, null, "Ticked: rays stopped by surface apertures are left out.\nCleared: every ray is traced ignoring apertures.");
+    const lab = (t) => el("label", {}, t);
+    const freqLab = lab(`MTF frequency (cycles/${info.units || "mm"})`), ringsLab = lab("Rings"), armsLab = lab("Arms"), gridLab = lab("Grid");
+    const g1 = el("fieldset", {}, el("legend", {}, "Image quality"), el("div", { class: "form" },
+      lab("Optimisation type"), optimization, lab("Criterion"), kind, lab("Reference"), ref, freqLab, freq));
+    const g2 = el("fieldset", {}, el("legend", {}, "Pupil integration"), el("div", { class: "form" },
+      lab("Method"), pupil, ringsLab, rings, armsLab, arms, gridLab, grid, lab("Obscuration"), obsc));
+    const g3 = el("fieldset", {}, el("legend", {}, "Weighting and rays"), el("div", { class: "form" },
+      lab("Fields"), fieldW, lab("Wavelengths"), waveW, lab("Overall weight"), weight, lab("Assume axial symmetry"), sym, el("span"), vig));
     const bounds = {};
-    const defaults = { glass_min: 2, glass_max: 20, glass_edge: 1, air_min: 0.5, air_max: 1000, air_edge: 0.5 };
-    for (const [name, label] of [["glass_min", "Glass min centre"], ["glass_max", "Glass max centre"], ["glass_edge", "Glass min edge"],
-      ["air_min", "Air min centre"], ["air_max", "Air max centre"], ["air_edge", "Air min edge"]]) {
-      const n = numInput(defaults[name], { min: 0, max: 1e5, step: 0.1 });
-      n.disabled = true;
-      const c = check("", false, (on) => { n.disabled = !on; });
-      bounds[name] = [c.input, n];
-      g.append(el("label", {}, label), el("div", { class: "row" }, c, n));
+    const bgrid = el("div", { class: "form", style: { gridTemplateColumns: "max-content 1fr max-content 1fr" } },
+      el("b", {}, "Glass"), el("span"), el("b", {}, "Air"), el("span"));
+    for (let k = 0; k < 4; k++) {
+      for (const [name, label, val] of [WIZ_BOUNDS[k], WIZ_BOUNDS[k + 4]]) {
+        const n = numInput(val, { min: 0, max: 1e5, step: 0.1 });
+        n.disabled = true;
+        const c = check(label, false, (on) => { n.disabled = !on; });
+        bounds[name] = [c.input, n];
+        bgrid.append(c, n);
+      }
     }
+    const bfirst = numInput(1, { min: 1, max: lastSurf, step: 1 }), blast = numInput(lastSurf, { min: 1, max: lastSurf, step: 1 });
+    bfirst.disabled = blast.disabled = true;
+    const bsurf = check("Only surfaces", false, (on) => { bfirst.disabled = blast.disabled = !on; });
+    const bweight = numInput(1, { min: 0.0001, max: 1e6, step: 0.1 });
+    const g4 = el("fieldset", {}, el("legend", {}, "Thickness boundaries"), bgrid,
+      el("div", { class: "row", style: { marginTop: "6px" } }, bsurf, bfirst, el("span", {}, "to"), blast),
+      el("div", { class: "form", style: { marginTop: "6px" } }, lab("Boundary weight"), bweight));
     const all = check(info.configs > 1 ? `All ${info.configs} configurations (a CONF row heads each group)` : "All configurations", true);
     all.input.disabled = info.configs <= 1;
+    const startRow = numInput(info.n_rows + 1, { min: 1, max: info.n_rows + 1, step: 1 });
+    startRow.disabled = true;
     const keep = check("Keep my other operands (above the default rows)", true);
-    g.append(el("label", {}, "Configurations"), all, el("span"), keep);
-    win.body.append(g);
-    bar.append(btn("Cancel", () => done(null)), btn("OK", async () => {
-      const kw = { kind: kind.value, reference: ref.value, rings: +rings.value, arms: +arms.value };
+    const start = check("Start at row", false, (on) => { startRow.disabled = !on; keep.input.disabled = on; },
+      "Keep the rows above this one as they are and replace this row and everything below it by the default rows.");
+    const g5 = el("fieldset", {}, el("legend", {}, "Rows"), el("div", { class: "form" },
+      lab("Configurations"), all, el("span"), el("div", { class: "row" }, start, startRow), el("span"), keep));
+    win.body.append(el("div", { class: "wizard-cols", style: { display: "flex", flexWrap: "wrap", gap: "8px" } },
+      el("div", { style: { flex: "1 1 320px", display: "flex", flexDirection: "column", gap: "8px" } }, g1, g2, g3),
+      el("div", { style: { flex: "1 1 320px", display: "flex", flexDirection: "column", gap: "8px" } }, g4, g5)));
+
+    const update = () => {
+      const mtf = kind.value === "mtf", gq = pupil.value === "gaussian";
+      for (const w of [optimization, ref, pupil, obsc, waveW, sym, vig.input]) w.disabled = mtf;
+      freq.disabled = !mtf; freqLab.style.opacity = mtf ? "" : "0.5";
+      rings.disabled = arms.disabled = !gq || mtf; ringsLab.style.opacity = armsLab.style.opacity = gq && !mtf ? "" : "0.5";
+      grid.disabled = gq || mtf; gridLab.style.opacity = !gq && !mtf ? "" : "0.5";
+    };
+    kind.addEventListener("change", update);
+    pupil.addEventListener("change", update);
+
+    const options = () => {
+      const kw = { kind: kind.value };
       if (kw.kind === "mtf") kw.frequency = +freq.value;
+      else {
+        Object.assign(kw, { optimization: optimization.value, reference: ref.value, pupil: pupil.value, obscuration: +obsc.value,
+          wavelength_weighting: waveW.value, symmetric: { auto: null, yes: true, no: false }[sym.value], delete_vignetted: vig.input.checked });
+        if (kw.pupil === "gaussian") Object.assign(kw, { rings: +rings.value, arms: +arms.value }); else kw.grid = +grid.value;
+      }
+      Object.assign(kw, { field_weighting: fieldW.value, weight: +weight.value });
       for (const [name, [c, n]] of Object.entries(bounds)) if (c.checked) kw[name] = +n.value;
+      if (bsurf.input.checked) kw.boundary_surfaces = [+bfirst.value, +blast.value];
+      kw.boundary_weight = +bweight.value;
       if (!all.input.disabled && !all.input.checked) kw.configs = [];
-      await run("mfe_wizard", { kw, keep: keep.input.checked });
-      done(true);
-    }, { primary: true }));
+      if (start.input.checked) kw.start_at = +startRow.value - 1;
+      return kw;
+    };
+    const setOptions = (o) => {
+      kind.value = o.kind ?? "spot"; optimization.value = o.optimization ?? "rms"; ref.value = o.reference ?? "centroid";
+      pupil.value = o.pupil ?? "gaussian"; fieldW.value = o.field_weighting ?? "system"; waveW.value = o.wavelength_weighting ?? "system";
+      sym.value = o.symmetric === true ? "yes" : o.symmetric === false ? "no" : "auto";
+      rings.value = o.rings ?? 3; arms.value = o.arms ?? 6; grid.value = o.grid ?? 6; obsc.value = o.obscuration ?? 0;
+      freq.value = o.frequency ?? 30; weight.value = o.weight ?? 1; vig.input.checked = o.delete_vignetted ?? true;
+      for (const [name, , val] of WIZ_BOUNDS) {
+        const [c, n] = bounds[name], v = o[name];
+        c.checked = v !== undefined && v !== null; n.disabled = !c.checked; n.value = c.checked ? v : val;
+      }
+      const bs = o.boundary_surfaces;
+      bsurf.input.checked = !!bs; bfirst.disabled = blast.disabled = !bs;
+      bfirst.value = bs ? bs[0] : 1; blast.value = bs ? bs[1] : lastSurf;
+      bweight.value = o.boundary_weight ?? 1;
+      if (!all.input.disabled) all.input.checked = !(Array.isArray(o.configs) && o.configs.length === 0);
+      const st = o.start_at;
+      start.input.checked = st !== undefined && st !== null; startRow.disabled = !start.input.checked;
+      startRow.value = start.input.checked ? st + 1 : info.n_rows + 1;
+      keep.input.checked = o.keep ?? true; keep.input.disabled = start.input.checked;
+      update();
+    };
+    setOptions(info.wizard || {});
+    bar.append(btn("Help", () => wizardHelp(info.help), { title: "Help on every wizard option (F1)." }),
+      btn("Reset", () => setOptions({}), { title: "Put every option back to its default." }), el("span", { class: "grow" }),
+      btn("Cancel", () => done(null)), btn("OK", async () => {
+        await run("mfe_wizard", { kw: options(), keep: keep.input.checked });
+        done(true);
+      }, { primary: true }));
+    win.element.addEventListener("keydown", (e) => { if (e.key === "F1") { e.preventDefault(); e.stopPropagation(); wizardHelp(info.help); } });
   });
+}
+
+/** The wizard's help page, on top of the (modal) wizard; also in Help > Merit Function Editor. */
+function wizardHelp(key) {
+  const page = (App.help.topics || []).find((t) => t.key === key);
+  message("Merit Function Wizard Help", `<div style="max-height:65vh;overflow:auto">${page ? page.html : "Help page not found."}</div>`, { width: 720 });
 }
 
 async function operandList() {

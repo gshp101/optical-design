@@ -75,13 +75,16 @@ class _Reference:
         return result.opl[-1] - n_img * s
 
 
-def opd(system, hx, hy, px, py, wavelength=None, reference=None):
+def opd(system, hx, hy, px, py, wavelength=None, reference=None, apertures: bool = True,
+        return_status: bool = False):
     """Optical path difference in waves at normalised pupil points.
 
     The reference sphere is centred on the primary-wavelength chief ray's image
     point and passes through the paraxial exit pupil; OPD is zero for the chief
     ray at each wavelength.  Sign convention: W = OPL(chief) - OPL(ray), so the
     transverse aberration is  ey = -(R / n') dW/dy  (W in lens units).
+    Failed or vignetted rays give NaN; ``apertures=False`` ignores surface
+    apertures and ``return_status`` also returns each ray's trace status.
     """
     wavelength = system.primary if wavelength is None else wavelength
     ref = reference or _Reference(system, hx, hy)
@@ -89,10 +92,11 @@ def opd(system, hx, hy, px, py, wavelength=None, reference=None):
     gen = RayGenerator(system, wavelength)
     P, D, o = gen.rays(np.append(np.full(px.shape, hx), hx), np.append(np.full(px.shape, hy), hy),
                        np.append(px, 0.0), np.append(py, 0.0))
-    res = trace(system, P, D, wavelength, o)
+    res = trace(system, P, D, wavelength, o, apertures=apertures)
     L = ref.opl_to_sphere(res)
     w = (L[-1] - L[:-1]) / (wavelength * system.wavelength_scale)
-    return np.where(res.valid[:-1], w, np.nan)
+    w = np.where(res.valid[:-1], w, np.nan)
+    return (w, res.status[:-1]) if return_status else w
 
 
 def opd_fan(system, field=0, wavelengths=None, n: int = 41):

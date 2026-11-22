@@ -13,9 +13,9 @@ import math
 from PySide6.QtCore import QAbstractTableModel, QModelIndex, Qt, QTimer, Signal
 from PySide6.QtGui import QAction, QColor, QKeySequence
 from PySide6.QtWidgets import (QAbstractItemView, QCheckBox, QComboBox, QCompleter, QDialog, QDialogButtonBox,
-                               QDoubleSpinBox, QFormLayout, QHBoxLayout, QHeaderView, QLabel, QLineEdit,
-                               QListWidget, QListWidgetItem, QSpinBox, QStyledItemDelegate, QTableView,
-                               QToolBar, QVBoxLayout, QWidget)
+                               QDoubleSpinBox, QFormLayout, QGridLayout, QGroupBox, QHBoxLayout, QHeaderView, QLabel,
+                               QLineEdit, QListWidget, QListWidgetItem, QSpinBox, QStyledItemDelegate, QTableView,
+                               QTextBrowser, QToolBar, QVBoxLayout, QWidget)
 
 from lensforge import optimize as opt
 
@@ -257,8 +257,8 @@ class MeritFunctionEditor(QWidget):
                                     "Insert a blank row above the selected row.")
         self.act_delete = self._act(tb, "Delete Rows", self.delete_rows, "Shift+Delete", "Delete the selected rows.")
         tb.addSeparator()
-        self._act(tb, "Wizard...", self.wizard, tip="Write a default RMS spot, wavefront or MTF merit function, "
-                  "with optional thickness limits.")
+        self._act(tb, "Wizard...", self.wizard, tip="Write a default merit function: RMS or PTV spot, wavefront, "
+                  "angular or MTF, with pupil sampling, weighting and thickness boundary options.")
         self._act(tb, "Operands...", self.operand_list, tip="List every operand with its description and insert "
                   "one.")
         self._act(tb, "Clear", self.clear, tip="Remove every row (undoable).")
@@ -328,16 +328,7 @@ class MeritFunctionEditor(QWidget):
         if dlg.exec() == QDialog.Accepted:
             kw, keep = dlg.options()
 
-            def fn(s):
-                new = opt.default_merit(s, **kw)
-                old = merit_function(s)
-                if keep:  # keep the user's rows that are not part of a default merit function
-                    user = [r for r in old.rows if r.type not in ("RAYS", "OPDS", "MTFA", "CONF") and
-                            not (r.type == "BLNK" and r.comment.startswith("Default merit"))
-                            and r.type not in ("MNCG", "MXCG", "MNEG", "MNCA", "MXCA", "MNEA")]
-                    new.rows = user + new.rows
-                s.merit_function = new
-            self.doc.modify("Default merit function", fn)
+            self.doc.modify("Default merit function", lambda s: opt.apply_default_merit(s, keep=keep, **kw))
 
     def operand_list(self):
         dlg = OperandList(self)
@@ -350,76 +341,298 @@ class MeritFunctionEditor(QWidget):
 
 @qt_owns_children
 class MeritWizard(QDialog):
-    """Options of :func:`lensforge.optimize.default_merit` (the optimisation wizard)."""
+    """Options of :func:`lensforge.optimize.default_merit` (the optimisation wizard).
+
+    Opens with the settings that built the lens's current default rows (saved with the lens), or the
+    defaults; Reset puts the defaults back."""
+
+    BOUNDS = (("glass_min", "Min centre", 2.0), ("glass_max", "Max centre", 20.0), ("glass_edge", "Min edge", 1.0),
+              ("glass_max_edge", "Max edge", 30.0), ("air_min", "Min centre", 0.5), ("air_max", "Max centre", 1000.0),
+              ("air_edge", "Min edge", 0.5), ("air_max_edge", "Max edge", 1000.0))
 
     def __init__(self, system, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Merit Function Wizard")
-        f = QFormLayout()
+        self.system = system
+        self._help = None
+        n_surf = system.num_surfaces
+        # -- image quality
+        self.optimization = QComboBox()
+        self.optimization.addItem("RMS", "rms")
+        self.optimization.addItem("PTV (peak to valley)", "ptv")
+        self.optimization.setToolTip("RMS: root-mean-square error over the pupil (the usual choice).\n"
+                                     "PTV: the largest error (spot) or max - min (wavefront).")
         self.kind = QComboBox()
-        self.kind.addItem("RMS spot radius", "spot")
-        self.kind.addItem("RMS wavefront", "wavefront")
-        self.kind.addItem("MTF (1 - average MTF)", "mtf")
+        for key, (op, label) in opt.CRITERIA.items():
+            self.kind.addItem({"mtf": "MTF (1 - average MTF)"}.get(key, label), key)
+        self.kind.setToolTip("What is minimised: transverse ray error (spot), OPD (wavefront), image-space ray "
+                             "angle (angular, for afocal systems) or 1 - MTF.\nX / Y use only that component; "
+                             "X + Y uses both separately.")
         self.reference = QComboBox()
         self.reference.addItem("Centroid", "centroid")
         self.reference.addItem("Chief ray", "chief")
+        self.reference.addItem("Unreferenced", "unreferenced")
+        self.reference.setToolTip("What the errors are measured from: the centroid of the rays (tilt removed for "
+                                  "wavefront), the chief ray, or nothing (spot: the image-surface origin; "
+                                  "wavefront: OPD as traced).")
+        self.freq = QDoubleSpinBox()
+        self.freq.setRange(0.1, 10000)
+        self.freq.setValue(30)
+        # -- pupil integration
+        self.pupil = QComboBox()
+        self.pupil.addItem("Gaussian quadrature", "gaussian")
+        self.pupil.addItem("Rectangular array", "rectangular")
+        self.pupil.setToolTip("Gaussian quadrature: few rays on rings and arms, very accurate for smooth "
+                              "aberrations.\nRectangular array: a grid x grid array of rays, better for vignetted "
+                              "or odd-shaped pupils.")
         self.rings = QSpinBox()
         self.rings.setRange(1, 20)
         self.rings.setValue(3)
         self.arms = QSpinBox()
         self.arms.setRange(4, 36)
         self.arms.setValue(6)
-        self.freq = QDoubleSpinBox()
-        self.freq.setRange(0.1, 10000)
-        self.freq.setValue(30)
+        self.grid = QSpinBox()
+        self.grid.setRange(2, 40)
+        self.grid.setValue(6)
+        self.obscuration = QDoubleSpinBox()
+        self.obscuration.setRange(0.0, 0.99)
+        self.obscuration.setDecimals(3)
+        self.obscuration.setSingleStep(0.05)
+        self.obscuration.setToolTip("Leave out rays inside this fraction of the pupil radius (central obscuration).")
+        # -- weighting and rays
+        self.field_weighting = QComboBox()
+        self.field_weighting.addItem("Field weights (Fields dialog)", "system")
+        self.field_weighting.addItem("Equal", "equal")
+        self.wave_weighting = QComboBox()
+        self.wave_weighting.addItem("Wavelength weights (Wavelengths dialog)", "system")
+        self.wave_weighting.addItem("Equal", "equal")
+        self.weight = QDoubleSpinBox()
+        self.weight.setRange(0.0001, 1e6)
+        self.weight.setDecimals(4)
+        self.weight.setValue(1.0)
+        self.weight.setToolTip("Scales the weight of every image-quality row.")
+        self.symmetric = QComboBox()
+        self.symmetric.addItem("Automatic (from the lens)", None)
+        self.symmetric.addItem("Yes: trace half the pupil", True)
+        self.symmetric.addItem("No: trace the whole pupil", False)
+        self.symmetric.setToolTip("Assume the lens is symmetric about the y-z plane, so only half the pupil is "
+                                  "traced. Automatic checks the lens at every evaluation.")
+        self.delete_vignetted = QCheckBox("Delete vignetted rays")
+        self.delete_vignetted.setChecked(True)
+        self.delete_vignetted.setToolTip("Ticked: rays stopped by surface apertures are left out.\nCleared: every "
+                                         "ray is traced ignoring apertures.")
+        # -- boundaries
         self.bounds = {}
-        f.addRow("Optimise for", self.kind)
-        f.addRow("Reference", self.reference)
-        f.addRow("Rings", self.rings)
-        f.addRow("Arms", self.arms)
-        f.addRow(f"MTF frequency (cycles/{system.units})", self.freq)
-        for name, label in (("glass_min", "Glass min centre"), ("glass_max", "Glass max centre"),
-                            ("glass_edge", "Glass min edge"), ("air_min", "Air min centre"),
-                            ("air_max", "Air max centre"), ("air_edge", "Air min edge")):
-            row = QHBoxLayout()
-            cb = QCheckBox()
+        bgrid = QGridLayout()
+        bgrid.addWidget(QLabel("<b>Glass</b>"), 0, 0, 1, 2)
+        bgrid.addWidget(QLabel("<b>Air</b>"), 0, 2, 1, 2)
+        for k, (name, label, val) in enumerate(self.BOUNDS):
+            cb = QCheckBox(label)
             sb = QDoubleSpinBox()
             sb.setRange(0, 1e5)
             sb.setDecimals(4)
-            sb.setValue({"glass_min": 2, "glass_max": 20, "glass_edge": 1, "air_min": 0.5, "air_max": 1000,
-                         "air_edge": 0.5}[name])
+            sb.setValue(val)
             sb.setEnabled(False)
             cb.toggled.connect(sb.setEnabled)
-            row.addWidget(cb)
-            row.addWidget(sb, 1)
-            f.addRow(label, row)
+            col = 0 if name.startswith("glass") else 2
+            bgrid.addWidget(cb, 1 + k % 4, col)
+            bgrid.addWidget(sb, 1 + k % 4, col + 1)
             self.bounds[name] = (cb, sb)
+        self.bsurf = QCheckBox("Only surfaces")
+        self.bfirst = QSpinBox()
+        self.blast = QSpinBox()
+        for sb, v in ((self.bfirst, 1), (self.blast, max(1, n_surf - 3))):
+            sb.setRange(1, max(1, n_surf - 3))
+            sb.setValue(v)
+            sb.setEnabled(False)
+            self.bsurf.toggled.connect(sb.setEnabled)
+        srow = QHBoxLayout()
+        srow.addWidget(self.bsurf)
+        srow.addWidget(self.bfirst)
+        srow.addWidget(QLabel("to"))
+        srow.addWidget(self.blast)
+        srow.addStretch(1)
+        self.bweight = QDoubleSpinBox()
+        self.bweight.setRange(0.0001, 1e6)
+        self.bweight.setDecimals(4)
+        self.bweight.setValue(1.0)
+        # -- rows and configurations
         mc = getattr(system, "multiconfig", None)
         self.all_configs = QCheckBox(f"All {mc.n_configs} configurations (a CONF row heads each group)"
                                      if mc is not None and mc.n_configs > 1 else "All configurations")
         self.all_configs.setChecked(True)
         self.all_configs.setEnabled(mc is not None and mc.n_configs > 1)
-        f.addRow("Configurations", self.all_configs)
+        n_rows = len(getattr(getattr(system, "merit_function", None), "rows", []) or [])
+        self.start = QCheckBox("Start at row")
+        self.start.setToolTip("Keep the rows above this one as they are and replace this row and everything "
+                              "below it by the default rows.")
+        self.start_row = QSpinBox()
+        self.start_row.setRange(1, n_rows + 1)
+        self.start_row.setValue(n_rows + 1)
+        self.start_row.setEnabled(False)
         self.keep = QCheckBox("Keep my other operands (above the default rows)")
         self.keep.setChecked(True)
-        f.addRow("", self.keep)
-        bb = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        self.start.toggled.connect(self.start_row.setEnabled)
+        self.start.toggled.connect(lambda on: self.keep.setEnabled(not on))
+        strow = QHBoxLayout()
+        strow.addWidget(self.start)
+        strow.addWidget(self.start_row)
+        strow.addStretch(1)
+
+        def group(title, rows):
+            g = QGroupBox(title)
+            f = QFormLayout(g)
+            for label, w in rows:
+                f.addRow(label, w)
+            return g
+        self.freq_label = QLabel(f"MTF frequency (cycles/{system.units})")
+        g1 = group("Image quality", [("Optimisation type", self.optimization), ("Criterion", self.kind),
+                                     ("Reference", self.reference), (self.freq_label, self.freq)])
+        self.rings_label, self.arms_label, self.grid_label = QLabel("Rings"), QLabel("Arms"), QLabel("Grid")
+        g2 = group("Pupil integration", [("Method", self.pupil), (self.rings_label, self.rings),
+                                         (self.arms_label, self.arms), (self.grid_label, self.grid),
+                                         ("Obscuration", self.obscuration)])
+        g3 = group("Weighting and rays", [("Fields", self.field_weighting), ("Wavelengths", self.wave_weighting),
+                                          ("Overall weight", self.weight), ("Assume axial symmetry", self.symmetric),
+                                          ("", self.delete_vignetted)])
+        g4 = QGroupBox("Thickness boundaries")
+        v4 = QVBoxLayout(g4)
+        v4.addLayout(bgrid)
+        v4.addLayout(srow)
+        f4 = QFormLayout()
+        f4.addRow("Boundary weight", self.bweight)
+        v4.addLayout(f4)
+        g5 = group("Rows", [("Configurations", self.all_configs), ("", strow), ("", self.keep)])
+        cols = QHBoxLayout()
+        left, right = QVBoxLayout(), QVBoxLayout()
+        for w in (g1, g2, g3):
+            left.addWidget(w)
+        for w in (g4, g5):
+            right.addWidget(w)
+        left.addStretch(1)
+        right.addStretch(1)
+        cols.addLayout(left)
+        cols.addLayout(right)
+        bb = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel | QDialogButtonBox.Help
+                              | QDialogButtonBox.Reset)
         bb.accepted.connect(self.accept)
         bb.rejected.connect(self.reject)
+        bb.button(QDialogButtonBox.Reset).setToolTip("Put every option back to its default.")
+        bb.button(QDialogButtonBox.Reset).clicked.connect(self.reset)
+        bb.button(QDialogButtonBox.Help).setToolTip("Help on every wizard option (F1).")
+        bb.helpRequested.connect(self.show_help)
         lay = QVBoxLayout(self)
-        lay.addLayout(f)
+        lay.addLayout(cols)
         lay.addWidget(bb)
+        for w in (self.kind, self.pupil):
+            w.currentIndexChanged.connect(self._update)
+        self._defaults = self.options()[0]
+        wiz = getattr(getattr(system, "merit_function", None), "wizard", None)
+        if wiz:
+            self.set_options(wiz)
+        self._update()
+
+    def show_help(self):
+        """The wizard's help page in a window of its own (the main help browser is blocked while this
+        modal dialog is open); also in Help > Help Contents > Merit Function Editor."""
+        if self._help is None:
+            self._help = QDialog(self)
+            self._help.setWindowTitle("Merit Function Wizard Help")
+            self._help.resize(720, 640)
+            tb = QTextBrowser(self._help)
+            tb.setHtml(mfe_help.topic_html(mfe_help.WIZARD))
+            QVBoxLayout(self._help).addWidget(tb)
+        self._help.show()
+        self._help.raise_()
+
+    def keyPressEvent(self, e):
+        if e.key() == Qt.Key_F1:
+            self.show_help()
+            return
+        super().keyPressEvent(e)
+
+    def _update(self):
+        mtf = self.kind.currentData() == "mtf"
+        for w in (self.optimization, self.reference, self.pupil, self.rings, self.arms, self.grid, self.obscuration,
+                  self.wave_weighting, self.symmetric, self.delete_vignetted):
+            w.setEnabled(not mtf)
+        self.freq.setEnabled(mtf)
+        self.freq_label.setEnabled(mtf)
+        gq = self.pupil.currentData() == "gaussian"
+        for w in (self.rings, self.arms, self.rings_label, self.arms_label):
+            w.setEnabled(gq and not mtf)
+        self.grid.setEnabled(not gq and not mtf)
+        self.grid_label.setEnabled(not gq and not mtf)
+
+    def reset(self):
+        self.set_options(self._defaults)
+
+    def set_options(self, o):
+        """Show the options of a :func:`lensforge.optimize.apply_default_merit` call (``mf.wizard``)."""
+        def pick(combo, value):
+            i = combo.findData(value)
+            if i >= 0:
+                combo.setCurrentIndex(i)
+        pick(self.kind, o.get("kind", "spot"))
+        pick(self.optimization, o.get("optimization", "rms"))
+        pick(self.reference, o.get("reference", "centroid"))
+        pick(self.pupil, o.get("pupil", "gaussian"))
+        pick(self.field_weighting, o.get("field_weighting", "system"))
+        pick(self.wave_weighting, o.get("wavelength_weighting", "system"))
+        pick(self.symmetric, o.get("symmetric"))
+        self.rings.setValue(int(o.get("rings", 3)))
+        self.arms.setValue(int(o.get("arms", 6)))
+        self.grid.setValue(int(o.get("grid", 6)))
+        self.obscuration.setValue(float(o.get("obscuration", 0.0)))
+        self.freq.setValue(float(o.get("frequency") or 30))
+        self.weight.setValue(float(o.get("weight", 1.0)))
+        self.delete_vignetted.setChecked(bool(o.get("delete_vignetted", True)))
+        for name, label, val in self.BOUNDS:
+            cb, sb = self.bounds[name]
+            v = o.get(name)
+            cb.setChecked(v is not None)
+            if v is not None:
+                sb.setValue(float(v))
+        bs = o.get("boundary_surfaces")
+        self.bsurf.setChecked(bs is not None)
+        if bs is not None:
+            self.bfirst.setValue(int(bs[0]))
+            self.blast.setValue(int(bs[1]))
+        self.bweight.setValue(float(o.get("boundary_weight", 1.0)))
+        if self.all_configs.isEnabled():
+            self.all_configs.setChecked(o.get("configs", None) != [])
+        st = o.get("start_at")
+        self.start.setChecked(st is not None)
+        if st is not None:
+            self.start_row.setValue(int(st) + 1)
+        self.keep.setChecked(bool(o.get("keep", True)))
+        self._update()
 
     def options(self):
-        kw = dict(kind=self.kind.currentData(), reference=self.reference.currentData(), rings=self.rings.value(),
-                  arms=self.arms.value())
+        """(default_merit keyword arguments, keep) -- start_at is in the keywords when set."""
+        kw = dict(kind=self.kind.currentData())
         if kw["kind"] == "mtf":
             kw["frequency"] = self.freq.value()
+        else:
+            kw.update(optimization=self.optimization.currentData(), reference=self.reference.currentData(),
+                      pupil=self.pupil.currentData(), obscuration=self.obscuration.value(),
+                      wavelength_weighting=self.wave_weighting.currentData(),
+                      symmetric=self.symmetric.currentData(), delete_vignetted=self.delete_vignetted.isChecked())
+            if kw["pupil"] == "gaussian":
+                kw.update(rings=self.rings.value(), arms=self.arms.value())
+            else:
+                kw["grid"] = self.grid.value()
+        kw.update(field_weighting=self.field_weighting.currentData(), weight=self.weight.value())
         for name, (cb, sb) in self.bounds.items():
             if cb.isChecked():
                 kw[name] = sb.value()
+        if self.bsurf.isChecked():
+            kw["boundary_surfaces"] = [self.bfirst.value(), self.blast.value()]
+        kw["boundary_weight"] = self.bweight.value()
         if self.all_configs.isEnabled() and not self.all_configs.isChecked():
             kw["configs"] = []  # the current configuration only
+        if self.start.isChecked():
+            kw["start_at"] = self.start_row.value() - 1
         return kw, self.keep.isChecked()
 
 
