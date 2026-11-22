@@ -271,6 +271,12 @@ criterion only.</td></tr>
 </table>
 
 <h3>Pupil integration</h3>
+<p>The diagram beside these options shows where the rays cross the entrance pupil, for one field and
+one wavelength (the same pattern is traced for each). It updates as you change the method, rings,
+arms, grid, obscuration or axial symmetry. The area of each dot is proportional to the ray's weight;
+dotted circles mark the Gaussian-quadrature rings and the hatched disk is the obscuration. When the
+lens is treated as symmetric, filled dots are the half that is traced and hollow dots the mirrored
+half it stands for. The caption gives the number of rays per field and wavelength.</p>
 <table border='1' cellspacing='0' cellpadding='3'>
 <tr><td><b>Gaussian quadrature</b></td><td>Rays on <b>Rings</b> radii and <b>Arms</b> azimuths chosen
 so that the RMS of smooth aberrations is integrated exactly with very few rays (Forbes 1988). 3 rings

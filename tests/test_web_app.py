@@ -13,6 +13,7 @@ pytest.importorskip("matplotlib")
 
 from lensforge_web import menus  # noqa: E402
 from lensforge_web.session import Session, dispatch  # noqa: E402
+from lensforge import optimize as opt  # noqa: E402
 
 WEB_ONLY = {"File > Import from Disk", "File > Export to Disk"}
 QT_ONLY = {"File > Exit"}
@@ -193,6 +194,11 @@ def test_session_merit_wizard_options():
     rows = call(s, "state")["result"]["mfe"]["rows"]
     assert rows[0]["type"] == "BLNK" and sum(r["type"] == "RAYS" for r in rows) == 3
     assert call(s, "mfe_evaluate")["result"]["value"] > 0
+    p = call(s, "wizard_pupil", pupil="rectangular", grid=10, obscuration=0.3, symmetric=False)["result"]
+    assert len(p["x"]) == len(p["w"]) == len(opt.rectangular_array(10, False, 0.3)[0]) and not p["symmetric"]
+    p = call(s, "wizard_pupil", rings=4, arms=8)["result"]   # automatic symmetry: the triplet is symmetric
+    assert p["symmetric"] and len(p["x"]) == 32 and min(p["x"]) > 0
+    assert call(s, "wizard_pupil", pupil="rectangular", grid=2, obscuration=0.9)["result"]["error"]
     help_keys = [t["key"] for t in call(s, "help_data")["result"]["topics"]]
     assert info["help"] in help_keys
 

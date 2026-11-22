@@ -1019,6 +1019,17 @@ class Session:
                 "wizard": dict(mf.wizard) if mf is not None and mf.wizard else None,
                 "help": mfe_help.WIZARD}
 
+    def wizard_pupil(self, pupil="gaussian", rings=3, arms=6, grid=6, obscuration=0.0, symmetric=None):
+        """The wizard's pupil sampling for its diagram: ray coordinates and weights of one field and wavelength
+        (``symmetric=None``: decided from the lens, as the merit function does)."""
+        sym = opt.is_symmetric(self.doc.system) if symmetric is None else bool(symmetric)
+        try:
+            px, py, w = opt.pupil_samples(pupil, int(rings), int(arms), int(grid), sym, float(obscuration))
+        except ValueError as e:
+            return {"x": [], "y": [], "w": [], "symmetric": sym, "error": str(e)}
+        return {"x": [round(float(v), 5) for v in px], "y": [round(float(v), 5) for v in py],
+                "w": [float(v) for v in w], "symmetric": sym, "error": None}
+
     def mfe_wizard(self, kw, keep=True):
         kw = dict(kw)
         if kw.get("kind") != "mtf":
@@ -1476,7 +1487,7 @@ READ_ONLY = {"state", "menus", "help_data", "about", "samples", "lens_text", "su
              "surface_properties", "material_search", "catalog_rows", "material_dialog", "material_preview",
              "squash", "system_settings", "compute_vignetting", "input_rays", "pupil_pattern", "analysis_specs",
              "run_analysis", "forget_analysis",
-             "mfe_evaluate", "operands", "operand_names", "operand_menu", "wizard_info", "script_example", "opt_info",
+             "mfe_evaluate", "operands", "operand_names", "operand_menu", "wizard_info", "wizard_pupil", "script_example", "opt_info",
              "history_plot", "tolerance_setup", "default_tolerances", "insert_preview", "inspect", "ns_info",
              "ns_text", "ns_trace"}
 

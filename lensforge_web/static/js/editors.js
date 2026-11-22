@@ -419,8 +419,9 @@ async function meritWizard() {
     const freqLab = lab(`MTF frequency (cycles/${info.units || "mm"})`), ringsLab = lab("Rings"), armsLab = lab("Arms"), gridLab = lab("Grid");
     const g1 = el("fieldset", {}, el("legend", {}, "Image quality"), el("div", { class: "form" },
       lab("Optimisation type"), optimization, lab("Criterion"), kind, lab("Reference"), ref, freqLab, freq));
-    const g2 = el("fieldset", {}, el("legend", {}, "Pupil integration"), el("div", { class: "form" },
-      lab("Method"), pupil, ringsLab, rings, armsLab, arms, gridLab, grid, lab("Obscuration"), obsc));
+    const prev = el("div", { class: "pupil-preview wizard-pupil" });
+    const g2 = el("fieldset", {}, el("legend", {}, "Pupil integration"), el("div", { class: "row", style: { alignItems: "flex-start" } },
+      el("div", { class: "form grow" }, lab("Method"), pupil, ringsLab, rings, armsLab, arms, gridLab, grid, lab("Obscuration"), obsc), prev));
     const g3 = el("fieldset", {}, el("legend", {}, "Weighting and rays"), el("div", { class: "form" },
       lab("Fields"), fieldW, lab("Wavelengths"), waveW, lab("Overall weight"), weight, lab("Assume axial symmetry"), sym, el("span"), vig));
     const bounds = {};
@@ -462,8 +463,21 @@ async function meritWizard() {
       rings.disabled = arms.disabled = !gq || mtf; ringsLab.style.opacity = armsLab.style.opacity = gq && !mtf ? "" : "0.5";
       grid.disabled = gq || mtf; gridLab.style.opacity = !gq && !mtf ? "" : "0.5";
     };
-    kind.addEventListener("change", update);
-    pupil.addEventListener("change", update);
+    let drawSeq = 0;
+    const drawPupil = async () => {
+      const seq = ++drawSeq;
+      const p = await run("wizard_pupil", { pupil: pupil.value, rings: +rings.value || 1, arms: +arms.value || 4, grid: +grid.value || 2,
+        obscuration: Math.min(0.99, Math.max(0, +obsc.value || 0)), symmetric: { auto: null, yes: true, no: false }[sym.value] }, { quiet: true });
+      if (!p || seq !== drawSeq) return;
+      prev.innerHTML = pupilSvg(p, pupil.value === "gaussian", +obsc.value || 0);
+      prev.title = "Where the merit function's rays cross the entrance pupil, for each field and wavelength.\nDot area is proportional to the ray's weight." +
+        (p.symmetric ? "\nHollow dots: the mirrored half, not traced for a symmetric lens." : "");
+      prev.style.opacity = kind.value === "mtf" ? "0.4" : "";
+    };
+    kind.addEventListener("change", () => { update(); drawPupil(); });
+    pupil.addEventListener("change", () => { update(); drawPupil(); });
+    sym.addEventListener("change", drawPupil);
+    for (const i of [rings, arms, grid, obsc]) i.addEventListener("input", drawPupil);
 
     const options = () => {
       const kw = { kind: kind.value };
@@ -501,6 +515,7 @@ async function meritWizard() {
       startRow.value = start.input.checked ? st + 1 : info.n_rows + 1;
       keep.input.checked = o.keep ?? true; keep.input.disabled = start.input.checked;
       update();
+      drawPupil();
     };
     setOptions(info.wizard || {});
     bar.append(btn("Help", () => wizardHelp(info.help), { title: "Help on every wizard option (F1)." }),
@@ -511,6 +526,29 @@ async function meritWizard() {
       }, { primary: true }));
     win.element.addEventListener("keydown", (e) => { if (e.key === "F1") { e.preventDefault(); e.stopPropagation(); wizardHelp(info.help); } });
   });
+}
+
+/** SVG of the wizard's pupil sampling (MeritPupilPreview in lensforge_qt/mfe.py): the pupil, the obscuration,
+ *  Gaussian-quadrature rings, and each ray with an area proportional to its weight (hollow: the mirrored half). */
+function pupilSvg(p, gq, obsc) {
+  const R = 80, cx = 90, cy = 85, n = p.x.length;
+  const base = Math.max(1.6, Math.min(5, 0.9 * R / Math.sqrt(Math.max(n, 1))));
+  const wmax = Math.max(...p.w, 1e-300);
+  let s = `<svg viewBox="0 0 180 212" width="180" height="212"><defs><pattern id="wiz-hatch" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">` +
+    `<line x1="0" y1="0" x2="0" y2="5" stroke="#999"/></pattern></defs><circle cx="${cx}" cy="${cy}" r="${R}" fill="#fff" stroke="#999"/>`;
+  if (obsc > 0) s += `<circle cx="${cx}" cy="${cy}" r="${(obsc * R).toFixed(1)}" fill="url(#wiz-hatch)" stroke="#999"/>`;
+  s += `<path d="M${cx - R} ${cy}h${2 * R}M${cx} ${cy - R}v${2 * R}" stroke="#bbb" stroke-dasharray="2 2" fill="none"/>`;
+  if (gq) for (const r of new Set(p.x.map((x, i) => Math.hypot(x, p.y[i]).toFixed(5))))
+    s += `<circle cx="${cx}" cy="${cy}" r="${(r * R).toFixed(1)}" fill="none" stroke="#bbb" stroke-dasharray="2 2"/>`;
+  p.x.forEach((x, i) => {
+    const d = (base * Math.sqrt(p.w[i] / wmax)).toFixed(2), X = cx + x * R, Y = (cy - p.y[i] * R).toFixed(1);
+    s += `<circle cx="${X.toFixed(1)}" cy="${Y}" r="${d}" fill="#1f5f99"/>`;
+    if (p.symmetric && Math.abs(x) > 1e-9) s += `<circle cx="${(cx - x * R).toFixed(1)}" cy="${Y}" r="${d}" fill="none" stroke="#1f5f99"/>`;
+  });
+  const [l1, l2] = p.error ? [p.error, ""] : [`${n} rays per field`, "and wavelength" + (p.symmetric ? " (half pupil)" : "")];
+  s += `<text x="${cx}" y="186" text-anchor="middle" font-size="12" fill="currentColor">${esc(l1)}</text>` +
+    `<text x="${cx}" y="202" text-anchor="middle" font-size="12" fill="currentColor">${esc(l2)}</text>`;
+  return s + "</svg>";
 }
 
 /** The wizard's help page, on top of the (modal) wizard; also in Help > Merit Function Editor. */
