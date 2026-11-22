@@ -2,7 +2,7 @@
 // as lensforge_qt/mfe.py, mce.py, script_console.py and the Qt undo view.
 import { App, run, call, status, statusError, onState, docks, cmd } from "./core.js";
 import * as engine from "./engine.js";
-import { el, esc, btn, select, numInput, check, dialog, message, prompt, popupMenu, iconImg, later, popupBlocked } from "./ui.js";
+import { el, esc, btn, select, numInput, check, dialog, message, prompt, popupMenu, iconImg, later, popupBlocked, keepInView } from "./ui.js";
 
 // ================================================================== a searchable menu for a Type cell
 /** The list under a Type cell being edited: every operand with its description, grouped; typing filters it
@@ -393,7 +393,7 @@ const WIZ_BOUNDS = [["glass_min", "Min centre", 2], ["glass_max", "Max centre", 
 async function meritWizard() {
   const info = await run("wizard_info");
   if (!info) return;
-  await dialog({ title: "Merit Function Wizard", width: 760, help: () => wizardHelp(info.help) }, (win, done, bar) => {
+  await dialog({ title: "Merit Function Wizard", width: 940, help: () => wizardHelp(info.help) }, (win, done, bar) => {
     const lastSurf = Math.max(1, info.n_surfaces - 3);
     const optimization = select([["rms", "RMS"], ["ptv", "PTV (peak to valley)"]], "rms");
     optimization.title = "RMS: root-mean-square error over the pupil (the usual choice).\nPTV: the largest error (spot) or max - min (wavefront).";
@@ -408,8 +408,10 @@ async function meritWizard() {
     const grid = numInput(6, { min: 2, max: 40, step: 1 });
     const obsc = numInput(0, { min: 0, max: 0.99, step: 0.05 });
     obsc.title = "Leave out rays inside this fraction of the pupil radius (central obscuration).";
-    const fieldW = select([["system", "Field weights (Fields dialog)"], ["equal", "Equal"]], "system");
-    const waveW = select([["system", "Wavelength weights (Wavelengths dialog)"], ["equal", "Equal"]], "system");
+    const fieldW = select([["system", "Field weights"], ["equal", "Equal"]], "system");
+    fieldW.title = "Field weights: each field's row is weighted by its weight in the Fields dialog. Equal: every field gets weight 1.";
+    const waveW = select([["system", "Wavelength weights"], ["equal", "Equal"]], "system");
+    waveW.title = "Wavelength weights: rays count by their wavelength's weight in the Wavelengths dialog. Equal: every wavelength counts the same.";
     const weight = numInput(1, { min: 0.0001, max: 1e6, step: 0.1 });
     weight.title = "Scales the weight of every image-quality row.";
     const sym = select([["auto", "Automatic (from the lens)"], ["yes", "Yes: trace half the pupil"], ["no", "No: trace the whole pupil"]], "auto");
@@ -421,7 +423,7 @@ async function meritWizard() {
       lab("Optimisation type"), optimization, lab("Criterion"), kind, lab("Reference"), ref, freqLab, freq));
     const prev = el("div", { class: "pupil-preview wizard-pupil" });
     const g2 = el("fieldset", {}, el("legend", {}, "Pupil integration"), el("div", { class: "row", style: { alignItems: "flex-start" } },
-      el("div", { class: "form grow" }, lab("Method"), pupil, ringsLab, rings, armsLab, arms, gridLab, grid, lab("Obscuration"), obsc), prev));
+      el("div", { class: "form grow", style: { flex: "1 1 200px" } }, lab("Method"), pupil, ringsLab, rings, armsLab, arms, gridLab, grid, lab("Obscuration"), obsc), prev));
     const g3 = el("fieldset", {}, el("legend", {}, "Weighting and rays"), el("div", { class: "form" },
       lab("Fields"), fieldW, lab("Wavelengths"), waveW, lab("Overall weight"), weight, lab("Assume axial symmetry"), sym, el("span"), vig));
     const bounds = {};
@@ -452,9 +454,15 @@ async function meritWizard() {
       "Keep the rows above this one as they are and replace this row and everything below it by the default rows.");
     const g5 = el("fieldset", {}, el("legend", {}, "Rows"), el("div", { class: "form" },
       lab("Configurations"), all, el("span"), el("div", { class: "row" }, start, startRow), el("span"), keep));
-    win.body.append(el("div", { class: "wizard-cols", style: { display: "flex", flexWrap: "wrap", gap: "8px" } },
-      el("div", { style: { flex: "1 1 320px", display: "flex", flexDirection: "column", gap: "8px" } }, g1, g2, g3),
-      el("div", { style: { flex: "1 1 320px", display: "flex", flexDirection: "column", gap: "8px" } }, g4, g5)));
+    // two columns as in the Qt dialog; one column on narrow screens (app.css .wizard-cols)
+    win.body.append(el("div", { class: "wizard-cols" }, el("div", {}, g1, g2, g3), el("div", {}, g4, g5)));
+    const view = win.element.ownerDocument.defaultView;
+    const fit = () => {   // on a small screen the body scrolls inside the window
+      if (!win.element.isConnected) { view.removeEventListener("resize", fit); return; }
+      keepInView(win.element);
+    };
+    setTimeout(fit, 0);
+    view.addEventListener("resize", fit);
 
     const update = () => {
       const mtf = kind.value === "mtf", gq = pupil.value === "gaussian";

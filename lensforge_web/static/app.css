@@ -279,6 +279,14 @@ table.sheet td.editing input, table.sheet td.editing select { width: 100%; heigh
 .glass-map .lab { font-size: 11px; fill: #333; }
 .pupil-preview { width: 170px; height: 190px; flex: none; }
 .pupil-preview.wizard-pupil { width: 180px; height: 212px; }
+/* Merit Function Wizard: sections in two columns like the Qt dialog, stacked on narrow screens */
+.wizard-cols { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; align-items: start; }
+.wizard-cols > div { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.wizard-cols .form > *, .wizard-cols .row > * { min-width: 0; }
+.wizard-cols select { width: 100%; }
+.wizard-cols .row { flex-wrap: wrap; }
+.wizard-cols input[type=number] { width: 100%; max-width: 120px; box-sizing: border-box; }
+@media (max-width: 720px) { .wizard-cols { grid-template-columns: minmax(0, 1fr); } }
 .drop-hint { position: fixed; inset: 0; background: rgba(31, 95, 153, .15); border: 4px dashed var(--accent);
   z-index: 2000; display: flex; align-items: center; justify-content: center; font-size: 22px; color: var(--accent);
   pointer-events: none; }
