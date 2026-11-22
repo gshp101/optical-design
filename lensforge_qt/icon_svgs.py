@@ -224,6 +224,11 @@ ANALYSIS_ICONS = {
                   + f'<path d="M12 3v8M17 13v8" stroke="{PURPLE}" stroke-width="2.2"/>'),
     "layout": (lens(9, 8, 2.4) + '<path d="M2 5h7l12 7M2 12h19M2 19h7l12-7" stroke-width="1.2"/>'
                f'<path d="M2 8h7l12 4M2 16h7l12-4" stroke="{RED}" stroke-width="1.2"/>'),
+    "layout_3d": (f'<ellipse cx="9" cy="10" rx="3" ry="7.5" fill="{GLASS}"/>'
+                  '<path d="M9 2.5c2.6 1.5 2.6 13.5 0 15" stroke-width="0.8"/>'
+                  f'<path d="M1.5 5h7.5l11 5M1.5 15h7.5l11-5" stroke="{RED}" stroke-width="1.2"/>'
+                  f'<path d="M1.5 10h18.5" stroke="{GREEN}" stroke-width="1.1"/>'
+                  f'<path d="M15 22.5v-5l4.5-2M15 17.5l-3.5-1.5" stroke="{GREY}" stroke-width="1.1"/>'),
     "footprint": ('<circle cx="12" cy="12" r="9" fill="#fff"/>'
                   + "".join(f'<circle cx="{x}" cy="{y}" r="0.9" fill="{GREEN}" stroke="none"/>'
                             for x in (8, 12, 16) for y in (8, 12, 16))

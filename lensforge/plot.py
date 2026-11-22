@@ -30,16 +30,85 @@ def _wl_label(w):
     return f"{w:.4f} um"
 
 
-def layout(result, ax=None, plane="y"):
-    """2-D layout from :func:`lensforge.analysis.geometry.layout`."""
+#: colours wavelengths are drawn in when they share a plot, from the longest (red) through green
+#: to the shortest (blue); intermediate wavelengths are interpolated between these by rank
+WAVELENGTH_SCALE = ("#d62728", "#e8820c", "#2ca02c", "#1a9fb4", "#1f4fd6")
+#: the colour of a lens with one wavelength
+SINGLE_WAVELENGTH_COLOR = "#1f4fd6"
+
+
+def _scale_color(t):
+    """Colour at ``t`` along :data:`WAVELENGTH_SCALE` (0 = red, 0.5 = green, 1 = blue)."""
+    t = min(max(float(t), 0.0), 1.0) * (len(WAVELENGTH_SCALE) - 1)
+    k = min(int(t), len(WAVELENGTH_SCALE) - 2)
+    f = t - k
+    a, b = (np.array([int(c[i:i + 2], 16) for i in (1, 3, 5)], float) for c in WAVELENGTH_SCALE[k:k + 2])
+    r, g, bl = np.rint(a + (b - a) * f).astype(int)
+    return f"#{r:02x}{g:02x}{bl:02x}"
+
+
+def wavelength_colors(wavelengths, all_wavelengths=None):
+    """Plot colours (hex strings, in the order given) of wavelengths that share a plot.
+
+    The longest wavelength is red, the shortest blue and those in between run through green,
+    by rank (not by value or by the order they were entered): three wavelengths are red, green
+    and blue, five are red, orange, green, teal and blue.  ``all_wavelengths`` (usually every
+    wavelength of the lens) sets the ranking, so a wavelength keeps its colour in a plot that
+    shows only some of them; by default the wavelengths given are ranked among themselves.
+    Values are in um (anything sortable works)."""
+    wl = [float(w) for w in wavelengths]
+    ref = sorted({float(w) for w in (all_wavelengths if all_wavelengths is not None else wl)} | set(wl),
+                 reverse=True)
+    if len(ref) <= 1:
+        return [SINGLE_WAVELENGTH_COLOR for _ in wl]
+    return [_scale_color(ref.index(w) / (len(ref) - 1)) for w in wl]
+
+
+def wavelength_color(w, all_wavelengths):
+    """Plot colour of one wavelength ranked among ``all_wavelengths`` (see :func:`wavelength_colors`)."""
+    return wavelength_colors([w], all_wavelengths)[0]
+
+
+def _wl_colors(result, waves=None):
+    return wavelength_colors(result["wavelengths"], waves)
+
+
+def ray_colors(rays, color_by="auto", waves=None):
+    """Colour and legend label of each layout ray set (dicts with ``field`` and ``wavelength``).
+
+    ``color_by`` "field" (matplotlib's colour cycle by field), "wavelength" (red longest through
+    green to blue shortest, :func:`wavelength_colors`; ``waves`` ranks them) or "auto" (by
+    wavelength when only one field is drawn, which shows the dispersion; by field otherwise).
+    Returns (colours, labels) lists in the order of ``rays``."""
+    fields = sorted({r["field"] for r in rays if isinstance(r["field"], (int, np.integer))})
+    wls = sorted({float(r["wavelength"]) for r in rays})
+    if color_by == "auto":
+        color_by = "wavelength" if len(fields) <= 1 and len(wls) > 1 else "field"
+    if color_by == "wavelength":
+        cols = wavelength_colors([r["wavelength"] for r in rays], waves if waves is not None else wls)
+        return cols, [_wl_label(r["wavelength"]) for r in rays]
+    cycle = _cycle()
+    cols, labels = [], []
+    for r in rays:
+        k = fields.index(r["field"]) if r["field"] in fields else 0
+        cols.append(cycle[k % len(cycle)])
+        labels.append(f"field {r['field'] + 1}" if r["field"] in fields else "rays")
+    return cols, labels
+
+
+def _cycle():
+    return ["#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd", "#8c564b", "#e377c2", "#7f7f7f", "#bcbd22",
+            "#17becf"]
+
+
+def layout(result, ax=None, plane="y", color_by="auto", waves=None):
+    """2-D layout from :func:`lensforge.analysis.geometry.layout`; rays coloured as :func:`ray_colors`."""
     ax = _ax(ax, figsize=(9, 4))
     j = 1 if plane == "y" else 0
-    colors = _plt().rcParams["axes.prop_cycle"].by_key()["color"]
     for s in result["surfaces"]:
         P = s["points"]
         ax.plot(P[:, 2], P[:, j], color="k", lw=1.5 if s["mirror"] else 1)
-    for r in result["rays"]:
-        c = colors[r["field"] % len(colors)] if isinstance(r["field"], int) else colors[0]
+    for r, c in zip(result["rays"], ray_colors(result["rays"], color_by, waves)[0]):
         p = r["path"]
         ax.plot(p[:, :, 2], p[:, :, j], color=c, lw=0.6)
     ax.set_aspect("equal", adjustable="datalim")
@@ -48,10 +117,184 @@ def layout(result, ax=None, plane="y"):
     return ax
 
 
-def spot(result, ax=None, scale=1.0):
+def _split_nan(P):
+    """Pieces (each >= 2 points) of a polyline ``P`` (M, 3) between NaN points."""
+    ok = np.all(np.isfinite(P), axis=1)
+    out, start = [], None
+    for k, good in enumerate(list(ok) + [False]):
+        if good and start is None:
+            start = k
+        elif not good and start is not None:
+            if k - start >= 2:
+                out.append(P[start:k])
+            start = None
+    return out
+
+
+def layout_3d_lines(result, color_by="auto", waves=None, show_edges=True):
+    """The polylines of a 3-D layout (:func:`lensforge.analysis.layout_3d`) as plain data.
+
+    Returns a list of dicts ``points`` ((M, 3) global x, y, z), ``color``, ``width``, ``kind``
+    ("surface", "edge" or "ray") and ``label`` (legend text of the first line of each ray colour,
+    else None).  Rays are split where they fail (NaN).  :func:`layout_3d` draws these with
+    matplotlib; the web app draws the same list on a canvas it can rotate."""
+    lines = []
+    for srf in result["surfaces"]:
+        w = 1.5 if srf["mirror"] else 1.0
+        if srf["semi_diameter"] > 0:
+            lines.append({"points": srf["rim"], "color": "#000000", "width": w, "kind": "surface", "label": None,
+                          "surface": srf["surface"]})
+        for sec in srf["sections"]:
+            lines.append({"points": sec, "color": "#000000", "width": w, "kind": "surface", "label": None,
+                          "surface": srf["surface"]})
+    if show_edges:
+        for e in result.get("edges", []):
+            lines.append({"points": e["points"], "color": "#000000", "width": 0.8, "kind": "edge", "label": None})
+    cols, labels = ray_colors(result["rays"], color_by, waves)
+    seen = set()
+    for r, c, lab in zip(result["rays"], cols, labels):
+        p = r["path"]
+        for k in range(p.shape[1]):
+            for piece in _split_nan(p[:, k]):
+                first = lab not in seen
+                seen.add(lab)
+                lines.append({"points": piece, "color": c, "width": 0.6, "kind": "ray",
+                              "label": lab if first else None})
+    return lines
+
+
+def layout_3d(result, ax=None, elevation=20.0, azimuth=-60.0, color_by="auto", waves=None, zoom=1.0,
+              show_edges=True, title=None):
+    """3-D layout (:func:`lensforge.analysis.layout_3d`): surfaces (rims and the local x and y
+    sections), element edges and rays.  The optical axis z runs across the view (the plot's first
+    axis), x and y are the other two, all to the same scale.  ``elevation`` / ``azimuth`` (degrees,
+    matplotlib's convention: 0 / -90 is the YZ side view, 90 / -90 looks down on the XZ plane)
+    turn the view; ``zoom`` > 1 magnifies about the centre.  Rays are coloured as
+    :func:`ray_colors`.  ``ax`` must be a 3-D axes (``fig.add_subplot(projection="3d")``) or None.
+    In an interactive matplotlib window, drag to rotate."""
+    from mpl_toolkits.mplot3d.art3d import Line3DCollection
+    if ax is None:
+        ax = _plt().figure(figsize=(8, 6)).add_subplot(projection="3d")
+    lines = layout_3d_lines(result, color_by, waves, show_edges)
+    for kind in ("surface", "edge", "ray"):
+        sel = [ln for ln in lines if ln["kind"] == kind]
+        if not sel:
+            continue
+        segs = [ln["points"][:, [2, 0, 1]] for ln in sel]
+        ax.add_collection3d(Line3DCollection(segs, colors=[ln["color"] for ln in sel],
+                                             linewidths=[ln["width"] for ln in sel]))
+    labelled = [ln for ln in lines if ln["label"]]
+    for ln in labelled:
+        ax.plot([], [], [], color=ln["color"], label=ln["label"])
+    if labelled:
+        ax.legend(fontsize=7, loc="upper left")
+    lo, hi = (np.asarray(v, float) for v in result["bounds"])
+    mid, half = (lo + hi) / 2, max(float((hi - lo).max()) / 2, 1e-6) / max(float(zoom), 1e-6)
+    ax.set_xlim(mid[2] - half, mid[2] + half)
+    ax.set_ylim(mid[0] - half, mid[0] + half)
+    ax.set_zlim(mid[1] - half, mid[1] + half)
+    try:
+        ax.set_box_aspect((1, 1, 1))
+    except Exception:  # noqa: BLE001 - old matplotlib
+        pass
+    ax.view_init(elev=float(elevation), azim=float(azimuth))
+    ax.grid(False)
+    for a in (ax.xaxis, ax.yaxis, ax.zaxis):
+        a.set_pane_color((1, 1, 1, 0))
+    u = result.get("units")
+    u = f" ({u})" if u else ""
+    ax.set_xlabel("z" + u)
+    ax.set_ylabel("x" + u)
+    ax.set_zlabel("y" + u)
+    if title:
+        ax.set_title(title, fontsize=9)
+    return ax
+
+
+#: marker of each field in a combined spot diagram (fields beyond these reuse them)
+FIELD_MARKERS = ("o", "s", "^", "D", "v", "P", "X", "*", "<", ">", "h", "p")
+
+
+def _field_magnification(spots):
+    """Spot magnification of the "image" mode: the largest spot spans about a third of the
+    smallest distance between two field points, rounded down to 1, 2 or 5 x a power of ten
+    (1 when the fields share one image point)."""
+    refs = np.array([sp["reference"] for sp in spots], float)
+    geo = max((sp["geo_radius"] for sp in spots if np.isfinite(sp["geo_radius"])), default=0.0)
+    d = [np.hypot(*(refs[i] - refs[k])) for i in range(len(refs)) for k in range(i)]
+    d = [v for v in d if v > 1e-9 * max(1.0, float(np.abs(refs).max()))]
+    if not d or geo <= 0:
+        return 1.0
+    m = 0.45 * min(d) / geo
+    e = 10 ** math.floor(math.log10(m))  # a round number: 1, 2 or 5 x a power of ten
+    return float(max(v * e for v in (1, 2, 5, 10) if v * e <= m * 1.0000001)) if m >= 1 else m
+
+
+def spot_combined(spots, ax=None, mode="overlay", scale=1.0, waves=None, labels=None, units=None,
+                  magnification=None, ms=3.0, image_units=None):
+    """Every field and wavelength of a set of spot diagrams in one plot.
+
+    ``spots``: :func:`lensforge.analysis.spot_diagram` results (one per field) or (field, result)
+    pairs.  Colour shows the wavelength (red longest, green, blue shortest: :func:`wavelength_colors`,
+    ranked among ``waves``, every wavelength of the lens) and the marker shape the field.
+    ``mode`` "overlay" draws every spot about its own reference point (chief ray or centroid), so
+    the sizes and shapes compare directly; "image" draws each spot at its place on the image,
+    magnified by ``magnification`` (default: chosen so the spots don't overlap) about its
+    reference.  ``scale`` multiplies the spot coordinates (1000 shows mm lenses in um); ``labels``
+    names the fields (default "Field 1", ...); ``units`` names the scaled unit (axes of "overlay",
+    RMS radii in the legend) and ``image_units`` the lens unit (axes of "image")."""
+    ax = _ax(ax, figsize=(5, 5))
+    items = [sp if isinstance(sp, tuple) else (k, sp) for k, sp in enumerate(spots)]
+    res = [sp for _, sp in items]
+    if labels is None:
+        labels = [f"Field {f + 1}" if isinstance(f, (int, np.integer)) else str(f) for f, _ in items]
+    allw = waves if waves is not None else sorted({float(w) for sp in res for w in sp["wavelengths"]})
+    image = mode == "image"
+    mag = (magnification or _field_magnification(res)) if image else 1.0
+    for k, sp in enumerate(res):
+        mk = FIELD_MARKERS[k % len(FIELD_MARKERS)]
+        cx, cy = sp["reference"] if image else (0.0, 0.0)
+        for w, c, x, y in zip(sp["wavelengths"], wavelength_colors(sp["wavelengths"], allw), sp["x"], sp["y"]):
+            x, y = np.asarray(x, float), np.asarray(y, float)
+            if image:
+                px, py = cx + mag * x, cy + mag * y
+            else:
+                px, py = x * scale, y * scale
+            ax.plot(px, py, mk, ms=ms, color=c, mfc="none" if k % 2 else c, mew=0.7, alpha=0.8, ls="none")
+    # legend: wavelengths by colour, fields by marker (with each field's RMS)
+    hs = []
+    shown = sorted({float(w) for sp in res for w in sp["wavelengths"]}, reverse=True)
+    for w, c in zip(shown, wavelength_colors(shown, allw)):
+        hs += ax.plot([], [], "s", color=c, ms=6, label=_wl_label(w))
+    u = units or ""
+    for k, (lab, sp) in enumerate(zip(labels, res)):
+        mk = FIELD_MARKERS[k % len(FIELD_MARKERS)]
+        rms = sp["rms_radius"] * scale
+        hs += ax.plot([], [], mk, color="0.25", mfc="none" if k % 2 else "0.25", ms=5,
+                      label=f"{lab}: RMS {rms:.4g} {u}".rstrip())
+    ax.legend(handles=hs, fontsize=7, loc="upper left", bbox_to_anchor=(1.01, 1.0), borderaxespad=0,
+              frameon=False)
+    ax.set_aspect("equal", adjustable="datalim")
+    ax.axhline(0, color="0.85", lw=0.5, zorder=0)
+    ax.axvline(0, color="0.85", lw=0.5, zorder=0)
+    if image:
+        ax.set_title(f"All fields at their image positions, spots magnified x{mag:.3g}", fontsize=8)
+    else:
+        ax.set_title("All fields and wavelengths, each about its reference point", fontsize=8)
+    au = image_units if image else units
+    if au:
+        ax.set_xlabel(f"x ({au})")
+        ax.set_ylabel(f"y ({au})")
+    ax.magnification = mag
+    return ax
+
+
+def spot(result, ax=None, scale=1.0, waves=None):
+    """Spot diagram of one field (:func:`lensforge.analysis.spot_diagram`).  ``waves``: every
+    wavelength of the lens, so each keeps its colour (:func:`wavelength_colors`)."""
     ax = _ax(ax, figsize=(4, 4))
-    for w, x, y in zip(result["wavelengths"], result["x"], result["y"]):
-        ax.plot(np.asarray(x) * scale, np.asarray(y) * scale, ".", ms=2, label=_wl_label(w))
+    for w, c, x, y in zip(result["wavelengths"], _wl_colors(result, waves), result["x"], result["y"]):
+        ax.plot(np.asarray(x) * scale, np.asarray(y) * scale, ".", ms=2, color=c, label=_wl_label(w))
     ax.set_aspect("equal")
     ax.set_title(f"RMS {result['rms_radius'] * scale:.4g}, GEO {result['geo_radius'] * scale:.4g}")
     ax.legend(fontsize=7)
@@ -73,13 +316,14 @@ def point_source(result, ax=None, scale=1.0, relative=True):
     return ax
 
 
-def ray_fan(result, axes=None, units=None):
-    """Transverse ray fan.  ``units`` (lens unit name, e.g. "mm") labels the error axis."""
+def ray_fan(result, axes=None, units=None, waves=None):
+    """Transverse ray fan.  ``units`` (lens unit name, e.g. "mm") labels the error axis; ``waves``
+    (every wavelength of the lens) ranks the wavelength colours."""
     if axes is None:
         _, axes = _plt().subplots(1, 2, figsize=(8, 3.5), sharey=True)
-    for w, ey, ex in zip(result["wavelengths"], result["ey"], result["ex"]):
-        axes[0].plot(result["p"], ey, label=_wl_label(w))
-        axes[1].plot(result["p"], ex)
+    for w, c, ey, ex in zip(result["wavelengths"], _wl_colors(result, waves), result["ey"], result["ex"]):
+        axes[0].plot(result["p"], ey, color=c, label=_wl_label(w))
+        axes[1].plot(result["p"], ex, color=c)
     u = f" ({units})" if units else ""
     axes[0].set_title(f"Tangential ey{u} vs py")
     axes[1].set_title(f"Sagittal ex{u} vs px")
@@ -91,12 +335,12 @@ def ray_fan(result, axes=None, units=None):
     return axes
 
 
-def opd_fan(result, axes=None):
+def opd_fan(result, axes=None, waves=None):
     if axes is None:
         _, axes = _plt().subplots(1, 2, figsize=(8, 3.5), sharey=True)
-    for w, wy, wx in zip(result["wavelengths"], result["wy"], result["wx"]):
-        axes[0].plot(result["p"], wy, label=_wl_label(w))
-        axes[1].plot(result["p"], wx)
+    for w, c, wy, wx in zip(result["wavelengths"], _wl_colors(result, waves), result["wy"], result["wx"]):
+        axes[0].plot(result["p"], wy, color=c, label=_wl_label(w))
+        axes[1].plot(result["p"], wx, color=c)
     axes[0].set_title("Tangential OPD (waves) vs py")
     axes[1].set_title("Sagittal OPD (waves) vs px")
     axes[0].set_xlabel("py (normalised pupil)", fontsize=8)
@@ -215,11 +459,11 @@ def energy(result, ax=None):
     return ax
 
 
-def field_curvature(result, axes=None):
+def field_curvature(result, axes=None, waves=None):
     if axes is None:
         _, axes = _plt().subplots(1, 2, figsize=(8, 4), sharey=True)
-    for k, w in enumerate(result["wavelengths"]):
-        l, = axes[0].plot(result["tangential"][k], result["field_value"], label=f"T {_wl_label(w)}")
+    for k, (w, c) in enumerate(zip(result["wavelengths"], _wl_colors(result, waves))):
+        l, = axes[0].plot(result["tangential"][k], result["field_value"], color=c, label=f"T {_wl_label(w)}")
         axes[0].plot(result["sagittal"][k], result["field_value"], "--", color=l.get_color())
         axes[1].plot(result["distortion_percent"][k], result["field_value"], color=l.get_color())
     axes[0].set_title("Field curvature (T solid, S dashed)")
@@ -240,20 +484,20 @@ def grid_distortion(result, ax=None):
     return ax
 
 
-def lateral_color(result, ax=None):
+def lateral_color(result, ax=None, waves=None):
     ax = _ax(ax, figsize=(5, 4))
-    for w, d in zip(result["wavelengths"], result["difference"]):
-        ax.plot(d, result["field"], label=_wl_label(w))
+    for w, c, d in zip(result["wavelengths"], _wl_colors(result, waves), result["difference"]):
+        ax.plot(d, result["field"], color=c, label=_wl_label(w))
     ax.set_xlabel("image height difference from primary")
     ax.set_ylabel("normalised field")
     ax.legend(fontsize=7)
     return ax
 
 
-def longitudinal_aberration(result, ax=None):
+def longitudinal_aberration(result, ax=None, waves=None):
     ax = _ax(ax, figsize=(5, 4))
-    for w, z in zip(result["wavelengths"], result["focus"]):
-        ax.plot(z, result["pupil"], label=_wl_label(w))
+    for w, c, z in zip(result["wavelengths"], _wl_colors(result, waves), result["focus"]):
+        ax.plot(z, result["pupil"], color=c, label=_wl_label(w))
     ax.set_xlabel("focus shift")
     ax.set_ylabel("pupil height")
     ax.legend(fontsize=7)
@@ -466,7 +710,8 @@ def _ns_colors(result, keep, color_by):
                                                   for v in np.unique(src)[:10] if v >= 0}
     if color_by == "wavelength":
         wl = seg["wavelength"][keep]
-        cmap = {float(w): wavelength_rgb(w) for w in np.unique(wl)}
+        allw = np.unique(seg["wavelength"])
+        cmap = {float(w): wavelength_color(w, allw) for w in np.unique(wl)}
         return [cmap[float(w)] for w in wl], {c: f"{w:.4f} um" for w, c in list(cmap.items())[:10]}
     nr = np.minimum(seg["n_reflections"][keep], 2)
     cmap = {0: "C0", 1: "C2", 2: "C3"}

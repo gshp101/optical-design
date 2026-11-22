@@ -4,6 +4,7 @@ import { App, run, status, onState, docks, cmd } from "./core.js";
 import * as engine from "./engine.js";
 const { PRIORITY } = engine;
 import { el, btn, check, download, downloadDataURL, copyText, popupMenu } from "./ui.js";
+import { View3D } from "./view3d.js";
 
 export const windows = [];
 let ids = 0;
@@ -75,6 +76,16 @@ class AnalysisWindow {
       this.body.prepend(this.pre);
       this.foot.append(btn("Copy", async () => status((await copyText(this.pre.textContent)) ? "Copied" : "Copy failed"), { small: true }),
         btn("Save...", () => download(`${this.spec.key}.txt`, this.pre.textContent, "text/plain"), { small: true }));
+    } else if (this.spec.view3d) {
+      // 3-D: the session sends the lines and this canvas turns them (no round trip while dragging)
+      this.v3d = new View3D(this.body, (elev, azim) => this.viewTurned(elev, azim));
+      const preset = (label, elev, azim, title) => btn(label, () => { this.v3d.setView(elev, azim); this.viewTurned(elev, azim); }, { small: true, title });
+      this.foot.append(
+        preset("Side (YZ)", 0, -90, "Look along x: the YZ plane, as the 2D Layout draws it"),
+        preset("Top (XZ)", 90, -90, "Look down along y onto the XZ plane"),
+        preset("Along Axis", 0, 0, "Look back along the optical axis (z) onto the XY plane"),
+        btn("Reset View", () => { const e = this.values.elevation, a = this.values.azimuth; this.v3d.setView(e, a); }, { small: true, title: "Back to the Elevation and Azimuth settings, unzoomed (double-click the plot does the same)" }),
+        btn("Save Image...", () => this.v3d.scene && downloadDataURL(`${this.spec.key}.png`, this.v3d.dataURL()), { small: true, title: "Download the view as a PNG image" }));
     } else {
       this.img = el("img", { alt: this.spec.title });
       this.body.prepend(this.img);
@@ -98,6 +109,10 @@ class AnalysisWindow {
     const w = this.makeWidget(st);
     // a new Zoom choice replaces the mouse zoom (plot-only settings re-plot without recomputing)
     if (st.name === "zoom") w.addEventListener("change", () => { this.view = null; }, { capture: true });
+    // 3-D view angles turn the canvas at once (the session needs no recompute for them)
+    if (this.spec.view3d && (st.name === "elevation" || st.name === "azimuth")) {
+      w.addEventListener("change", () => this.v3d.setView(this.values.elevation, this.values.azimuth));
+    }
     return w;
   }
 
@@ -187,8 +202,16 @@ class AnalysisWindow {
     return [Math.max(200, Math.round(r.width)), Math.max(150, Math.round(r.height))];
   }
 
+  /** The user turned the 3-D view: show its angles in the Elevation and Azimuth settings. */
+  viewTurned(elev, azim) {
+    for (const [name, v] of [["elevation", elev], ["azimuth", azim]]) {
+      this.values[name] = Math.round(v);
+      if (this.widgets[name]) this.widgets[name].value = Math.round(v);
+    }
+  }
+
   sizeChanged() {
-    if (!this.renderedSize || this.spec.text) return false;
+    if (!this.renderedSize || this.spec.text || this.spec.view3d) return false;  // the 3-D canvas redraws itself
     const [w, h] = this.size();
     return Math.abs(w - this.renderedSize[0]) > 8 || Math.abs(h - this.renderedSize[1]) > 8;
   }
@@ -230,6 +253,7 @@ class AnalysisWindow {
     else {
       this.errorLine.hidden = true;
       if (this.pre) this.pre.textContent = r.text;
+      else if (this.v3d) this.v3d.setScene(r.scene);
       else this.img.src = "data:image/png;base64," + r.png;
       this.setTitle();
     }
@@ -319,6 +343,7 @@ class AnalysisWindow {
   showError(msg) {
     // never leave the previous lens's plot or report on screen under an error
     if (this.pre) this.pre.textContent = "";
+    else if (this.v3d) { this.v3d.scene = null; this.v3d.draw(); }
     else this.img.removeAttribute("src");
     this.errorLine.textContent = msg;
     this.errorLine.hidden = false;

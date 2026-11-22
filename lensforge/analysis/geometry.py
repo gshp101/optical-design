@@ -100,6 +100,119 @@ def layout(system, fields=None, wavelengths=None, n_rays: int = 7, plane: str = 
     return {"rays": rays, "surfaces": surface_profiles(system, plane="y" if plane != "x" else "x")}
 
 
+def _section(s, R, O, u, r, n):
+    """Global points of surface ``s`` along the local direction ``u`` (unit 2-vector), from -r to r."""
+    t = np.linspace(-r, r, n)
+    x, y = t * u[0], t * u[1]
+    return np.stack([x, y, s.sag(x, y)], axis=1) @ R.T + O
+
+
+def surface_wireframes(system, n_rim: int = 64, n_section: int = 33):
+    """3-D wireframe of every real surface (coordinate breaks left out) in global coordinates.
+
+    Each entry has the ``rim`` (closed polyline at the semi-diameter, ``n_rim`` + 1 points), the
+    two ``sections`` along the surface's local x and y axes, ``semi_diameter`` and ``mirror``.
+    Semi-diameters come from the surfaces or, when unset, from a real ray trace of all fields
+    (as :func:`surface_profiles`).  Surfaces are placed with :meth:`System.surface_frames`, so
+    decentres and tilts of coordinate breaks are followed exactly."""
+    sd = None
+    if any(s.semi_diameter is None for s in system.surfaces[1:]):
+        sd = system.copy().update_semi_diameters()
+    frames = system.surface_frames()
+    th = np.linspace(0, 2 * np.pi, n_rim + 1)
+    out = []
+    for i, s in enumerate(system.surfaces):
+        if i == 0 or s.is_coordinate_break or frames[i] is None:
+            continue
+        r = s.semi_diameter if s.semi_diameter is not None else (sd[i] if sd is not None else 0.0)
+        r = float(r or 0.0)
+        R, O = frames[i]
+        x, y = r * np.cos(th), r * np.sin(th)
+        rim = np.stack([x, y, s.sag(x, y)], axis=1) @ R.T + O
+        sections = [_section(s, R, O, (1.0, 0.0), r, n_section), _section(s, R, O, (0.0, 1.0), r, n_section)]
+        out.append({"surface": i, "rim": rim, "sections": sections, "semi_diameter": r,
+                    "mirror": system.library.resolve(s.material).is_mirror if s.material else False})
+    return out
+
+
+def lens_edges(system, wireframes, n_edges: int = 8):
+    """Edge lines of each element: straight lines joining the rims of consecutive surfaces that
+    bound glass, at ``n_edges`` points around the rim.  Coordinate breaks in between (a wedge, a
+    tilted back face) are skipped: the glass carries on through them to the next real surface."""
+    by = {w["surface"]: w for w in wireframes}
+    out = []
+    for i, a in by.items():
+        n = i + 1
+        while n < len(system.surfaces) and system.surfaces[n].is_coordinate_break:
+            n += 1
+        b = by.get(n)
+        if b is None or not system.surfaces[i].material:
+            continue
+        m = system.library.resolve(system.surfaces[i].material)
+        if m.is_mirror or getattr(m, "nd", None) == 1.0 or a["semi_diameter"] <= 0 or b["semi_diameter"] <= 0:
+            continue
+        ra, rb = a["rim"][:-1], b["rim"][:-1]
+        for k in np.linspace(0, len(ra), n_edges, endpoint=False).astype(int):
+            out.append({"from": i, "to": n, "points": np.stack([ra[k], rb[k]])})
+    return out
+
+
+LAYOUT_3D_RAYS = ("y_fan", "x_fan", "fans", "ring", "grid")
+
+
+def _pupil_3d(rays, n):
+    p = np.linspace(-1, 1, n)
+    z = np.zeros(n)
+    if rays == "y_fan":
+        return z, p
+    if rays == "x_fan":
+        return p, z
+    if rays == "fans":
+        m = p != 0  # the chief ray once
+        return np.concatenate([z, p[m]]), np.concatenate([p, z[m]])
+    if rays == "ring":
+        th = np.linspace(0, 2 * np.pi, n, endpoint=False)
+        return np.concatenate([[0.0], np.cos(th)]), np.concatenate([[0.0], np.sin(th)])
+    if rays == "grid":
+        X, Y = np.meshgrid(p, p)
+        m = X**2 + Y**2 <= 1 + 1e-9
+        return X[m], Y[m]
+    raise ValueError(f"rays must be one of {', '.join(LAYOUT_3D_RAYS)}")
+
+
+def layout_3d(system, fields=None, wavelengths=None, n_rays: int = 7, rays: str = "fans",
+              include_object: bool = False, n_rim: int = 64, n_edges: int = 8):
+    """Everything a 3-D layout draws, in global coordinates (surface 1's vertex at the origin).
+
+    ``rays`` picks the pupil sampling: "y_fan", "x_fan", "fans" (both fans), "ring" (``n_rays``
+    rays round the pupil edge plus the chief ray) or "grid" (an ``n_rays`` x ``n_rays`` square grid
+    clipped to the pupil).  Returns ``surfaces`` (:func:`surface_wireframes`), ``edges``
+    (:func:`lens_edges`), ``rays`` (field index, wavelength, ``path`` (S, N, 3) with NaN after a
+    failed ray, ``valid``) and ``bounds`` (lo, hi corners of everything drawn).  Coordinate breaks
+    are followed exactly (see :func:`ray_paths`), so folded and tilted systems come out in 3-D as
+    they are.  Plot it with :func:`lensforge.plot.layout_3d`.
+    """
+    fields = range(len(system.fields)) if fields is None else fields
+    wls = resolve_wavelengths(system, wavelengths if wavelengths is not None else [system.primary])
+    px, py = _pupil_3d(rays, max(int(n_rays), 1))
+    out_rays = []
+    start = 0 if (include_object or system.object_at_infinity) else 1
+    for f in fields:
+        hx, hy = resolve_field(system, f)
+        for w in wls:
+            r = trace_rays(system, hx, hy, px, py, wavelength=w)
+            out_rays.append({"field": f, "wavelength": w, "path": ray_paths(r, start), "valid": r.valid})
+    surfaces = surface_wireframes(system, n_rim=n_rim)
+    edges = lens_edges(system, surfaces, n_edges=n_edges)
+    pts = [s["rim"] for s in surfaces] + [r["path"].reshape(-1, 3) for r in out_rays]
+    P = np.concatenate(pts) if pts else np.zeros((1, 3))
+    P = P[np.all(np.isfinite(P), axis=1)]
+    if not len(P):
+        P = np.zeros((1, 3))
+    return {"surfaces": surfaces, "edges": edges, "rays": out_rays, "pattern": rays,
+            "bounds": (P.min(axis=0), P.max(axis=0)), "units": system.units}
+
+
 def surface_sag(surface, semi_diameter=None, n: int = 101, best_fit: str = "vertex-edge"):
     """Sag of one surface: 2-D map, y cross-section and departure from a best-fit sphere.
 

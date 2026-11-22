@@ -46,6 +46,8 @@ class AnalysisSpec:
     shortcut: Optional[str] = None
     uses_rays: bool = False  # sampling comes from the Input Rays dialog
     zoomable: bool = False  # mouse-wheel / drag-box zoom kept across recomputes (PSF plots)
+    view3d: bool = False  # a 3-D plot: drag rotates, the wheel zooms (kept across recomputes)
+    scene: Optional[Callable] = None  # (result, opts, system) -> line data the web app draws itself (3-D)
 
     def compute_values(self, values):
         """The settings ``compute`` takes: everything except the plot-only ones (such as Zoom)."""
@@ -90,6 +92,11 @@ WAVE_ALL = Setting("wave", "Wavelength", "wave_all", -1)
 WAVE = Setting("wave", "Wavelength", "wave", -1)
 
 
+def _all_waves(system):
+    """Every wavelength of the lens: ranks the plot colours (red longest, green, blue shortest)."""
+    return [w.value for w in system.wavelengths]
+
+
 def _grid(fig, n):
     cols = min(n, 3)
     rows = int(math.ceil(n / cols))
@@ -121,24 +128,16 @@ def _layout_plot(fig, r, opts, system):
     ax = fig.add_subplot(111)
     plane = r.get("plane", "y")
     j = 0 if plane == "x" else 1
-    # colour by field, or by wavelength when only one field is drawn (shows dispersion)
-    fields = sorted({ray["field"] for ray in r["rays"] if isinstance(ray["field"], int)})
-    waves = sorted({ray["wavelength"] for ray in r["rays"]})
-    by_wave = len(fields) <= 1 and len(waves) > 1
     for srf in r["surfaces"]:
         p = srf["points"]
         ax.plot(p[:, 2], p[:, j], color="k", lw=1.5 if srf["mirror"] else 1)
+    # colour by field, or by wavelength when only one field is drawn (shows dispersion)
     labelled = set()
-    for ray in r["rays"]:
-        key = ray["wavelength"] if by_wave else ray["field"]
-        k = waves.index(key) if by_wave else (fields.index(key) if key in fields else 0)
-        lab = None
-        if key not in labelled:
-            labelled.add(key)
-            lab = f"{key:.4f} um" if by_wave else f"field {key + 1}"
+    for ray, c, lab in zip(r["rays"], *P.ray_colors(r["rays"], "auto", _all_waves(system))):
         p = ray["path"]
-        lines = ax.plot(p[:, :, 2], p[:, :, j], color=f"C{k % 10}", lw=0.6)
-        if lab and lines:
+        lines = ax.plot(p[:, :, 2], p[:, :, j], color=c, lw=0.6)
+        if lab not in labelled and lines:
+            labelled.add(lab)
             lines[0].set_label(lab)
     ax.set_aspect("equal", adjustable="datalim")
     for s in r["surfaces"]:
@@ -176,6 +175,51 @@ def _connect_lens_edges(ax, r, system, j):
 
 register(AnalysisSpec("layout", "2D Layout", "Layout", _layout_compute, _layout_plot, [], shortcut="Ctrl+L",
                       uses_rays=True))
+
+
+LAYOUT_3D_RAYS = [("X and Y fans", "fans"), ("Y fan", "y_fan"), ("X fan", "x_fan"), ("Ring", "ring"),
+                  ("Grid", "grid")]
+VIEW_ELEVATION = Setting("elevation", "Elevation (deg)", "float", 20.0, minimum=-90, maximum=90, plot_only=True)
+VIEW_AZIMUTH = Setting("azimuth", "Azimuth (deg)", "float", -60.0, minimum=-360, maximum=360, plot_only=True)
+
+
+def _layout_3d_compute(system, rays="fans"):
+    ir = R.get(system)
+    return lf.layout_3d(system, fields=R.fields(system, ir["layout_fields"]),
+                        wavelengths=R.waves(system, ir["layout_waves"]), n_rays=ir["layout_rays"], rays=rays)
+
+
+def _layout_3d_plot(fig, r, opts, system):
+    ax = fig.add_subplot(111, projection="3d")
+    P.layout_3d(r, ax, elevation=opts.get("elevation", 20.0), azimuth=opts.get("azimuth", -60.0),
+                color_by=opts.get("color_by", "auto"), waves=_all_waves(system), zoom=opts.get("zoom", 1.0),
+                show_edges=bool(opts.get("edges", True)), title=f"{system.name or 'Lens'}: 3D layout")
+
+
+def _layout_3d_scene(r, opts, system):
+    """The 3-D layout as plain line data for the web app's rotatable canvas (same lines, colours and
+    legend as :func:`_layout_3d_plot`)."""
+    lines = P.layout_3d_lines(r, opts.get("color_by", "auto"), _all_waves(system), bool(opts.get("edges", True)))
+
+    def flat(p):
+        return [round(float(v), 6) for v in np.asarray(p, float).ravel()]
+
+    lo, hi = r["bounds"]
+    return {"lines": [{"p": flat(ln["points"]), "c": ln["color"], "w": ln["width"], "k": ln["kind"]} for ln in lines],
+            "legend": [[ln["color"], ln["label"]] for ln in lines if ln["label"]],
+            "bounds": [flat(lo), flat(hi)], "units": system.units,
+            "title": f"{system.name or 'Lens'}: 3D layout",
+            "elevation": float(opts.get("elevation", 20.0)), "azimuth": float(opts.get("azimuth", -60.0))}
+
+
+register(AnalysisSpec("layout_3d", "3D Layout", "Layout", _layout_3d_compute, _layout_3d_plot,
+                      [Setting("rays", "Rays", "choice", "fans", LAYOUT_3D_RAYS),
+                       Setting("color_by", "Color by", "choice", "auto",
+                               [("Auto", "auto"), ("Field", "field"), ("Wavelength", "wavelength")],
+                               plot_only=True),
+                       VIEW_ELEVATION, VIEW_AZIMUTH,
+                       Setting("edges", "Edges", "bool", True, plot_only=True)],
+                      shortcut="Ctrl+Alt+L", uses_rays=True, view3d=True, scene=_layout_3d_scene))
 
 
 def _mc_layout_compute(system, configs=-1):
@@ -270,9 +314,9 @@ def _fan_plot(fig, res, opts, system, kind="ray"):
         a1 = fig.add_subplot(n, 2, 2 * k + 1)
         a2 = fig.add_subplot(n, 2, 2 * k + 2, sharey=a1)
         if kind == "ray":
-            P.ray_fan(r, [a1, a2], units=system.units)
+            P.ray_fan(r, [a1, a2], units=system.units, waves=_all_waves(system))
         else:
-            P.opd_fan(r, [a1, a2])
+            P.opd_fan(r, [a1, a2], waves=_all_waves(system))
         a1.set_ylabel(_field_title(system, f), fontsize=8)
         if k:
             a1.set_title("")
@@ -300,16 +344,32 @@ def _spot_compute(system, field=-1, wave=-1):
                                 reference=reference)) for f in _fields(system, field)]
 
 
+SPOT_SHOW = Setting("show", "Show", "choice", "each",
+                    [("Each field", "each"), ("All fields in one plot", "overlay"),
+                     ("All fields at image positions", "image")], plot_only=True)
+
+
 def _spot_plot(fig, res, opts, system):
+    scale = 1000.0 if system.units == "mm" else 1.0
+    unit = "um" if system.units == "mm" else system.units
+    ir = R.get(system)
+    note = (f"Spot diagram, units {unit}, reference: {ir['spot_reference']}, "
+            f"{ir['spot_pattern']} {ir['spot_rings']}")
+    show = opts.get("show", "each")
+    if show in ("overlay", "image"):
+        ax = fig.add_subplot(111)
+        P.spot_combined(res, ax, mode=show, scale=scale, waves=_all_waves(system), units=unit,
+                        image_units=system.units, labels=[_field_title(system, f) for f, _ in res])
+        ax.tick_params(labelsize=7)
+        _legend_note(fig, note)
+        return
     axes = _grid(fig, len(res))
     lim = max((np.nanmax(np.abs(np.concatenate([np.concatenate([np.ravel(x) for x in r["x"]] or [[0]]),
                                                  np.concatenate([np.ravel(y) for y in r["y"]] or [[0]])])))
                for _, r in res if r["x"]), default=1.0)
     lim = lim * 1.1 if lim > 0 else 1.0
-    scale = 1000.0 if system.units == "mm" else 1.0
-    unit = "um" if system.units == "mm" else system.units
     for ax, (f, r) in zip(axes, res):
-        P.spot(r, ax, scale=scale)
+        P.spot(r, ax, scale=scale, waves=_all_waves(system))
         ax.set_xlim(-lim * scale, lim * scale)
         ax.set_ylim(-lim * scale, lim * scale)
         ax.set_title(f"{_field_title(system, f)}\nRMS {r['rms_radius'] * scale:.4g} {unit}, "
@@ -317,13 +377,11 @@ def _spot_plot(fig, res, opts, system):
         ax.tick_params(labelsize=7)
         if ax is not axes[0] and ax.get_legend():
             ax.get_legend().remove()
-    ir = R.get(system)
-    _legend_note(fig, f"Spot diagram, units {unit}, reference: {ir['spot_reference']}, "
-                      f"{ir['spot_pattern']} {ir['spot_rings']}")
+    _legend_note(fig, note)
 
 
 register(AnalysisSpec("spot", "Standard Spot Diagram", "Rays & Spots", _spot_compute, _spot_plot,
-                      [FIELD_ALL, WAVE_ALL], shortcut="Ctrl+D", uses_rays=True))
+                      [FIELD_ALL, WAVE_ALL, SPOT_SHOW], shortcut="Ctrl+D", uses_rays=True))
 
 
 def _tfs_compute(system, field=0, wave=-1, steps=7, focus_range=0.0):
@@ -338,8 +396,8 @@ def _tfs_plot(fig, r, opts, system):
     lim = max(max((np.nanmax(np.abs(np.concatenate([np.ravel(x) for x in s["x"]]))) for s in r["spots"]
                    if s["x"]), default=1.0), 1e-12) * 1.1
     for ax, dz, s in zip(axes, r["focus"], r["spots"]):
-        for w, x, y in zip(s["wavelengths"], s["x"], s["y"]):
-            ax.plot(x, y, ".", ms=1.5)
+        for c, x, y in zip(P.wavelength_colors(s["wavelengths"], _all_waves(system)), s["x"], s["y"]):
+            ax.plot(x, y, ".", ms=1.5, color=c)
         ax.set_xlim(-lim, lim)
         ax.set_ylim(-lim, lim)
         ax.set_aspect("equal")
@@ -625,7 +683,8 @@ register(AnalysisSpec("encircled_energy", "Encircled Energy", "PSF & MTF", _ee_c
 register(AnalysisSpec("field_curvature", "Field Curvature / Distortion", "Aberrations",
                       lambda s, wave=-1, distortion="ftan": lf.field_curvature(s, _waves(s, wave),
                                                                                 distortion=distortion),
-                      lambda fig, r, o, s: P.field_curvature(r, [fig.add_subplot(121), fig.add_subplot(122)]),
+                      lambda fig, r, o, s: P.field_curvature(r, [fig.add_subplot(121), fig.add_subplot(122)],
+                                                            waves=_all_waves(s)),
                       [WAVE_ALL, Setting("distortion", "Distortion", "choice", "ftan",
                                          [("F-Tan(theta)", "ftan"), ("F-Theta", "ftheta")])], shortcut="Ctrl+F"))
 register(AnalysisSpec("grid_distortion", "Grid Distortion", "Aberrations",
@@ -634,10 +693,12 @@ register(AnalysisSpec("grid_distortion", "Grid Distortion", "Aberrations",
                       [Setting("n", "Grid size", "int", 11, minimum=3, maximum=41), WAVE]))
 register(AnalysisSpec("lateral_color", "Lateral Color", "Aberrations",
                       lambda s, wave=-1: lf.lateral_color(s, _waves(s, wave)),
-                      lambda fig, r, o, s: P.lateral_color(r, fig.add_subplot(111)), [WAVE_ALL]))
+                      lambda fig, r, o, s: P.lateral_color(r, fig.add_subplot(111), waves=_all_waves(s)),
+                      [WAVE_ALL]))
 register(AnalysisSpec("longitudinal", "Longitudinal Aberration", "Aberrations",
                       lambda s, wave=-1: lf.longitudinal_aberration(s, _waves(s, wave)),
-                      lambda fig, r, o, s: P.longitudinal_aberration(r, fig.add_subplot(111)), [WAVE_ALL]))
+                      lambda fig, r, o, s: P.longitudinal_aberration(r, fig.add_subplot(111), waves=_all_waves(s)),
+                      [WAVE_ALL]))
 register(AnalysisSpec("focal_shift", "Chromatic Focal Shift", "Aberrations",
                       lambda s: lf.chromatic_focal_shift(s),
                       lambda fig, r, o, s: P.chromatic_focal_shift(r, fig.add_subplot(111)), []))
