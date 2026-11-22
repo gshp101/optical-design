@@ -42,7 +42,7 @@ from lensforge_qt import ns_table as NT  # noqa: E402
 from lensforge_qt import rays as R  # noqa: E402
 from lensforge_qt.analyses import REGISTRY  # noqa: E402
 from lensforge_qt.commands import sample_list  # noqa: E402
-from lensforge_qt.help_text import (CLEAR_VIGNETTING_TIP, FIELD_TIPS, OVERVIEW,  # noqa: E402
+from lensforge_qt.help_text import (CLEAR_VIGNETTING_TIP, EQUAL_AREA_TIPS, FIELD_TIPS, OVERVIEW,  # noqa: E402
                                      SET_VIGNETTING_TIP)
 from lensforge_qt.icon_svgs import APP_ICON, ns_svg  # noqa: E402
 from lensforge_qt.opt_runner import (ALGORITHMS, COMPENSATORS, CRITERIA, DISTRIBUTIONS,  # noqa: E402
@@ -729,7 +729,7 @@ class Session:
             "primary": s.primary_wavelength, "name": s.name, "units": s.units, "notes": s.notes,
             "presets": {k: [[f"{w:g}" for w in v[0]], v[1]] for k, v in WAVE_PRESETS.items()},
             "field_tips": FIELD_TIPS, "set_vignetting_tip": SET_VIGNETTING_TIP,
-            "clear_vignetting_tip": CLEAR_VIGNETTING_TIP,
+            "clear_vignetting_tip": CLEAR_VIGNETTING_TIP, "equal_area_tips": EQUAL_AREA_TIPS,
         }
 
     def _system_values(self, d):
@@ -759,6 +759,12 @@ class Session:
             for k, v in vals.items():
                 setattr(s, k, v)
         return self._modify("System settings", fn)
+
+    def equal_area_fields(self, n, maximum, minimum="0", full=False):
+        """Equal-Area Fields dialog: the y field values (as table text) for its settings."""
+        ys = lf.equal_area_fields(int(n), E.parse_number(str(maximum), allow_inf=False),
+                                  E.parse_number(str(minimum).strip() or "0", allow_inf=False), bool(full))
+        return [E.format_number(round(y, 10), 10) for y in ys]
 
     def compute_vignetting(self, d):
         """Set Vignetting in the Fields tab: factors for the dialog's (unapplied) settings.
@@ -1485,7 +1491,7 @@ SESSION = None
 READ_ONLY = {"state", "menus", "help_data", "about", "samples", "lens_text", "suggested_name", "lens_info",
              "session_dump", "prescription", "describe_deletion", "context_menu", "can_vary", "solve_form",
              "surface_properties", "material_search", "catalog_rows", "material_dialog", "material_preview",
-             "squash", "system_settings", "compute_vignetting", "input_rays", "pupil_pattern", "analysis_specs",
+             "squash", "system_settings", "compute_vignetting", "equal_area_fields", "input_rays", "pupil_pattern", "analysis_specs",
              "run_analysis", "forget_analysis",
              "mfe_evaluate", "operands", "operand_names", "operand_menu", "wizard_info", "wizard_pupil", "script_example", "opt_info",
              "history_plot", "tolerance_setup", "default_tolerances", "insert_preview", "inspect", "ns_info",

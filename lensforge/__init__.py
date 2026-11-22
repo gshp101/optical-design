@@ -21,7 +21,7 @@ from .materials import (AIR, MIRROR, ConstantIndex, Glass, GlassCatalog, Materia
 from .surfaces import (BinaryPhase, CircularAperture, CircularObscuration, CoordinateBreak, DiffractionGrating,
                        EllipticalAperture, EvenAsphere, OddAsphere, Paraxial, RectangularAperture,
                        Standard, Surface, Toroidal, XYPolynomial)
-from .system import Field, OpticalSystem, Wavelength, shared_library
+from .system import Field, OpticalSystem, Wavelength, equal_area_fields, shared_library
 from .paraxial import ParaxialAnalysis
 from .raytrace import TraceResult, RayGenerator, chief_ray, marginal_ray, trace, trace_rays
 from .pupil import pupil_grid

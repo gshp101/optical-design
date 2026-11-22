@@ -9,12 +9,13 @@ from __future__ import annotations
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (QAbstractItemView, QComboBox, QDialog, QDialogButtonBox, QFormLayout, QHBoxLayout,
                                QHeaderView, QLineEdit, QMessageBox, QPlainTextEdit, QPushButton, QTableWidget,
-                               QTableWidgetItem, QTabWidget, QVBoxLayout, QWidget, QLabel, QApplication)
+                               QTableWidgetItem, QTabWidget, QVBoxLayout, QWidget, QLabel, QApplication,
+                               QCheckBox, QSpinBox)
 
-from lensforge.system import APERTURE_TYPES, FIELD_TYPES, Field, Wavelength
+from lensforge.system import APERTURE_TYPES, FIELD_TYPES, Field, Wavelength, equal_area_fields
 
 from . import edits as E
-from .help_text import CLEAR_VIGNETTING_TIP, FIELD_TIPS, SET_VIGNETTING_TIP
+from .help_text import CLEAR_VIGNETTING_TIP, EQUAL_AREA_TIPS, FIELD_TIPS, SET_VIGNETTING_TIP
 from .ownership import qt_owns_children
 
 APERTURE_LABELS = {"EPD": "Entrance Pupil Diameter", "IMAGE_FNUM": "Image Space F/#",
@@ -206,14 +207,19 @@ class SystemExplorer(QDialog):
         self.preset.setCurrentIndex(0)
 
     def _equal_area(self):
-        """Replace the fields by n equal-area fields up to the current maximum y field."""
-        ys = [abs(_num(self.field_table, r, 1)) for r in range(self.field_table.rowCount())]
-        ymax = max(ys) if ys and max(ys) > 0 else 1.0
-        n = 5
+        """Equal-Area Fields...: ask for the count, range and half / full field, then replace the fields."""
+        ys = [_num(self.field_table, r, 1) for r in range(self.field_table.rowCount())]
+        d = EqualAreaDialog(self, maximum=max((abs(y) for y in ys), default=0.0) or 1.0,
+                            full=any(y < 0 for y in ys))
+        if d.exec() != QDialog.Accepted:
+            return False
+        self.set_field_values(d.values)
+        return True
+
+    def set_field_values(self, ys):
         self.field_table.setRowCount(0)
-        for k in range(n):
-            y = ymax * (k / (n - 1)) ** 0.5
-            self._add_row(self.field_table, ["0", f"{y:.6g}", "1", "0", "0", "0", "0", "0"])
+        for y in ys:
+            self._add_row(self.field_table, ["0", E.format_number(round(y, 10), 10), "1", "0", "0", "0", "0", "0"])
 
     def _show_fields(self, fields):
         for r, f in enumerate(fields):
@@ -312,3 +318,59 @@ class SystemExplorer(QDialog):
     def _ok(self):
         if self.apply():
             self.accept()
+
+
+@qt_owns_children
+class EqualAreaDialog(QDialog):
+    """Number of fields in the half field, full-field option and field range for Equal-Area Fields."""
+
+    def __init__(self, parent=None, maximum: float = 1.0, minimum: float = 0.0, count: int = 5,
+                 full: bool = False):
+        super().__init__(parent)
+        self.setWindowTitle("Equal-Area Fields")
+        self.values = []
+        self.count = QSpinBox()
+        self.count.setRange(1, 100)
+        self.count.setValue(count)
+        self.full = QCheckBox("Full field (positive and negative)")
+        self.full.setChecked(full)
+        self.maximum = QLineEdit(E.format_number(maximum, 10))
+        self.minimum = QLineEdit(E.format_number(minimum, 10))
+        for w, k in ((self.count, "count"), (self.full, "full"), (self.maximum, "maximum"), (self.minimum, "minimum")):
+            w.setToolTip(EQUAL_AREA_TIPS[k])
+        self.preview = QLabel()
+        self.preview.setWordWrap(True)
+        f = QFormLayout(self)
+        f.addRow("Fields in half field", self.count)
+        f.addRow("", self.full)
+        f.addRow("Maximum field", self.maximum)
+        f.addRow("Minimum field", self.minimum)
+        f.addRow("Fields", self.preview)
+        bb = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        bb.accepted.connect(self._ok)
+        bb.rejected.connect(self.reject)
+        f.addRow(bb)
+        self.count.valueChanged.connect(self._update)
+        self.full.toggled.connect(self._update)
+        self.maximum.textChanged.connect(self._update)
+        self.minimum.textChanged.connect(self._update)
+        self._update()
+
+    def compute(self):
+        return equal_area_fields(self.count.value(), E.parse_number(self.maximum.text(), allow_inf=False),
+                                 E.parse_number(self.minimum.text() or "0", allow_inf=False), self.full.isChecked())
+
+    def _update(self):
+        try:
+            ys = self.compute()
+            self.preview.setText(", ".join(f"{y:.6g}" for y in ys))
+        except ValueError as e:
+            self.preview.setText(str(e))
+
+    def _ok(self):
+        try:
+            self.values = self.compute()
+        except ValueError as e:
+            QMessageBox.warning(self, "Equal-Area Fields", str(e))
+            return
+        self.accept()

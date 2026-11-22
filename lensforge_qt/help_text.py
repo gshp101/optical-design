@@ -26,6 +26,14 @@ SET_VIGNETTING_TIP = ("Compute VDX/VDY/VCX/VCY for every field so its whole ray 
                       "apertures and fixed semi-diameters (VAN sets the axes of the compression)")
 CLEAR_VIGNETTING_TIP = "Set the vignetting factors and angle of every field back to zero"
 
+# Equal-Area Fields dialog (Qt and web): tooltips of its entries
+EQUAL_AREA_TIPS = {
+    "count": "Number of fields from the minimum to the maximum field (one side of the axis)",
+    "full": "Add the mirrored negative fields too, so the fields cover the full field from -maximum to +maximum",
+    "maximum": "Largest field value (in the units of the field type)",
+    "minimum": "Smallest field value; 0 puts the first field on axis",
+}
+
 #: menu path -> (summary, details)
 HELP = {
     # ------------------------------------------------------------------ File
@@ -82,6 +90,14 @@ HELP = {
         "Edit the field points and their vignetting factors.",
         "Opens the System Explorer on the Fields tab: the field type (angle in degrees, object height, "
         "paraxial or real image height) and the x/y field points with weights."
+        "<p><b>Equal-Area Fields...</b> opens a dialog that replaces the fields by y fields spaced so "
+        "each zone between neighbouring fields covers the same area: <b>Fields in half field</b> sets how "
+        "many fields run from the <b>Minimum field</b> to the <b>Maximum field</b> (field squared is evenly "
+        "spaced, so 5 fields from 0 to 20 give 0, 10, 14.14, 17.32, 20), and <b>Full field</b> adds the "
+        "mirrored negative fields too (one on-axis field, never two). The new fields have weight 1 and no "
+        "vignetting; OK or Apply in the System Explorer writes them to the lens. From Python: "
+        "<code>lens.set_equal_area_fields(5, 20.0, minimum=0.0, full=True)</code> or "
+        "<code>lf.equal_area_fields(5, 20.0)</code>.</p>"
         "<p><b>Vignetting factors.</b> Each field has VDX / VDY (decentre of the pupil, as fractions of its "
         "radius), VCX / VCY (compression: 0 = none, 0.3 = 30% narrower) and <b>VAN</b>, the vignetting "
         "angle in degrees, which rotates the compressed pupil counter-clockwise about its centre so a field "
