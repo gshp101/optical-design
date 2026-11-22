@@ -516,14 +516,19 @@ def _seid(ctx, term="S1"):
 # Default-merit-function blocks
 # ---------------------------------------------------------------------------
 
-def gaussian_quadrature(rings: int = 3, arms: int = 6, symmetric: bool = False):
+def gaussian_quadrature(rings: int = 3, arms: int = 6, symmetric: bool = False, obscuration: float = 0.0):
     """Gaussian quadrature pupil sampling (Forbes 1988): ``rings`` radii from a
     Gauss-Legendre rule in r^2 and ``arms`` equally spaced azimuths.  With
     ``symmetric`` only the half pupil px >= 0 is sampled (systems symmetric
-    about the y-z plane).  Returns (px, py, weights) with weights summing to 1;
-    weighted sums integrate polynomials of degree 2*rings-1 in r^2 exactly."""
-    x, w = np.polynomial.legendre.leggauss(rings)
-    r = np.sqrt((x + 1) / 2)
+    about the y-z plane).  ``obscuration`` (0..1, fraction of the pupil radius)
+    puts the rings in the annulus obscuration <= r <= 1.  Returns (px, py,
+    weights) with weights summing to 1; weighted sums integrate polynomials of
+    degree 2*rings-1 in r^2 exactly."""
+    eps2 = float(obscuration) ** 2
+    if not 0.0 <= eps2 < 1.0:
+        raise ValueError("obscuration must be in [0, 1)")
+    x, w = np.polynomial.legendre.leggauss(int(rings))
+    r = np.sqrt(eps2 + (1 - eps2) * (x + 1) / 2)
     w = w / 2
     if symmetric:
         th = -np.pi / 2 + (np.arange(arms) + 0.5) * np.pi / arms
@@ -532,6 +537,41 @@ def gaussian_quadrature(rings: int = 3, arms: int = 6, symmetric: bool = False):
     R, T = np.meshgrid(r, th, indexing="ij")
     W = np.repeat(w[:, None], arms, axis=1) / arms
     return (R * np.cos(T)).ravel(), (R * np.sin(T)).ravel(), W.ravel()
+
+
+def rectangular_array(grid: int = 6, symmetric: bool = False, obscuration: float = 0.0):
+    """Rectangular pupil sampling: the centres of a ``grid`` x ``grid`` array of
+    equal cells over the square circumscribing the pupil, keeping the points with
+    obscuration <= r <= 1 (equal weights summing to 1).  With ``symmetric`` only
+    px >= 0 is kept, points on px = 0 counting half."""
+    n = int(grid)
+    if n < 1:
+        raise ValueError("grid must be at least 1")
+    v = -1 + (np.arange(n) + 0.5) * 2 / n
+    X, Y = np.meshgrid(v, v)
+    X, Y = X.ravel(), Y.ravel()
+    r2 = X**2 + Y**2
+    m = (r2 <= 1.0 + 1e-12) & (r2 >= float(obscuration) ** 2)
+    W = np.ones_like(X)
+    if symmetric:
+        m &= X >= -1e-12
+        W = np.where(np.abs(X) < 1e-12, 0.5, 1.0)
+    X, Y, W = X[m], Y[m], W[m]
+    if not X.size:
+        raise ValueError("no rays left in the pupil: increase the grid or reduce the obscuration")
+    return X, Y, W / W.sum()
+
+
+def pupil_samples(pupil: str = "gaussian", rings: int = 3, arms: int = 6, grid: int = 6,
+                  symmetric: bool = False, obscuration: float = 0.0):
+    """Pupil points and weights of a default merit block: ``pupil='gaussian'``
+    (:func:`gaussian_quadrature`, rings x arms) or ``'rectangular'``
+    (:func:`rectangular_array`, grid x grid)."""
+    if pupil in ("gaussian", "gq", None):
+        return gaussian_quadrature(rings, arms, symmetric, obscuration)
+    if pupil in ("rectangular", "rect", "ra"):
+        return rectangular_array(grid, symmetric, obscuration)
+    raise ValueError("pupil must be 'gaussian' or 'rectangular'")
 
 
 def is_symmetric(system) -> bool:
@@ -549,23 +589,29 @@ def is_symmetric(system) -> bool:
     return True
 
 
-def _wave_set(ctx, wavelengths):
+def _wave_set(ctx, wavelengths, equal_waves=False):
     s = ctx.system
     idx = range(len(s.wavelengths)) if wavelengths is None else wavelengths
     vals = [s.wavelengths[i].value for i in idx]
-    w = np.array([s.wavelengths[i].weight for i in idx], float)
+    w = np.array([1.0 if equal_waves else s.wavelengths[i].weight for i in idx], float)
+    if not w.size or w.sum() <= 0:
+        raise OperandError("no wavelength with a positive weight")
     return vals, w / w.sum()
 
 
-def _ray_bundle(ctx, field, wavelengths, rings, arms, symmetric):
+_PUPIL_PARAMS = "pupil='gaussian'|'rectangular', rings, arms, grid, obscuration"
+
+
+def _ray_bundle(ctx, field, wavelengths, rings, arms, symmetric, pupil="gaussian", grid=6, obscuration=0.0,
+                apertures=True, equal_waves=False):
     s = ctx.system
     hx, hy = (field if isinstance(field, (tuple, list)) else s.normalized_field(int(field)))
     sym = is_symmetric(s) if symmetric is None else symmetric
-    px, py, q = gaussian_quadrature(rings, arms, sym)
-    waves, ww = _wave_set(ctx, wavelengths)
+    px, py, q = pupil_samples(pupil, rings, arms, grid, sym, obscuration)
+    waves, ww = _wave_set(ctx, wavelengths, equal_waves)
     out = []
     for wl, w in zip(waves, ww):
-        r = trace_rays(s, hx, hy, px, py, wavelength=wl)
+        r = trace_rays(s, hx, hy, px, py, wavelength=wl, apertures=apertures)
         bad = (r.status == MISS) | (r.status == TIR)
         if bad.any():
             raise OperandError(f"{int(bad.sum())} rays failed (miss/TIR) at field ({hx:g}, {hy:g})")
@@ -574,57 +620,128 @@ def _ray_bundle(ctx, field, wavelengths, rings, arms, symmetric):
     return hx, hy, px, py, q, sym, out
 
 
-@operand("RAYS", "Default-merit block: transverse ray errors of one field over a Gaussian-quadrature pupil "
-                 "(field, reference='centroid'|'chief', rings, arms, wavelengths)")
-def _rays(ctx, field=0, reference="centroid", rings=3, arms=6, wavelengths=None, symmetric=None):
-    hx, hy, px, py, q, sym, bundle = _ray_bundle(ctx, field, wavelengths, rings, arms, symmetric)
+def _spot_coords(r, angular):
+    """Image-plane coordinates, or direction tangents (L/N, M/N) for angular (afocal) criteria."""
+    if not angular:
+        return r.x, r.y
+    d = r.direction
+    return d[:, 0] / d[:, 2], d[:, 1] / d[:, 2]
+
+
+def _spot_block(ctx, field, reference, rings, arms, wavelengths, symmetric, pupil, grid, obscuration,
+                component, mode, apertures, equal_waves, angular):
+    hx, hy, px, py, q, sym, bundle = _ray_bundle(ctx, field, wavelengths, rings, arms, symmetric, pupil, grid,
+                                                 obscuration, apertures, equal_waves)
+    coords = [_spot_coords(r, angular) for wl, w, r, keep in bundle]
     if reference == "centroid":
         sx = sy = sw = 0.0
-        for wl, w, r, keep in bundle:
+        for (x, y), (wl, w, r, keep) in zip(coords, bundle):
             qq = w * q * keep
-            sx += np.sum(qq * np.where(keep, r.x, 0.0))
-            sy += np.sum(qq * np.where(keep, r.y, 0.0))
+            sx += np.sum(qq * np.where(keep, x, 0.0))
+            sy += np.sum(qq * np.where(keep, y, 0.0))
             sw += qq.sum()
         if sw == 0:
             raise OperandError("all rays vignetted")
         cx, cy = (0.0 if sym else sx / sw), sy / sw
-    else:
+    elif reference == "chief":
         c = ctx.chief(hx, hy)
-        cx, cy = c.x[0], c.y[0]
-    vals, wts = [], []
-    for wl, w, r, keep in bundle:
-        qq = w * q * keep
-        vals += [np.where(keep, r.x - cx, 0.0), np.where(keep, r.y - cy, 0.0)]
-        wts += [qq, qq]
+        cx, cy = (c.x[0], c.y[0]) if not angular else (c.direction[0, 0] / c.direction[0, 2],
+                                                        c.direction[0, 1] / c.direction[0, 2])
+    elif reference in ("unreferenced", "none", "zero"):
+        cx = cy = 0.0
+    else:
+        raise OperandError("reference must be 'centroid', 'chief' or 'unreferenced'")
+    comps = {"radial": "xy", "r": "xy", "xy": "xy", "x": "x", "y": "y"}.get(component)
+    if comps is None:
+        raise OperandError("component must be 'radial', 'xy', 'x' or 'y'")
     total = sum(w * np.sum(q * keep) for wl, w, r, keep in bundle)
+    if total == 0:
+        raise OperandError("all rays vignetted")
+    if mode == "ptv":
+        ex = np.concatenate([np.where(keep, x - cx, 0.0) for (x, y), (wl, w, r, keep) in zip(coords, bundle)])
+        ey = np.concatenate([np.where(keep, y - cy, 0.0) for (x, y), (wl, w, r, keep) in zip(coords, bundle)])
+        if component in ("radial", "r"):
+            return Block(np.array([np.sqrt(np.max(ex**2 + ey**2))]))
+        vals = ([np.max(np.abs(ex))] if "x" in comps else []) + ([np.max(np.abs(ey))] if "y" in comps else [])
+        return Block(np.array(vals), np.ones(len(vals)), np.full(len(vals), 1.0 / len(vals)))
+    if mode != "rms":
+        raise OperandError("mode must be 'rms' or 'ptv'")
+    vals, wts = [], []
+    for (x, y), (wl, w, r, keep) in zip(coords, bundle):
+        qq = w * q * keep
+        if "x" in comps:
+            vals.append(np.where(keep, x - cx, 0.0))
+            wts.append(qq)
+        if "y" in comps:
+            vals.append(np.where(keep, y - cy, 0.0))
+            wts.append(qq)
     W = np.concatenate(wts)
-    return Block(np.concatenate(vals), W, W / (2 * total))
+    # RMS radius for 'radial' / 'xy' (x and y errors of each ray), RMS x or y otherwise
+    return Block(np.concatenate(vals), W, W / ((2 if comps == "xy" else 1) * total))
 
 
-@operand("OPDS", "Default-merit block: OPD (waves) of one field over a Gaussian-quadrature pupil, "
-                 "piston removed (and tilt for reference='centroid')")
-def _opds(ctx, field=0, reference="centroid", rings=3, arms=6, wavelengths=None, symmetric=None):
+@operand("RAYS", "Default-merit block: transverse ray errors of one field over the pupil (field, "
+                 "reference='centroid'|'chief'|'unreferenced', component='radial'|'xy'|'x'|'y', mode='rms'|'ptv', "
+                 + _PUPIL_PARAMS + ", wavelengths)")
+def _rays(ctx, field=0, reference="centroid", rings=3, arms=6, wavelengths=None, symmetric=None,
+          pupil="gaussian", grid=6, obscuration=0.0, component="radial", mode="rms", apertures=True,
+          equal_waves=False):
+    return _spot_block(ctx, field, reference, rings, arms, wavelengths, symmetric, pupil, grid, obscuration,
+                       component, mode, apertures, equal_waves, False)
+
+
+@operand("ANGS", "Default-merit block: angular ray errors (direction tangents, radians) of one field in image "
+                 "space, for afocal systems; same parameters as RAYS")
+def _angs(ctx, field=0, reference="centroid", rings=3, arms=6, wavelengths=None, symmetric=None,
+          pupil="gaussian", grid=6, obscuration=0.0, component="radial", mode="rms", apertures=True,
+          equal_waves=False):
+    return _spot_block(ctx, field, reference, rings, arms, wavelengths, symmetric, pupil, grid, obscuration,
+                       component, mode, apertures, equal_waves, True)
+
+
+@operand("OPDS", "Default-merit block: OPD (waves) of one field over the pupil, piston removed (reference='chief'), "
+                 "piston and tilt removed ('centroid') or nothing removed ('unreferenced'); mode='rms'|'ptv', "
+                 + _PUPIL_PARAMS)
+def _opds(ctx, field=0, reference="centroid", rings=3, arms=6, wavelengths=None, symmetric=None,
+          pupil="gaussian", grid=6, obscuration=0.0, mode="rms", apertures=True, equal_waves=False):
     s = ctx.system
     hx, hy = (field if isinstance(field, (tuple, list)) else s.normalized_field(int(field)))
     sym = is_symmetric(s) if symmetric is None else symmetric
-    px, py, q = gaussian_quadrature(rings, arms, sym)
-    waves, ww = _wave_set(ctx, wavelengths)
+    px, py, q = pupil_samples(pupil, rings, arms, grid, sym, obscuration)
+    waves, ww = _wave_set(ctx, wavelengths, equal_waves)
     ref = ctx.cached(("ref", hx, hy), lambda: _Reference(s, hx, hy))
-    vals, wts = [], []
+    if reference not in ("centroid", "chief", "unreferenced", "none", "zero"):
+        raise OperandError("reference must be 'centroid', 'chief' or 'unreferenced'")
+    vals, wts, peaks = [], [], []
     for wl, w in zip(waves, ww):
-        W = _opd(s, hx, hy, px, py, wl, ref)
-        if not np.all(np.isfinite(W)):
+        W, status = _opd(s, hx, hy, px, py, wl, ref, apertures=apertures, return_status=True)
+        bad = (status == MISS) | (status == TIR)
+        if bad.any() or not np.all(np.isfinite(W) | (status == VIGNETTED)):
             raise OperandError(f"OPD rays failed at field ({hx:g}, {hy:g})")
-        cols = [np.ones_like(px)]
+        keep = np.isfinite(W)
+        if not keep.any():
+            raise OperandError("all rays vignetted")
+        cols = []
+        if reference in ("centroid", "chief"):
+            cols.append(np.ones_like(px))
         if reference == "centroid":
             cols += [py] if sym else [px, py]
-        A = np.column_stack(cols)
-        sq = np.sqrt(q)
-        c, *_ = np.linalg.lstsq(A * sq[:, None], W * sq, rcond=None)
-        vals.append(W - A @ c)
-        wts.append(w * q)
+        Wk = np.where(keep, W, 0.0)
+        qk = q * keep
+        if cols:
+            A = np.column_stack(cols)
+            sq = np.sqrt(qk)
+            c, *_ = np.linalg.lstsq(A * sq[:, None], Wk * sq, rcond=None)
+            Wk = np.where(keep, Wk - A @ c, 0.0)
+        vals.append(Wk)
+        wts.append(w * qk)
+        peaks.append((Wk[keep].max(), Wk[keep].min()))
+    if mode == "ptv":
+        return Block(np.array([max(p[0] for p in peaks) - min(p[1] for p in peaks)]))
+    if mode != "rms":
+        raise OperandError("mode must be 'rms' or 'ptv'")
     Wt = np.concatenate(wts)
-    return Block(np.concatenate(vals), Wt, Wt)
+    return Block(np.concatenate(vals), Wt, Wt / Wt.sum())
 
 
 # ---------------------------------------------------------------------------

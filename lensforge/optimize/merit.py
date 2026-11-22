@@ -25,6 +25,7 @@ field-weighted RMS spot radius.
 
 from __future__ import annotations
 
+import inspect
 import math
 from dataclasses import dataclass, field as dc_field
 from typing import Dict, List, Optional, Sequence
@@ -108,8 +109,11 @@ class MeritEvaluation:
 class MeritFunction:
     """Ordered list of :class:`Operand` rows (a merit function editor)."""
 
-    def __init__(self, rows: Sequence[Operand] = ()):
+    def __init__(self, rows: Sequence[Operand] = (), wizard: Optional[Dict] = None):
         self.rows: List[Operand] = list(rows)
+        #: the :func:`default_merit` options that built the default rows (None if not built by it);
+        #: saved with the lens so the wizard reopens with the same settings
+        self.wizard: Optional[Dict] = None if wizard is None else dict(wizard)
 
     # -- editing ---------------------------------------------------------------
     def add(self, type: str, target: float = 0.0, weight: float = 1.0, bound: Optional[str] = None,
@@ -164,7 +168,7 @@ class MeritFunction:
 
     def copy(self) -> "MeritFunction":
         return MeritFunction([Operand(r.type, r.target, r.weight, r.bound, dict(r.params), r.comment)
-                              for r in self.rows])
+                              for r in self.rows], self.wizard)
 
     # -- evaluation ------------------------------------------------------------
     def _compute(self, system):
@@ -271,17 +275,42 @@ class MeritFunction:
 
     # -- serialisation ---------------------------------------------------------
     def to_dict(self):
-        return {"rows": [r.to_dict() for r in self.rows]}
+        d = {"rows": [r.to_dict() for r in self.rows]}
+        if self.wizard:
+            d["wizard"] = dict(self.wizard)
+        return d
 
     @classmethod
     def from_dict(cls, d):
         mf = cls([Operand(r["type"], r.get("target", 0.0), r.get("weight", 1.0), r.get("bound"),
-                          dict(r.get("params", {})), r.get("comment", "")) for r in d["rows"]])
+                          dict(r.get("params", {})), r.get("comment", "")) for r in d["rows"]], d.get("wizard"))
         mf.auto_weight()
         return mf
 
     def __repr__(self):
         return f"MeritFunction({len(self.rows)} rows)"
+
+
+#: operand types that the default merit function writes (replaced when it is rebuilt)
+DEFAULT_MERIT_TYPES = ("RAYS", "OPDS", "ANGS", "MTFA", "CONF")
+BOUNDARY_TYPES = ("MNCG", "MXCG", "MNEG", "MXEG", "MNCA", "MXCA", "MNEA", "MXEA")
+
+#: criteria of :func:`default_merit` (``kind``), with the operand each one writes
+CRITERIA = {"spot": ("RAYS", "Spot radius"), "spot_x": ("RAYS", "Spot X"), "spot_y": ("RAYS", "Spot Y"),
+            "spot_xy": ("RAYS", "Spot X + Y"), "wavefront": ("OPDS", "Wavefront"),
+            "angular": ("ANGS", "Angular radius"), "angular_x": ("ANGS", "Angular X"),
+            "angular_y": ("ANGS", "Angular Y"), "angular_xy": ("ANGS", "Angular X + Y"),
+            "mtf": ("MTFA", "MTF")}
+REFERENCES = ("centroid", "chief", "unreferenced")
+PUPILS = ("gaussian", "rectangular")
+OPTIMIZATION_TYPES = ("rms", "ptv")
+
+
+def is_default_row(row) -> bool:
+    """True for rows written by :func:`default_merit` (image-quality blocks, CONF
+    headers, the "Default merit" BLNK header and the thickness boundaries)."""
+    return (row.type in DEFAULT_MERIT_TYPES or row.type in BOUNDARY_TYPES
+            or (row.type == "BLNK" and row.comment.startswith("Default merit")))
 
 
 def default_merit(system, kind: str = "spot", reference: str = "centroid", rings: int = 3, arms: int = 6,
@@ -291,36 +320,116 @@ def default_merit(system, kind: str = "spot", reference: str = "centroid", rings
                   glass_edge: Optional[float] = None, air_min: Optional[float] = None,
                   air_max: Optional[float] = None, air_edge: Optional[float] = None,
                   boundary_weight: float = 1.0, configs: Optional[Sequence[int]] = None,
-                  config_weights: Optional[Sequence[float]] = None) -> MeritFunction:
+                  config_weights: Optional[Sequence[float]] = None, *, optimization: str = "rms",
+                  component: Optional[str] = None, pupil: str = "gaussian", grid: int = 6,
+                  obscuration: float = 0.0, delete_vignetted: bool = True, field_weighting: str = "system",
+                  wavelength_weighting: str = "system", weight: float = 1.0,
+                  glass_max_edge: Optional[float] = None, air_max_edge: Optional[float] = None,
+                  boundary_surfaces: Optional[Sequence[int]] = None) -> MeritFunction:
     """Default merit function (the "optimisation wizard").
 
-    ``kind``: "spot" (RMS transverse ray error), "wavefront" (RMS OPD, waves)
-    or "mtf" (1 - average MTF at ``frequency`` cycles per lens unit for each field).
-    ``reference``: "centroid" or "chief".  Pupil sampling is Gaussian
-    quadrature with ``rings`` x ``arms`` rays per field and wavelength (half
-    pupil if the system is symmetric).  Rows are weighted by the field
-    weights; wavelength weights are applied inside each block.
+    Image quality:
 
-    Optional thickness boundaries add MNCG / MXCG / MNEG / MNCA / MXCA / MNEA rows.
+    * ``optimization``: "rms" (root-mean-square over the pupil) or "ptv"
+      (peak-to-valley: the largest ray error, or the wavefront's max - min).
+    * ``kind`` (criterion): "spot" (transverse ray error, radial), "spot_x",
+      "spot_y" or "spot_xy" (x and y separately), "wavefront" (OPD in waves),
+      "angular" / "angular_x" / "angular_y" / "angular_xy" (image-space ray
+      angles in radians, for afocal systems) or "mtf" (1 - average MTF at
+      ``frequency`` cycles per lens unit; RMS only).  ``component`` overrides
+      the suffix ("radial", "x", "y", "xy").
+    * ``reference``: "centroid", "chief" (ray) or "unreferenced" (spot: the
+      image-surface origin; wavefront: OPD as traced, nothing removed).
+    * Pupil integration: ``pupil="gaussian"`` (Gaussian quadrature, ``rings``
+      x ``arms`` rays) or "rectangular" (``grid`` x ``grid`` array); an
+      ``obscuration`` (fraction of the pupil radius) leaves out the centre.
+    * ``symmetric``: True assumes symmetry about the y-z plane (half pupil),
+      False samples the whole pupil, None decides at each evaluation.
+    * ``delete_vignetted``: True leaves out rays that surface apertures stop
+      (the usual choice); False traces every ray ignoring apertures.
+    * ``field_weighting`` / ``wavelength_weighting``: "system" (the weights in
+      the Fields / Wavelengths dialogs) or "equal".  ``fields`` /
+      ``wavelengths`` choose a subset (indices).  ``weight`` scales every
+      image-quality row.
+
+    Boundaries: ``glass_min`` / ``glass_max`` / ``glass_edge`` /
+    ``glass_max_edge`` and the ``air_...`` equivalents add MNCG / MXCG / MNEG
+    / MXEG / MNCA / MXCA / MNEA / MXEA rows of weight ``boundary_weight`` over
+    ``boundary_surfaces=(first, last)`` (default: all surfaces).
 
     For a multi-configuration lens the image-quality rows are repeated for
     every configuration (or those listed in ``configs``), each group headed by
     a ``CONF`` row and scaled by its ``config_weights`` entry; pass
     ``configs=[]`` for the current configuration only.  Boundary rows apply
     to the configuration the lens shows.
+
+    The options are kept in the result's :attr:`MeritFunction.wizard` (and
+    saved with the lens).  :func:`apply_default_merit` also handles the rows
+    the lens already has.
     """
+    opts = {k: v for k, v in locals().items() if k != "system"}
+    for k in ("fields", "wavelengths", "configs", "config_weights", "boundary_surfaces"):
+        if opts[k] is not None:
+            opts[k] = list(opts[k])
+    defaults = {k: p.default for k, p in inspect.signature(default_merit).parameters.items()}
+    opts = {k: v for k, v in opts.items() if k == "kind" or v != defaults[k]}  # what differs from the defaults
+    kind = kind.lower()
+    if kind not in CRITERIA:
+        raise ValueError("kind must be one of " + ", ".join(repr(k) for k in CRITERIA))
+    base, _, suffix = kind.partition("_")
+    comp = component or {"": "radial", "x": "x", "y": "y", "xy": "xy"}[suffix]
+    if comp not in ("radial", "x", "y", "xy"):
+        raise ValueError("component must be 'radial', 'x', 'y' or 'xy'")
+    if optimization not in OPTIMIZATION_TYPES:
+        raise ValueError("optimization must be 'rms' or 'ptv'")
+    if reference not in REFERENCES:
+        raise ValueError("reference must be 'centroid', 'chief' or 'unreferenced'")
+    if pupil not in PUPILS:
+        raise ValueError("pupil must be 'gaussian' or 'rectangular'")
+    if not 0.0 <= obscuration < 1.0:
+        raise ValueError("obscuration must be in [0, 1)")
+    if field_weighting not in ("system", "equal") or wavelength_weighting not in ("system", "equal"):
+        raise ValueError("field_weighting and wavelength_weighting must be 'system' or 'equal'")
+    if base == "mtf" and frequency is None:
+        raise ValueError("kind='mtf' needs a frequency (cycles per lens unit)")
+    block = {"kind": base, "frequency": frequency, "fields": fields, "field_weighting": field_weighting,
+             "weight": float(weight), "params": {}}
+    if base != "mtf":
+        p = {"reference": reference, "wavelengths": None if wavelengths is None else list(wavelengths),
+             "symmetric": symmetric}
+        if pupil == "gaussian":
+            p.update(rings=int(rings), arms=int(arms))
+        else:
+            p.update(pupil="rectangular", grid=int(grid))
+        if obscuration:
+            p["obscuration"] = float(obscuration)
+        if base != "wavefront" and comp != "radial":
+            p["component"] = comp
+        if optimization != "rms":
+            p["mode"] = optimization
+        if not delete_vignetted:
+            p["apertures"] = False
+        if wavelength_weighting == "equal":
+            p["equal_waves"] = True
+        block["params"] = p
     mf = MeritFunction()
     sym = symmetric  # None: decided at each evaluation, so perturbed copies stay correct
-    mf.add("BLNK", weight=0, comment=f"Default merit: {kind}, {reference}, {rings} rings x {arms} arms")
-    for k, (lo, hi_t, edge, op_min, op_max, op_edge) in enumerate((
-            (glass_min, glass_max, glass_edge, "MNCG", "MXCG", "MNEG"),
-            (air_min, air_max, air_edge, "MNCA", "MXCA", "MNEA"))):
-        if lo is not None:
-            mf.add(op_min, lo, boundary_weight)
-        if hi_t is not None:
-            mf.add(op_max, hi_t, boundary_weight)
-        if edge is not None:
-            mf.add(op_edge, edge, boundary_weight)
+    samp = f"{rings} rings x {arms} arms" if pupil == "gaussian" else f"{grid} x {grid} grid"
+    if obscuration:
+        samp += f", obscuration {obscuration:g}"
+    label = CRITERIA[kind][1] if component is None else f"{CRITERIA[base][1].split()[0]} {comp}"
+    head = (f"Default merit: {label}, {frequency:g} cycles" if base == "mtf" else
+            f"Default merit: {optimization.upper()} {label}, {reference}, {samp}")
+    mf.add("BLNK", weight=0, comment=head)
+    rng = {}
+    if boundary_surfaces is not None:
+        a, b = boundary_surfaces
+        rng = {"surf": int(a), "surf2": int(b)}
+    for vals, ops in (((glass_min, glass_max, glass_edge, glass_max_edge), ("MNCG", "MXCG", "MNEG", "MXEG")),
+                      ((air_min, air_max, air_edge, air_max_edge), ("MNCA", "MXCA", "MNEA", "MXEA"))):
+        for v, op in zip(vals, ops):
+            if v is not None:
+                mf.add(op, float(v), boundary_weight, **rng)
     mc = getattr(system, "multiconfig", None)
     if configs is None:
         configs = list(mc.configs) if mc is not None and mc.n_configs > 1 else []
@@ -332,31 +441,51 @@ def default_merit(system, kind: str = "spot", reference: str = "centroid", rings
         raise ValueError("give one config weight per configuration")
     for k, w in zip(configs, cw):
         mf.add("CONF", weight=0, cfg=int(k), comment=mc.name(int(k)))
-        _image_quality_rows(mf, system.config_copy(int(k)), kind, reference, rings, arms, frequency, fields,
-                            wavelengths, sym, w)
+        _image_quality_rows(mf, system.config_copy(int(k)), block, sym, w)
     if not configs:
-        _image_quality_rows(mf, system, kind, reference, rings, arms, frequency, fields, wavelengths, sym, 1.0)
+        _image_quality_rows(mf, system, block, sym, 1.0)
+    mf.wizard = opts
     return mf
 
 
-def _image_quality_rows(mf, system, kind, reference, rings, arms, frequency, fields, wavelengths, sym, scale):
+def _image_quality_rows(mf, system, block, sym, scale):
+    fields = block["fields"]
     idx = range(len(system.fields)) if fields is None else fields
+    op = {"spot": "RAYS", "wavefront": "OPDS", "angular": "ANGS"}.get(block["kind"])
     for i in idx:
-        w = system.fields[i].weight * scale
+        fw = system.fields[i].weight
+        if block["field_weighting"] == "system" and fw <= 0:
+            continue
+        w = (fw if block["field_weighting"] == "system" else 1.0) * scale * block["weight"]
         if w <= 0:
             continue
-        if kind == "spot":
-            mf.add("RAYS", 0.0, w, field=i, reference=reference, rings=rings, arms=arms,
-                   wavelengths=None if wavelengths is None else list(wavelengths), symmetric=sym)
-        elif kind == "wavefront":
-            mf.add("OPDS", 0.0, w, field=i, reference=reference, rings=rings, arms=arms,
-                   wavelengths=None if wavelengths is None else list(wavelengths), symmetric=sym)
-        elif kind == "mtf":
-            if frequency is None:
-                raise ValueError("kind='mtf' needs a frequency (cycles per lens unit)")
-            mf.add("MTFA", 1.0, w, freq=frequency, field=i)
+        if block["kind"] == "mtf":
+            mf.add("MTFA", 1.0, w, freq=block["frequency"], field=i)
         else:
-            raise ValueError("kind must be 'spot', 'wavefront' or 'mtf'")
+            p = dict(block["params"])
+            p["symmetric"] = sym
+            mf.add(op, 0.0, w, field=i, **p)
+
+
+def apply_default_merit(system, start_at: Optional[int] = None, keep: bool = True, **options) -> MeritFunction:
+    """Build :func:`default_merit` (``options``) and attach it to ``system``.
+
+    ``start_at`` (row index from 0): keep the lens's rows above it and replace
+    everything from that row on by the default rows.  Otherwise, with ``keep``
+    the lens's own rows (those :func:`is_default_row` does not recognise) stay
+    above the new default rows, and without it the merit function is replaced.
+    Re-run with the same settings as ``apply_default_merit(lens, **lens.merit_function.wizard)``.
+    """
+    new = default_merit(system, **options)
+    old = getattr(system, "merit_function", None)
+    if old is not None:
+        if start_at is not None:
+            new.rows = old.rows[:max(0, int(start_at))] + new.rows
+        elif keep:
+            new.rows = [r for r in old.rows if not is_default_row(r)] + new.rows
+    new.wizard = dict(new.wizard, start_at=None if start_at is None else int(start_at), keep=bool(keep))
+    system.merit_function = new
+    return new
 
 
 def operand_help(name: Optional[str] = None) -> str:

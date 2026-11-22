@@ -27,8 +27,10 @@ from .variables import (MCVariable, Variable, VariableSet, clear_variables, get_
 from .solves import (ChiefRayAngle, ChiefRayHeight, Concentric, EdgeThickness, FNumber, Formula, MarginalRayAngle,
                      MarginalRayHeight, Pickup, Position, Solve, apply_solves, remove_solve, set_solve, solves,
                      solve_from_dict)
-from .operands import OPERAND_INFO, OPERANDS, Block, EvalContext, gaussian_quadrature, is_symmetric
-from .merit import MeritFunction, Operand, default_merit, operand_help
+from .operands import (OPERAND_INFO, OPERANDS, Block, EvalContext, gaussian_quadrature, is_symmetric, pupil_samples,
+                       rectangular_array)
+from .merit import (CRITERIA, MeritFunction, Operand, apply_default_merit, default_merit, is_default_row,
+                    operand_help)
 from .dls import OptimizationResult, merit_value, optimize
 from .orthogonal import ODResult, minimize_od, orthogonal_descent
 from .global_opt import GlobalResult, global_search, hammer

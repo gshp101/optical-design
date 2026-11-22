@@ -179,6 +179,24 @@ def test_session_optimizes_and_stops():
     assert call(s, "mfe_evaluate")["result"]["value"] == pytest.approx(r["merit"], rel=1e-6)
 
 
+def test_session_merit_wizard_options():
+    s = Session()
+    call(s, "load_sample", name="Cooke Triplet (optimised)")
+    info = call(s, "wizard_info")["result"]
+    assert ["angular", "Angular radius"] in info["criteria"] and info["help"].endswith("mfe/wizard")
+    kw = {"kind": "spot_y", "optimization": "ptv", "reference": "chief", "pupil": "rectangular", "grid": 8,
+          "obscuration": 0.2, "wavelength_weighting": "equal", "symmetric": None, "delete_vignetted": True,
+          "field_weighting": "system", "weight": 2, "glass_min": 1.5, "boundary_weight": 1, "start_at": 0}
+    call(s, "mfe_wizard", kw=kw, keep=True)
+    info = call(s, "wizard_info")["result"]
+    assert info["wizard"]["kind"] == "spot_y" and info["wizard"]["start_at"] == 0
+    rows = call(s, "state")["result"]["mfe"]["rows"]
+    assert rows[0]["type"] == "BLNK" and sum(r["type"] == "RAYS" for r in rows) == 3
+    assert call(s, "mfe_evaluate")["result"]["value"] > 0
+    help_keys = [t["key"] for t in call(s, "help_data")["result"]["topics"]]
+    assert info["help"] in help_keys
+
+
 # ---------------------------------------------------------------------- the build
 def test_build_writes_a_complete_site(tmp_path):
     from lensforge_web.build import build
