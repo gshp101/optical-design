@@ -13,30 +13,30 @@
         "x": 0.0,
         "y": 0.0,
         "weight": 1.0,
-        "vdx": -0.310706,
-        "vdy": -0.003234,
-        "vcx": 0.643445,
-        "vcy": 0.603734,
+        "vdx": -0.514064,
+        "vdy": -0.008849,
+        "vcx": 0.668173,
+        "vcy": 0.612919,
         "van": 0.0
       },
       {
         "x": 0.0,
         "y": 20.0,
         "weight": 1.0,
-        "vdx": -0.36552,
-        "vdy": 0.013768,
-        "vcx": 0.742537,
-        "vcy": 0.890247,
+        "vdx": -0.587069,
+        "vdy": 0.087604,
+        "vcx": 0.837331,
+        "vcy": 0.940765,
         "van": 0.0
       },
       {
         "x": 0.0,
         "y": -20.0,
         "weight": 1.0,
-        "vdx": -0.356159,
-        "vdy": -0.026907,
-        "vcx": 0.728315,
-        "vcy": 0.874943,
+        "vdx": -0.586434,
+        "vdy": -0.100346,
+        "vcx": 0.815385,
+        "vcy": 0.930569,
         "van": 0.0
       }
     ]
@@ -319,7 +319,7 @@
       "type": "STANDARD",
       "curvature": -0.048851694890554125,
       "conic": 0.0,
-      "thickness": 1.0,
+      "thickness": 2.0,
       "material": null,
       "semi_diameter": 12.261325463413895,
       "aperture": {
@@ -356,7 +356,7 @@
       "type": "DGRATING",
       "curvature": 0.0,
       "conic": 0.0,
-      "lines_per_um": 0.2,
+      "lines_per_um": 0.3,
       "diffraction_order": 1.0,
       "thickness": 0.0,
       "material": null,
@@ -381,7 +381,7 @@
       "tilt_y": 0.0,
       "tilt_z": -90.0,
       "order": 0,
-      "thickness": 1.0,
+      "thickness": 2.0,
       "material": null
     },
     {
