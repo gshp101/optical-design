@@ -278,6 +278,7 @@ table.sheet td.editing input, table.sheet td.editing select { width: 100%; heigh
 .glass-map .gridline { stroke: #e3e3e3; }
 .glass-map .lab { font-size: 11px; fill: #333; }
 .pupil-preview { width: 170px; height: 190px; flex: none; }
+.pupil-preview.wizard-pupil { width: 180px; height: 212px; }
 .drop-hint { position: fixed; inset: 0; background: rgba(31, 95, 153, .15); border: 4px dashed var(--accent);
   z-index: 2000; display: flex; align-items: center; justify-content: center; font-size: 22px; color: var(--accent);
   pointer-events: none; }

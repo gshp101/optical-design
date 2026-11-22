@@ -10,8 +10,8 @@ from __future__ import annotations
 
 import math
 
-from PySide6.QtCore import QAbstractTableModel, QModelIndex, Qt, QTimer, Signal
-from PySide6.QtGui import QAction, QColor, QKeySequence
+from PySide6.QtCore import QAbstractTableModel, QModelIndex, QPointF, QRectF, QSize, Qt, QTimer, Signal
+from PySide6.QtGui import QAction, QBrush, QColor, QKeySequence, QPainter, QPen
 from PySide6.QtWidgets import (QAbstractItemView, QCheckBox, QComboBox, QCompleter, QDialog, QDialogButtonBox,
                                QDoubleSpinBox, QFormLayout, QGridLayout, QGroupBox, QHBoxLayout, QHeaderView, QLabel,
                                QLineEdit, QListWidget, QListWidgetItem, QSpinBox, QStyledItemDelegate, QTableView,
@@ -339,6 +339,81 @@ class MeritFunctionEditor(QWidget):
             self.view.setCurrentIndex(self.model.index(r, C_PARAMS))
 
 
+class MeritPupilPreview(QWidget):
+    """Picture of the wizard's pupil sampling: the unit pupil, the obscuration, and each ray of one field and
+    wavelength drawn with an area proportional to its weight (hollow: the mirrored half that a symmetric lens
+    does not trace)."""
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setMinimumSize(170, 190)
+        self.set_sampling("gaussian", 3, 6, 6, 0.0, False)
+
+    def sizeHint(self):
+        return QSize(190, 212)
+
+    def set_sampling(self, pupil, rings, arms, grid, obscuration, symmetric):
+        self.pupil, self.rings, self.obscuration, self.symmetric = pupil, int(rings), float(obscuration), symmetric
+        try:
+            self.px, self.py, self.w = opt.pupil_samples(pupil, rings, arms, grid, symmetric, obscuration)
+            self.error = None
+        except ValueError as e:
+            self.px = self.py = self.w = ()
+            self.error = str(e)
+        n = len(self.px)
+        self.caption = (self.error or f"{n} rays per field and wavelength" + (" (half pupil)" if symmetric else ""))
+        self.setToolTip("Where the merit function's rays cross the entrance pupil, for each field and wavelength.\n"
+                        "Dot area is proportional to the ray's weight." + ("\nHollow dots: the mirrored half, not "
+                                                                           "traced for a symmetric lens."
+                                                                           if symmetric else ""))
+        self.update()
+
+    @property
+    def count(self) -> int:
+        return len(self.px)
+
+    def paintEvent(self, _):
+        p = QPainter(self)
+        p.setRenderHint(QPainter.Antialiasing)
+        pal = self.palette()
+        fm = p.fontMetrics()
+        text_h = 2 * fm.height() + 4
+        side = min(self.width(), self.height() - text_h) - 8
+        r = side / 2
+        c = QPointF(self.width() / 2, 4 + r)
+        p.setPen(QPen(pal.mid().color(), 1))
+        p.setBrush(pal.base())
+        p.drawEllipse(c, r, r)
+        if self.obscuration > 0:
+            p.setBrush(QBrush(pal.mid().color(), Qt.BDiagPattern))
+            p.drawEllipse(c, r * self.obscuration, r * self.obscuration)
+        p.setPen(QPen(pal.mid().color(), 1, Qt.DotLine))
+        p.setBrush(Qt.NoBrush)
+        p.drawLine(QPointF(c.x() - r, c.y()), QPointF(c.x() + r, c.y()))
+        p.drawLine(QPointF(c.x(), c.y() - r), QPointF(c.x(), c.y() + r))
+        n = len(self.px)
+        if n:
+            if self.pupil == "gaussian":  # the quadrature rings
+                for rr in sorted({round(float(math.hypot(x, y)), 9) for x, y in zip(self.px, self.py)}):
+                    p.drawEllipse(c, rr * r, rr * r)
+            base = max(1.6, min(5.0, 0.9 * r / n ** 0.5))
+            wmax = max(self.w)
+            colour = QColor("#1f5f99")
+            for x, y, w in zip(self.px, self.py, self.w):
+                d = base * (w / wmax) ** 0.5
+                p.setPen(Qt.NoPen)
+                p.setBrush(colour)
+                p.drawEllipse(QPointF(c.x() + x * r, c.y() - y * r), d, d)
+                if self.symmetric and abs(x) > 1e-9:  # the mirrored half
+                    p.setPen(QPen(colour, 1))
+                    p.setBrush(Qt.NoBrush)
+                    p.drawEllipse(QPointF(c.x() - x * r, c.y() - y * r), d, d)
+        p.setPen(pal.text().color())
+        p.drawText(QRectF(0, 4 + side + 2, self.width(), text_h), Qt.AlignHCenter | Qt.AlignTop | Qt.TextWordWrap,
+                   self.caption)
+        p.end()
+
+
 @qt_owns_children
 class MeritWizard(QDialog):
     """Options of :func:`lensforge.optimize.default_merit` (the optimisation wizard).
@@ -489,9 +564,15 @@ class MeritWizard(QDialog):
         g1 = group("Image quality", [("Optimisation type", self.optimization), ("Criterion", self.kind),
                                      ("Reference", self.reference), (self.freq_label, self.freq)])
         self.rings_label, self.arms_label, self.grid_label = QLabel("Rings"), QLabel("Arms"), QLabel("Grid")
-        g2 = group("Pupil integration", [("Method", self.pupil), (self.rings_label, self.rings),
-                                         (self.arms_label, self.arms), (self.grid_label, self.grid),
-                                         ("Obscuration", self.obscuration)])
+        g2 = QGroupBox("Pupil integration")
+        f2 = QFormLayout()
+        for label, w in (("Method", self.pupil), (self.rings_label, self.rings), (self.arms_label, self.arms),
+                         (self.grid_label, self.grid), ("Obscuration", self.obscuration)):
+            f2.addRow(label, w)
+        self.preview = MeritPupilPreview()
+        h2 = QHBoxLayout(g2)
+        h2.addLayout(f2, 1)
+        h2.addWidget(self.preview)
         g3 = group("Weighting and rays", [("Fields", self.field_weighting), ("Wavelengths", self.wave_weighting),
                                           ("Overall weight", self.weight), ("Assume axial symmetry", self.symmetric),
                                           ("", self.delete_vignetted)])
@@ -524,8 +605,10 @@ class MeritWizard(QDialog):
         lay = QVBoxLayout(self)
         lay.addLayout(cols)
         lay.addWidget(bb)
-        for w in (self.kind, self.pupil):
+        for w in (self.kind, self.pupil, self.symmetric):
             w.currentIndexChanged.connect(self._update)
+        for w in (self.rings, self.arms, self.grid, self.obscuration):
+            w.valueChanged.connect(self._update_preview)
         self._defaults = self.options()[0]
         wiz = getattr(getattr(system, "merit_function", None), "wizard", None)
         if wiz:
@@ -563,6 +646,15 @@ class MeritWizard(QDialog):
             w.setEnabled(gq and not mtf)
         self.grid.setEnabled(not gq and not mtf)
         self.grid_label.setEnabled(not gq and not mtf)
+        self.preview.setEnabled(not mtf)
+        self._update_preview()
+
+    def _update_preview(self):
+        sym = self.symmetric.currentData()
+        if sym is None:
+            sym = opt.is_symmetric(self.system)
+        self.preview.set_sampling(self.pupil.currentData(), self.rings.value(), self.arms.value(), self.grid.value(),
+                                  self.obscuration.value(), sym)
 
     def reset(self):
         self.set_options(self._defaults)

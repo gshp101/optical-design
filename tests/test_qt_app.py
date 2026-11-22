@@ -1419,6 +1419,17 @@ def test_merit_wizard_options_round_trip_and_start_row(win, monkeypatch):
     # the wizard reopens with the settings that built the rows
     again = mfe_mod.MeritWizard(win.doc.system, win.mfe)
     assert again.kind.currentData() == "wavefront" and again.grid.value() == 7 and again.start.isChecked()
+    # the pupil diagram follows the sampling options
+    again.set_options({"pupil": "gaussian", "rings": 4, "arms": 8, "symmetric": False})
+    assert again.preview.count == 32 and not again.preview.symmetric
+    again.symmetric.setCurrentIndex(again.symmetric.findData(True))
+    assert again.preview.symmetric and "half pupil" in again.preview.caption
+    again.obscuration.setValue(0.5)
+    assert again.preview.obscuration == 0.5
+    again.pupil.setCurrentIndex(again.pupil.findData("rectangular"))
+    again.grid.setValue(10)
+    assert again.preview.count == len(opt.rectangular_array(10, True, 0.5)[0])
+    again.preview.grab()  # paints without errors
     again.show_help()
     assert "Gaussian quadrature" in again._help.findChild(mfe_mod.QTextBrowser).toPlainText()
 
