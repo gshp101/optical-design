@@ -823,6 +823,7 @@ class Session:
         for k, spec in REGISTRY.items():
             out[k] = {"key": k, "title": spec.title, "group": spec.group, "text": spec.plot is None,
                       "uses_rays": spec.uses_rays, "shortcut": spec.shortcut, "zoomable": spec.zoomable,
+                      "view3d": spec.scene is not None,
                       "id": f"Analysis > {spec.group} > {spec.title}",
                       "settings": [{"name": st.name, "label": st.label, "kind": st.kind, "default": st.default,
                                     "choices": st.choices, "min": st.minimum, "max": st.maximum,
@@ -844,7 +845,8 @@ class Session:
 
     def run_analysis(self, key, opts=None, config=0, width=600, height=400, dpr=1.0, view=None, cache=None,
                      replot=False):
-        """Compute one analysis: {"png": base64} for a plot, {"text": ...} for a report, or {"error": ...}.
+        """Compute one analysis: {"png": base64} for a plot, {"text": ...} for a report, {"scene": ...}
+        (line data, see ``AnalysisSpec.scene``) for a 3-D view the page draws itself, or {"error": ...}.
 
         ``view`` = [x0, x1, y0, y1] zooms the first axes of a zoomable plot (PSF) to those limits, and
         the reply then carries ``axes`` (its box as fractions of the image from the top left, and its
@@ -881,6 +883,11 @@ class Session:
                 self._analysis_cache[cache] = (sig, result, system)
         if spec.plot is None:
             return {"text": result if isinstance(result, str) else str(result)}
+        if spec.scene is not None:  # 3-D: the page draws (and rotates) the lines itself
+            try:
+                return {"scene": spec.scene(result, values, system)}
+            except Exception as e:  # noqa: BLE001
+                return {"error": f"Plot failed: {type(e).__name__}: {e}"}
         try:
             fig = _figure(width, height)
             spec.plot(fig, result, values, system)

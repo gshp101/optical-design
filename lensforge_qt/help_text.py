@@ -504,7 +504,8 @@ ANALYSIS_HELP = {
                   "Traces the lens's non-sequential scene (Tools &gt; Non-Sequential &gt; Non-Sequential Component "
                   "Editor) with its Ray Trace Control settings and draws each object's section and the ray "
                   "segments, with the object numbers. <b>Color by</b> reflections (blue direct, green one "
-                  "Fresnel reflection, red two or more: ghosts), source, wavelength or power. <b>Rays</b> keeps "
+                  "Fresnel reflection, red two or more: ghosts), source, wavelength (red longest, through green, "
+                  "to blue shortest) or power. <b>Rays</b> keeps "
                   "only direct light, ghosts or an exact number of reflections. <b>Path</b> k draws only the "
                   "k-th brightest ray path to the <b>Detector</b> (numbered as in the Ray Path Analysis), which "
                   "shows exactly where a ghost goes. At most <b>Segments drawn</b> are drawn (whole ray paths, "
@@ -573,7 +574,8 @@ ANALYSIS_HELP = {
                   "with one configuration shows a single layout."),
     "layout": ("2D cross-section of the lens with traced rays.",
                "Draws the surfaces and rays in the YZ or XZ plane, coloured by field (or by wavelength when one "
-               "field is shown). The number of rays, plane, fields and wavelengths are set in Input Rays; user "
+               "field is shown: red for the longest, through green, to blue for the shortest). For a rotatable "
+               "view use the 3D Layout. The number of rays, plane, fields and wavelengths are set in Input Rays; user "
                "rays are drawn dashed. Coordinate breaks are followed exactly: every surface after a "
                "decentre or tilt (either order flag) is drawn where it really is, so fold mirrors, tilted or "
                "decentred elements, wedges and tilted image planes appear as they are, and the rays meet the "
@@ -581,6 +583,22 @@ ANALYSIS_HELP = {
                "before a break to the one after it. Each surface is cut along the plotted plane (YZ or XZ); "
                "a fold out of that plane shows edge-on, so switch the plane in Input Rays to see it. Lens "
                "edges are joined across breaks inside the glass. From Python: <code>lf.layout(lens)</code>."),
+    "layout_3d": ("3D view of the lens and its rays, rotatable and zoomable.",
+                  "Draws every surface in 3-D (its rim at the semi-diameter and its sections along the local x "
+                  "and y axes), the element edges and the traced rays, with the optical axis z across the "
+                  "view and all three axes to the same scale. <b>Rays</b> picks the pupil sampling: X and Y "
+                  "fans, one fan, a ring round the pupil edge (plus the chief ray) or a grid; the number of "
+                  "rays, fields and wavelengths come from Input Rays. <b>Color by</b> field or wavelength "
+                  "(Auto: by wavelength when one field is drawn; wavelengths run red for the longest, through "
+                  "green, to blue for the shortest). <b>Edges</b> joins the rims of each element. "
+                  "<b>Elevation</b> and <b>Azimuth</b> set the view (0 / -90 is the YZ side view, 90 / -90 "
+                  "looks down on the XZ plane). <b>Drag</b> the plot to rotate it and use the <b>mouse "
+                  "wheel</b> to zoom (in the desktop app right-drag also zooms and Home goes back to the "
+                  "Elevation and Azimuth settings; in the web app shift-drag pans and double-click resets "
+                  "the view); the view is kept when the lens changes. Coordinate breaks are followed "
+                  "exactly, so fold mirrors, tilted and decentred elements and folds out of the YZ plane "
+                  "appear where they really are. From Python: <code>r = lf.layout_3d(lens, rays='ring')</code> "
+                  "and <code>lensforge.plot.layout_3d(r, elevation=20, azimuth=-60)</code>."),
     "footprint": ("Where the rays land on a chosen surface.",
                   "Plots the ray intercepts of every field on one surface, with its semi-diameter, to check "
                   "clear apertures and vignetting."),
@@ -588,15 +606,26 @@ ANALYSIS_HELP = {
             "Plots the sag (z) of one surface against height, or its departure from the best-fit sphere."),
     "ray_fan": ("Transverse ray aberration against pupil coordinate.",
                 "Plots ey against py (tangential) and ex against px (sagittal) for each field and wavelength. "
-                "Ray errors are in lens units (shown in the plot titles); pupil coordinates are normalised."),
+                "Ray errors are in lens units (shown in the plot titles); pupil coordinates are normalised."
+                " Wavelength colours: red for the longest, through green, to blue for the shortest."),
     "opd_fan": ("Optical path difference against pupil coordinate.",
                 "Plots the wavefront error in waves (at each wavelength) along the tangential and sagittal "
-                "normalised pupil axes."),
+                "normalised pupil axes. Wavelength colours: red for the longest, through green, to blue for the shortest."),
     "spot": ("Spot diagram: ray intercepts on the image for each field.",
-             "Shows ray intercepts per field and wavelength with RMS and GEO radii and the Airy disc; pattern "
-             "and density are set in Input Rays."),
+             "Shows ray intercepts per field and wavelength with RMS and GEO radii; pattern, density and "
+             "reference (chief ray or centroid) are set in Input Rays. <b>Show</b>: <b>Each field</b> draws "
+             "one plot per field (all to the same scale); <b>All fields in one plot</b> overlays every field "
+             "and wavelength about its own reference point, so their sizes and shapes compare directly; "
+             "<b>All fields at image positions</b> draws each spot where it lands on the image, magnified "
+             "(by the factor in the title) so the spots can be seen. In the combined plots the colour is "
+             "the wavelength and the marker shape the field (filled and open markers alternate), and the "
+             "legend gives each field's RMS radius. Wavelengths that share a plot are coloured by rank: "
+             "red for the longest, through green, to blue for the shortest (three wavelengths are red, "
+             "green and blue). From Python: <code>lensforge.plot.spot_combined([lf.spot_diagram(lens, f) "
+             "for f in range(len(lens.fields))], mode='overlay')</code>."),
     "through_focus_spot": ("Spot diagrams through focus.",
-                           "Spot diagrams at several defocus positions either side of the image plane."),
+                           "Spot diagrams at several defocus positions either side of the image plane. Wavelength "
+                           "colours: red for the longest, through green, to blue for the shortest."),
     "rms_vs_field": ("RMS spot radius against field.",
                      "Plots the RMS spot radius (polychromatic and per wavelength) across the field."),
     "wavefront": ("Wavefront error map over the pupil.",
@@ -629,14 +658,14 @@ ANALYSIS_HELP = {
                          + _SAMPLING + " For the geometric method the pupil sampling is the ray grid."),
     "field_curvature": ("Field curvature and distortion.",
                         "Tangential and sagittal focus shift against field, and percentage distortion "
-                        "(F-tan(theta) or F-theta)."),
+                        "(F-tan(theta) or F-theta). Wavelength colours: red for the longest, through green, to blue for the shortest."),
     "grid_distortion": ("Distorted image of a regular grid.",
                         "Overlays the real image of a grid of field points on the ideal grid."),
     "lateral_color": ("Lateral colour against field.",
-                      "Image height difference between wavelengths across the field."),
+                      "Image height difference between wavelengths across the field. Wavelength colours: red for the longest, through green, to blue for the shortest."),
     "longitudinal": ("Longitudinal aberration against pupil height.",
                      "Axial focus position of each pupil zone, for each wavelength (spherical aberration and "
-                     "axial colour)."),
+                     "axial colour). Wavelength colours: red for the longest, through green, to blue for the shortest."),
     "focal_shift": ("Chromatic focal shift.",
                     "Paraxial focus position against wavelength."),
     "seidel": ("Seidel aberrations per surface (chart).",
@@ -731,6 +760,9 @@ Editor</b> pages below the Overview explain merit functions in detail, with a wo
 Arducam lens kit, Smith's <i>Modern Lens Design</i> by chapter); each opens as an untitled copy.</li>
 <li><b>View</b>: the toolbar (View &gt; Customize Toolbar puts any command on it).</li>
 </ul>
+<p>Wherever several wavelengths share a plot they are coloured by rank: red for the longest, through
+green, to blue for the shortest (three wavelengths are red, green and blue), so each wavelength keeps its
+colour in every plot.</p>
 <p>Pick a command on the left to read about it, or type in the filter box. Hovering a toolbar button
 shows what it does; Help &gt; What's This? explains any button you click.</p>
 """

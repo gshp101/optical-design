@@ -42,6 +42,14 @@ def zoom_axes(ax, x, y, factor):
         a, b = get()
         set_(c - (c - a) / factor, c + (b - c) / factor)
 
+def zoom_axes_3d(ax, factor):
+    """Zoom a 3-D axes by *factor* (> 1 magnifies) about the centre of its box."""
+    for get, set_ in ((ax.get_xlim, ax.set_xlim), (ax.get_ylim, ax.set_ylim), (ax.get_zlim, ax.set_zlim)):
+        a, b = get()
+        c, h = 0.5 * (a + b), 0.5 * (b - a) / factor
+        set_(c - h, c + h)
+
+
 #: how to fix a lens whose glass is missing (shown in analysis windows and the open warning)
 MISSING_HINT = ("Choose a replacement in the Material column of the Lens Data Editor (Ctrl+G), "
                 "or load a catalog that has it with File > Load Glass Catalog (AGF).")
@@ -172,6 +180,7 @@ class AnalysisWindow(QDockWidget):
         self.error = None
         self._shown = None  # (opts, system) of the plot on screen, to re-plot plot-only changes
         self.user_view = None  # (xlim, ylim) of a mouse zoom, kept when the plot is recomputed
+        self.view3d = None  # {"elev", "azim", "zoom"} of a mouse-rotated 3-D plot, kept likewise
         self._request = 0
         self._busy = False
         self._pending = False
@@ -224,6 +233,11 @@ class AnalysisWindow(QDockWidget):
                                        "zoom; Home: back to the Zoom setting")
                 self.canvas.mpl_connect("scroll_event", self._wheel)
                 self.canvas.mpl_connect("button_release_event", self._released)
+            if self.spec.view3d:
+                self.canvas.setToolTip("Drag: rotate. Right-drag or mouse wheel: zoom. Home: back to the "
+                                       "Elevation and Azimuth settings")
+                self.canvas.mpl_connect("scroll_event", self._wheel_3d)
+                self.canvas.mpl_connect("button_release_event", self._released_3d)
             self.stack.addWidget(pw)
             self.text = None
         else:
@@ -394,6 +408,13 @@ class AnalysisWindow(QDockWidget):
             ax = self.figure.axes[0]
             ax.set_xlim(*self.user_view[0])
             ax.set_ylim(*self.user_view[1])
+        if self.spec.view3d and self._axes_3d() is not None:
+            a, b = self._axes_3d().get_xlim()
+            self._span3d = b - a  # the span at the zoom the settings give
+        if self.spec.view3d and self.view3d is not None and self._axes_3d() is not None:
+            ax = self._axes_3d()
+            ax.view_init(elev=self.view3d["elev"], azim=self.view3d["azim"])
+            zoom_axes_3d(ax, self.view3d["zoom"])
         self.canvas.draw_idle()
 
     # -- zoom -----------------------------------------------------------------------
@@ -404,6 +425,8 @@ class AnalysisWindow(QDockWidget):
                 self.spec.compute_values(new) == self.spec.compute_values(self._shown[0]):
             if new.get("zoom") != self._shown[0].get("zoom"):
                 self.user_view = None  # a new Zoom choice replaces the mouse zoom
+            if any(new.get(k) != self._shown[0].get(k) for k in ("elevation", "azimuth")):
+                self.view3d = None  # typed angles replace the mouse rotation
             try:
                 self._show(self.result, new, self._shown[1])
             except Exception as e:  # noqa: BLE001 - plotting problem, shown in the window
@@ -431,9 +454,38 @@ class AnalysisWindow(QDockWidget):
         if str(self.toolbar.mode) in ("zoom rect", "pan/zoom"):  # the toolbar's box zoom or pan
             self._keep_view()
 
+    def _axes_3d(self):
+        ax = self.figure.axes[0] if self.figure.axes else None
+        return ax if ax is not None and getattr(ax, "name", "") == "3d" else None
+
+    def _keep_view_3d(self):
+        """Remember the mouse rotation and zoom of the 3-D plot (zoom measured against the plotted span)."""
+        ax = self._axes_3d()
+        if ax is None:
+            return
+        a, b = ax.get_xlim()
+        base = getattr(self, "_span3d", None) or (b - a)
+        self.view3d = {"elev": float(ax.elev), "azim": float(ax.azim), "zoom": base / max(b - a, 1e-300)}
+
+    def _wheel_3d(self, ev):
+        ax = self._axes_3d()
+        if ax is None:
+            return
+        zoom_axes_3d(ax, WHEEL_ZOOM if ev.step > 0 else 1 / WHEEL_ZOOM)
+        self._keep_view_3d()
+        self.canvas.draw_idle()
+
+    def _released_3d(self, ev):
+        self._keep_view_3d()
+
     def reset_zoom(self):
-        """Forget the mouse zoom: the plot shows the view its Zoom setting gives."""
+        """Forget the mouse zoom (and a mouse rotation of a 3-D plot): the plot shows the view its
+        settings give."""
         self.user_view = None
+        if self.spec.view3d:
+            self.view3d = None
+            if self._shown is not None and self.result is not None:
+                self._show(self.result, *self._shown)
 
     # -- misc -------------------------------------------------------------------
     def save_text(self):

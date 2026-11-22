@@ -226,6 +226,8 @@ table.sheet td.editing input, table.sheet td.editing select { width: 100%; heigh
 .an-body { flex: 1; min-height: 0; position: relative; overflow: hidden; background: #fff; display: flex; }
 .an-body img { width: 100%; height: 100%; object-fit: contain; display: block; }
 .an-body pre { flex: 1; padding: 6px 8px; }
+.an-body canvas.view3d { display: block; position: absolute; inset: 0; cursor: grab; touch-action: none; user-select: none; }
+.an-body canvas.view3d:active { cursor: grabbing; }
 .an-body img.zoomable { cursor: crosshair; touch-action: pinch-zoom; user-select: none; }
 .an-zoombox { position: absolute; border: 1px dashed #1a73e8; background: rgba(26,115,232,.12); pointer-events: none; }
 .an-busy { position: absolute; top: 6px; right: 8px; background: rgba(255,255,255,.9); border: 1px solid var(--border);
