@@ -31,24 +31,23 @@ recomputes them wherever Optiland is installed.
 | Analysis | Agreement |
 |---|---|
 | Seidel S1..S5, per surface and total | 1e-7 relative (opposite sign, see below) |
-| Third-order transverse TSPH, TSCO, TPFC, TSFC, TTFC, TDIS, TAXC, TLAC | 1e-7 relative |
+| Third-order transverse TSPH, TSCO, TAST, TPFC, TSFC, TTFC, TDIS, TAXC, TLAC | 1e-7 relative |
 | Ray fans, 3 fields x 3 wavelengths, T and S | 3e-14 mm (identical ray aiming) |
 | OPD fans, primary wavelength and on axis | 5e-5 waves |
 | Spot RMS radius, 3 fields x 3 wavelengths, 6 hexapolar rings | 1.1e-7 relative |
 | Fringe Zernike Z1..Z16 | 1e-3 waves (different pupil sampling) |
 
-## 3. Differences found (conventions, not bugs; nothing was changed)
+## 3. Differences found
 
 * **Seidel sign.** Optiland's Seidel sums are the negative of lensforge's. lensforge follows
   Welford and Zemax (S1 > 0 for an under-corrected positive lens), and the thin-lens test confirms
   Welford's signs, including S2, when H is Welford's n(u ybar - ubar y). The docstring in
   `lensforge/analysis/seidel.py` writes H with the opposite sign. That doesn't change any result,
   because H only appears squared.
-* **TAST is twice Optiland's TAC.** lensforge reports TAST = 2 S3 / (2 n'u') = TTFC - TSFC, the
-  separation of the tangential and sagittal fans. Optiland (and, by the relations TSFC = TAST + TPFC
-  and TTFC = 3 TAST + TPFC, probably Zemax) reports S3 / (2 n'u'). TSFC and TTFC agree with both. If
-  matching Zemax output matters, TAST (and LAST, which is derived from it) should be halved.
-  That would change the reported values, so it is left for a decision.
+* **TAST was twice Optiland's TAC.** lensforge reported TAST = S3 / (n'u') = TTFC - TSFC, the
+  separation of the tangential and sagittal fans. Optiland and Zemax report S3 / (2 n'u'), with
+  TSFC = TAST + TPFC and TTFC = 3 TAST + TPFC. Fixed (Joe's decision, 2026-11-22): TAST and LAST are
+  now half their old values and match Optiland to 1e-7. TSFC and TTFC are unchanged.
 * **OPD fans of non-primary wavelengths off axis.** lensforge centres every wavelength's reference
   sphere on the primary-wavelength chief ray. Optiland uses each wavelength's own chief ray. The two
   differ by a tilt of up to 0.03 waves here, plus a trace (< 1e-3 waves) of focus. The test checks
