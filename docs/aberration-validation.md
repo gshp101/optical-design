@@ -3,7 +3,9 @@
 How lensforge's Seidel coefficients, ray fans, OPD fans, spot diagrams and Zernike
 terms were checked (November 2026). The numbers are pinned in
 `tests/test_aberration_reference.py`. MTF and PSF are covered separately in
-[mtf-validation.md](mtf-validation.md).
+[mtf-validation.md](mtf-validation.md). [validation-report.html](validation-report.html) lists every
+test that compares lensforge with known truth, with the agreement measured on a test run
+(regenerate it with `python tools/validation_report/run.py`).
 
 ## 1. Closed-form references
 
