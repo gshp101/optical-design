@@ -17,6 +17,27 @@ export const App = {
 let statusTimer = null;
 // the main tab's status line, and the one of every pop-out tab (so an editor there shows its errors too)
 const statusLines = () => allDocuments().map((d) => d.getElementById("status-msg")).filter(Boolean);
+// ------------------------------------------------------------------ keys on a Mac
+export const IS_MAC = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
+const GLYPHS = { Alt: "\u2325", Shift: "\u21E7", Ctrl: "\u2318", Up: "\u2191", Down: "\u2193", Left: "\u2190", Right: "\u2192",
+  Del: "\u2326", Backspace: "\u232B", Enter: "\u21A9", Esc: "\u238B", Tab: "\u21E5", PgUp: "\u21DE", PgDown: "\u21DF" };
+
+/** The key a Mac uses for a shortcut (a Mac has no Insert key: Ins is Option+Up, as in Numbers); others unchanged. */
+export function platformKey(sc) {
+  return IS_MAC && sc && App.menus && App.menus.mac_keys ? (App.menus.mac_keys[sc] || sc) : sc;
+}
+
+/** A shortcut as this platform writes it: Ctrl+Shift+S here, \u21E7\u2318S on a Mac (with its own key for Ins). */
+export function keyLabel(sc) {
+  if (!sc) return sc;
+  const k = platformKey(sc);
+  if (!IS_MAC) return k;
+  const m = /^((?:(?:Ctrl|Alt|Shift)\+)*)(.+)$/.exec(k);
+  const parts = m[1].split("+"), key = m[2];
+  const order = ["Alt", "Shift", "Ctrl"];   // Mac order: Option, Shift, Command
+  return order.filter((m) => parts.includes(m)).map((m) => GLYPHS[m]).join("") + (GLYPHS[key] || key);
+}
+
 export function status(msg, ms = 5000) {
   for (const s of statusLines()) {
     s.textContent = msg || "";

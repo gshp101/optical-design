@@ -219,7 +219,7 @@ hard constraints.</td></tr>
 </table>
 <h3>Toolbar</h3>
 <ul>
-<li><b>Add Row</b> (Ctrl+Shift+A) adds a BLNK row at the end; <b>Insert Row</b> (Insert) adds one above
+<li><b>Add Row</b> (Ctrl+Shift+A) adds a BLNK row at the end; <b>Insert Row</b> (Insert; Option+Up on a Mac) adds one above
 the selected row; <b>Delete Rows</b> (Shift+Delete) deletes the selected rows.</li>
 <li><b>Wizard...</b> writes a default image-quality merit function: one RAYS (spot), OPDS
 (wavefront), ANGS (angular) or MTFA row per field, RMS or PTV, with a choice of reference, pupil

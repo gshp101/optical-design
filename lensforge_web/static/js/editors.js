@@ -1,6 +1,6 @@
 // Merit Function Editor, Multi-Configuration Editor, Python Shell and Undo History (bottom and left docks),
 // as lensforge_qt/mfe.py, mce.py, script_console.py and the Qt undo view.
-import { App, run, call, status, statusError, onState, docks, cmd } from "./core.js";
+import { App, run, call, status, statusError, onState, docks, cmd, keyLabel } from "./core.js";
 import * as engine from "./engine.js";
 import { el, esc, btn, select, numInput, check, dialog, message, prompt, popupMenu, iconImg, later, popupBlocked, keepInView } from "./ui.js";
 
@@ -205,7 +205,7 @@ class Sheet {
     if (this.editing) return;
     const plainKey = !e.ctrlKey && !e.metaKey && !e.altKey;
     const moves = { ArrowUp: [-1, 0], ArrowDown: [1, 0], ArrowLeft: [0, -1], ArrowRight: [0, 1] };
-    if (moves[e.key] && !e.ctrlKey && !e.metaKey) { e.preventDefault(); this.move(...moves[e.key], e.shiftKey); return; }
+    if (moves[e.key] && !e.ctrlKey && !e.metaKey && !e.altKey) { e.preventDefault(); this.move(...moves[e.key], e.shiftKey); return; }
     if (e.key === "Tab" && !e.ctrlKey) { e.preventDefault(); this.move(0, e.shiftKey ? -1 : 1); return; }
     if ((e.key === "Enter" || e.key === "F2") && plainKey) { e.preventDefault(); this.edit(this.cur.row, this.cur.col); return; }
     if (e.key.length === 1 && plainKey && !e.isComposing) { e.preventDefault(); this.edit(this.cur.row, this.cur.col, e.key); }
@@ -274,7 +274,7 @@ class Sheet {
 }
 
 function toolbarButton(label, tip, fn, shortcut) {
-  return el("button", { type: "button", title: shortcut ? `${label} (${shortcut})\n${tip}` : `${label}\n${tip}`, onclick: fn }, label);
+  return el("button", { type: "button", title: shortcut ? `${label} (${keyLabel(shortcut)})\n${tip}` : `${label}\n${tip}`, onclick: fn }, label);
 }
 
 /** "Open in New Tab" / "Return to Main Tab": moves the editor's dock panel to its own browser tab and back. */
@@ -310,15 +310,15 @@ export function showMFE() {
       getRows: () => mfeRows(),
       onEdit: (r, c, text) => run("mfe_set", { r, c, text }),
       onContext: (r, c, e) => popupMenu([
-        { label: "Insert Row", shortcut: "Insert", action: () => mfeInsert() },
-        { label: "Delete Rows", shortcut: "Shift+Del", action: () => mfeDelete() },
-        { label: "Add Row", shortcut: "Ctrl+Shift+A", action: () => mfeAdd() }, null,
+        { label: "Insert Row", shortcut: keyLabel("Ins"), action: () => mfeInsert() },
+        { label: "Delete Rows", shortcut: keyLabel("Shift+Del"), action: () => mfeDelete() },
+        { label: "Add Row", shortcut: keyLabel("Ctrl+Shift+A"), action: () => mfeAdd() }, null,
         { label: "Operands...", action: () => operandList() }, { label: "Help", action: () => cmd("__help:" + App.help.root) }], e.clientX, e.clientY),
     });
     const label = el("div", { class: "editor-foot" }, "Merit function: -");
     const bar = el("div", { class: "editor-bar" },
       toolbarButton("Add Row", "Add a blank row at the end.", () => mfeAdd(), "Ctrl+Shift+A"),
-      toolbarButton("Insert Row", "Insert a blank row above the selected row.", () => mfeInsert(), "Insert"),
+      toolbarButton("Insert Row", "Insert a blank row above the selected row.", () => mfeInsert(), "Ins"),
       toolbarButton("Delete Rows", "Delete the selected rows.", () => mfeDelete(), "Shift+Del"), el("span", { class: "sep" }),
       toolbarButton("Wizard...", "Write a default merit function: RMS or PTV spot, wavefront, angular or MTF, with pupil sampling, weighting and thickness boundary options.", () => meritWizard()),
       toolbarButton("Operands...", "List every operand with its description and insert one.", () => operandList()),
@@ -608,9 +608,9 @@ export function showMCE() {
             { label: "Rename...", action: () => mceRename(k) }, { label: "Insert Config After", action: () => run("mce_add_config", { k }) },
             { label: "Delete Config", action: () => run("mce_delete_config", { k }) }], e.clientX, e.clientY);
         }
-        popupMenu([{ label: "Insert Operand", shortcut: "Insert", action: () => mceInsert() },
-          { label: "Delete Operands", shortcut: "Shift+Del", action: () => mceDelete() },
-          { label: "Toggle Variable", shortcut: "Ctrl+Shift+V", action: () => mceToggleVar() },
+        popupMenu([{ label: "Insert Operand", shortcut: keyLabel("Ins"), action: () => mceInsert() },
+          { label: "Delete Operands", shortcut: keyLabel("Shift+Del"), action: () => mceDelete() },
+          { label: "Toggle Variable", shortcut: keyLabel("Ctrl+Shift+V"), action: () => mceToggleVar() },
           { label: "Make Current", action: () => mceMakeCurrent() }], e.clientX, e.clientY);
       },
     });
@@ -620,7 +620,7 @@ export function showMCE() {
     });
     const label = el("div", { class: "editor-foot plain" });
     const bar = el("div", { class: "editor-bar" },
-      toolbarButton("Insert Operand", "Insert a THIC row above the selected row (all configurations take the lens's current value; change the type, Ref and values afterwards).", () => mceInsert(), "Insert"),
+      toolbarButton("Insert Operand", "Insert a THIC row above the selected row (all configurations take the lens's current value; change the type, Ref and values afterwards).", () => mceInsert(), "Ins"),
       toolbarButton("Delete Operands", "Delete the selected rows; the lens keeps its current values.", () => mceDelete(), "Shift+Del"), el("span", { class: "sep" }),
       toolbarButton("Add Config", "Add a configuration after the selected one, copying its values.", () => run("mce_add_config", { k: mceConfig() })),
       toolbarButton("Delete Config", "Delete the selected configuration.", () => run("mce_delete_config", { k: mceConfig() })),

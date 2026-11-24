@@ -23,6 +23,7 @@ from .edits import drop_row_variables as _drop_row_variables
 from .edits import multiconfig
 from .edits import shift_mc_configs as _shift_mc_configs
 from .edits import shift_mc_variables as _shift_mc_variables
+from . import keys
 from .ownership import qt_owns_children
 
 FIXED = ["Type", "Ref", "Param"]
@@ -269,11 +270,12 @@ class MultiConfigEditor(QWidget):
     def _act(self, tb, text, slot, shortcut=None, tip=""):
         a = QAction(text, self)
         a.triggered.connect(slot)
+        label = QKeySequence(keys.primary(shortcut)).toString(QKeySequence.NativeText) if shortcut else ""
         if tip:
-            a.setToolTip(f"{text} ({shortcut})\n{tip}" if shortcut else f"{text}\n{tip}")
+            a.setToolTip(f"{text} ({label})\n{tip}" if shortcut else f"{text}\n{tip}")
             a.setStatusTip(tip)
         if shortcut:
-            a.setShortcut(QKeySequence(shortcut))
+            a.setShortcuts([QKeySequence(s) for s in keys.shortcuts(shortcut)])  # Mac: Option+Up for Insert
             a.setShortcutContext(Qt.WidgetWithChildrenShortcut)
             self.view.addAction(a)
         tb.addAction(a)

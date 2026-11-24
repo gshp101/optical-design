@@ -3,7 +3,7 @@
 // semi-diameter. Right-click a cell (press and hold on a touch screen) for variables, solves, surface
 // type, stop and surface properties; Edit > Solve opens the solve dialog for the selected cell. Typing
 // =2*T2 into a numeric cell makes it a formula of other cells (shown with an = marker).
-import { App, run, status, statusError, onState, cmd } from "./core.js";
+import { App, run, status, statusError, onState, cmd, keyLabel } from "./core.js";
 import { el, popupMenu, closePopups } from "./ui.js";
 import * as D from "./dialogs.js";
 
@@ -195,7 +195,7 @@ function onKey(e) {
   const k = e.key;
   const plainKey = !e.ctrlKey && !e.metaKey && !e.altKey;
   const moves = { ArrowUp: [-1, 0], ArrowDown: [1, 0], ArrowLeft: [0, -1], ArrowRight: [0, 1], PageUp: [-10, 0], PageDown: [10, 0] };
-  if (moves[k] && !e.ctrlKey && !e.metaKey) { e.preventDefault(); move(...moves[k], e.shiftKey && (k === "ArrowUp" || k === "ArrowDown")); return; }
+  if (moves[k] && !e.ctrlKey && !e.metaKey && !e.altKey) { e.preventDefault(); move(...moves[k], e.shiftKey && (k === "ArrowUp" || k === "ArrowDown")); return; }
   if (k === "Home" && plainKey) { e.preventDefault(); move(0, -cur.col); return; }
   if (k === "End" && plainKey) { e.preventDefault(); move(0, nCols() - 1 - cur.col); return; }
   if (k === "Tab" && !e.ctrlKey) { e.preventDefault(); move(0, e.shiftKey ? -1 : 1); return; }
@@ -258,7 +258,7 @@ export function startEdit(row, col, initial) {
     if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); cancelEdit(); root.focus(); }
     else if (e.key === "Enter") { e.preventDefault(); commitEdit(); move(1, 0); root.focus(); }
     else if (e.key === "Tab") { e.preventDefault(); commitEdit(); move(0, e.shiftKey ? -1 : 1); root.focus(); }
-    else if ((e.key === "ArrowUp" || e.key === "ArrowDown") && !input._completion?.open()) {
+    else if ((e.key === "ArrowUp" || e.key === "ArrowDown") && !e.altKey && !input._completion?.open()) {
       e.preventDefault(); commitEdit(); move(e.key === "ArrowUp" ? -1 : 1, 0); root.focus();
     }
   });
@@ -354,7 +354,7 @@ async function onContext(e) {
     if (!it) return null;
     if (it.items) return { label: it.label, items: conv(it.items) };
     const c = it.id ? App.menus.commands[it.id] : null;
-    return { label: it.label, checked: it.checked, icon: c ? c.icon : null, shortcut: c ? c.shortcut : null, cmd: it.id,
+    return { label: it.label, checked: it.checked, icon: c ? c.icon : null, shortcut: c ? keyLabel(c.shortcut) : null, cmd: it.id,
       title: c ? c.summary : "", action: () => (it.id ? cmd(it.id) : contextAction(it.cmd, it.args)) };
   });
   popupMenu(conv(items), e.clientX, e.clientY);

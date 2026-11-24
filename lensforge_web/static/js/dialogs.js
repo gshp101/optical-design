@@ -1,5 +1,5 @@
 // Dialogs of the File and Edit menus and the Lens Data Editor (as the Qt dialogs of lensforge_qt).
-import { App, run, call, status, statusError } from "./core.js";
+import { App, run, call, status, statusError, IS_MAC, keyLabel } from "./core.js";
 import { el, esc, btn, select, numInput, check, tabs, dialog, message, confirmBox, prompt, openWindow,
   download, pickFile, copyText, fmtDate, fmtSize, svgURL, keepInView } from "./ui.js";
 import * as store from "./storage.js";
@@ -765,7 +765,7 @@ async function b64of(f) {
   return btoa(bin);
 }
 
-/** File > Load Stock Lens Folder: every .zmx / .ZMF / .zip in a folder as one catalog, kept in this browser. */
+/** Insert Stock Lens > Load Folder: every .zmx / .ZMF / .zip in a folder as one catalog, kept in this browser. */
 export async function loadStockFolder() {
   const pick = await pickFolder();
   if (!pick) return 0;
@@ -839,7 +839,19 @@ export async function stockLensDialog(at) {
     const copySd = check("Use the part's semi-diameters", true, null,
       "Checked: the inserted surfaces get the part's clear semi-diameters as fixed values.\nUnchecked: automatic semi-diameters sized by the current lens's rays.");
     const tbody = el("tbody");
-    const table = el("table", { class: "grid" }, el("thead", {}, el("tr", {}, ...info.columns.map((c) => el("th", { title: info.tips[c] || "" }, c)))), tbody);
+    // a click on a header sorts by that column (again: reversed); the search does the sorting, so keys stay in step
+    let sortCol = null, descending = false;
+    const heads = info.columns.map((c) => el("th", {
+      title: (info.tips[c] ? info.tips[c] + "\n" : "") + "Click to sort by this column; click again to reverse the order",
+      style: { cursor: "pointer", userSelect: "none" },
+      onclick: () => { descending = c === sortCol ? !descending : false; sortCol = c; markSort(); search(true); },
+    }, c));
+    const markSort = () => heads.forEach((h, i) => {
+      const c = info.columns[i];
+      h.textContent = c + (c === sortCol ? (descending ? " \u25BC" : " \u25B2") : "");
+      h.setAttribute("aria-sort", c === sortCol ? (descending ? "descending" : "ascending") : "none");
+    });
+    const table = el("table", { class: "grid" }, el("thead", {}, el("tr", {}, ...heads)), tbody);
     const wrap = el("div", { class: "table-wrap", style: { flex: "3", minHeight: "120px" } }, table);
     const count = el("div", { class: "muted" });
     const preview = el("pre", { class: "mono", style: { flex: "2", border: "1px solid var(--border)", padding: "6px", minHeight: "90px", overflow: "auto" } });
@@ -848,8 +860,10 @@ export async function stockLensDialog(at) {
     const numeric = new Set(["EFL", "Diameter", "Thickness", "Elements"]);
     let keys = [], selected = null, token = 0;
     const form = () => ({ text: text.value, vendor: vendor.value, kind: kind.value, glass: glass.value, efl_min: eflMin.value,
-      efl_max: eflMax.value, dia_min: diaMin.value, dia_max: diaMax.value, elements: +elements.value });
-    const search = async () => {
+      efl_max: eflMax.value, dia_min: diaMin.value, dia_max: diaMax.value, elements: +elements.value,
+      sort: sortCol, descending });
+    const search = async (keepSelection = false) => {
+      const keep = keepSelection === true ? selected : null;
       const my = ++token;
       const r = await run("stock_search", { form: form() }, { quiet: true });
       if (my !== token || !r) return;
@@ -858,7 +872,9 @@ export async function stockLensDialog(at) {
       count.textContent = r.message;
       tbody.replaceChildren(...r.rows.map((row, i) => el("tr", { onclick: () => pick(i), ondblclick: () => { pick(i); insert(); } },
         ...row.map((v, c) => el("td", { class: numeric.has(info.columns[c]) ? "num" : "" }, v)))));
-      pick(keys.length ? 0 : -1);
+      const at = keep ? keys.indexOf(keep) : -1;
+      pick(at >= 0 ? at : (keys.length ? 0 : -1));
+      if (at >= 0) tbody.children[at]?.scrollIntoView({ block: "nearest" });
     };
     const pick = async (i) => {
       [...tbody.children].forEach((tr, k) => tr.classList.toggle("sel", k === i));
@@ -942,14 +958,18 @@ export async function about() {
 
 export async function shortcutsHelp() {
   const rows = [];
-  for (const [id, c] of Object.entries(App.menus.commands)) if (c.shortcut) rows.push([c.path[0], c.path.slice(1).join(" > "), c.shortcut]);
+  for (const [id, c] of Object.entries(App.menus.commands)) if (c.shortcut) rows.push([c.path[0], c.path.slice(1).join(" > "), keyLabel(c.shortcut)]);
   const extra = "<p>In the Lens Data Editor, right-click a cell for variables, solves, surface type and stop; the ... button in a " +
     "Material cell opens the material picker; type into a cell to replace it, Enter or F2 edits it, Delete clears a comment or " +
     "semi-diameter. Typing in a Material cell lists the matching glasses (arrow keys and Enter, or a click, take one). On a touch " +
-    "screen, tap a selected cell again to type in it. In the Python Shell, Ctrl+Enter runs the script. On a Mac, Cmd works wherever Ctrl is shown.</p>" +
-    "<p>A few shortcuts the browser keeps for itself use Alt instead of Ctrl: New (Alt+N), Wavefront Map (Alt+W), Tolerancing " +
-    "(Alt+Shift+T), Non-Sequential Component Editor (Alt+Shift+N), Delete Surfaces (Alt+Shift+Del), Surface Properties (Alt+Shift+P), " +
-    "Inspect Lens File (Alt+Shift+O).</p>";
+    "screen, tap a selected cell again to type in it. In the Python Shell, " + keyLabel("Ctrl+Enter") + " runs the script.</p>" +
+    (IS_MAC ? "<p>On a Mac, \u2318 is Command, \u2325 Option and \u21E7 Shift. A Mac has no Insert key: Option+Up (\u2325\u2191) inserts a surface or " +
+      "row above the selected one and Option+Down (\u2325\u2193) inserts a surface after it, as in Numbers.</p>"
+      : "<p>On a Mac, which has no Insert key, Option+Up inserts a surface or row above the selected one and Option+Down a surface after it.</p>") +
+    `<p>A few shortcuts the browser keeps for itself use ${IS_MAC ? "Option" : "Alt"} instead of ${IS_MAC ? "Command" : "Ctrl"}: ` +
+    [["New", "Alt+N"], ["Wavefront Map", "Alt+W"], ["Tolerancing", "Alt+Shift+T"], ["Non-Sequential Component Editor", "Alt+Shift+N"],
+      ["Delete Surfaces", "Alt+Shift+Del"], ["Surface Properties", "Alt+Shift+P"], ["Inspect Lens File", "Alt+Shift+O"], ["Insert Stock Lens", "Alt+Shift+I"]]
+      .map(([n, k]) => `${n} (${keyLabel(k)})`).join(", ") + ".</p>";
   await message("Keyboard Shortcuts", `<div style="max-height:60vh;overflow:auto"><table class="grid"><tr><th>Menu</th><th>Command</th><th>Keys</th></tr>` +
     rows.map(([m, c, k]) => `<tr><td>${esc(m)}</td><td>${esc(c)}</td><td><b>${esc(k)}</b></td></tr>`).join("") + `</table></div>${extra}`, { width: 640 });
 }

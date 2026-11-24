@@ -86,7 +86,9 @@ HELP = {
         "Search the stock lenses you imported by <b>part number or description</b>, <b>vendor</b>, <b>type</b> "
         "(plano-convex, bi-concave, meniscus, cemented doublet, ...), <b>focal length</b> and <b>diameter</b> "
         "ranges (leave either end empty), <b>glass</b> (part of a name, e.g. BK7) and number of <b>elements</b>. "
-        "The list updates as you type; pick a part to see its surfaces exactly as they will be inserted, with its "
+        "The list updates as you type. <b>Click a column header to sort</b> the list by that column (Part, "
+        "Vendor, Type, EFL, Diameter, ...); click it again to reverse the order. The arrow in the header shows "
+        "the sort column; until you click one, parts are listed by focal length. Pick a part to see its surfaces exactly as they will be inserted, with its "
         "focal length and notes. <b>Insert before surface</b> chooses where it goes (the selected row by "
         "default); <b>Reverse</b> turns the part round so light meets its back surface first; <b>Use the part's "
         "semi-diameters</b> fixes the inserted semi-diameters at the part's clear apertures. Only the element "
@@ -95,10 +97,17 @@ HELP = {
         "'part (vendor)', with ', reversed' for a reversed part. Variables, solves and merit operands on later "
         "surfaces are renumbered, and one undo step removes the insertion."
         "<p><b>Import Catalog...</b> adds a Zemax lens catalog (<code>.ZMF</code>), a single part's "
-        "<code>.zmx</code> file or a <code>.zip</code> of them. <b>Load Folder...</b> (also "
-        "<b>File &gt; Load Stock Lens Folder</b>) adds every lens file in a folder as one catalog. Lens makers (Thorlabs, Edmund Optics, Newport and others) publish a "
+        "<code>.zmx</code> file or a <code>.zip</code> of them."
+        "<p><b>Load Folder...</b> adds every <code>.zmx</code>, <code>.ZMF</code> and <code>.zip</code> in a "
+        "folder and its sub-folders as one catalog: choose the folder, then a catalog name (the folder's name "
+        "by default). Each part's maker is read from its file, so one folder can hold several makers' parts; "
+        "other files are ignored, files that cannot be read are listed at the end, and a part number that "
+        "comes twice is loaded once. Loading the same folder again under the same name replaces the catalog "
+        "with what the folder holds now, so parts you downloaded since appear. The folder dialog opens at the "
+        "last folder you loaded."
+        "<p>Lens makers (Thorlabs, Edmund Optics, Newport and others) publish a "
         "<code>.zmx</code> file on each product page, and OpticStudio installs whole <code>.ZMF</code> "
-        "catalogs; LensForge does not ship them because the data is the makers' copyright, so download the "
+        "catalogs (in its <code>Zemax\\Stockcat</code> folder); LensForge does not ship them because the data is the makers' copyright, so download the "
         "files you need. Imported catalogs are remembered (in <code>~/.lensforge/stock_lenses.json</code>, "
         "shared with Python scripts) until <b>Remove Catalog...</b>. A few generic <b>LensForge Demo</b> parts "
         "are always there to try the search. A glass that is in none of the loaded catalogs is replaced by a "
@@ -106,26 +115,9 @@ HELP = {
         "and vd, and the preview says so; surface types LensForge cannot model (such as Q-type aspheres) are "
         "listed too."
         "<p>From Python: <code>lib = lf.StockLibrary.default(); lib.import_file('THORLABS.ZMF'); "
+        "lib.import_folder('~/Downloads/zmx'); lib.save(); "
         "hits = lib.search(kind='plano-convex', efl=(45, 55), diameter=(20, 30), glass='BK7'); "
         "lf.insert_stock_lens(lens, hits[0], at=3, reverse=True)</code>."),
-    "File > Load Stock Lens Folder": (
-        "Add every .zmx / .ZMF lens file in a folder as one searchable stock lens catalog.",
-        "Choose a folder, then a name for the catalog (the folder's name by default). Every Zemax part file "
-        "(<code>.zmx</code>), lens catalog (<code>.ZMF</code>) and <code>.zip</code> of them in the folder and "
-        "its sub-folders goes into that catalog, which <b>File &gt; Insert Stock Lens</b> then searches. The "
-        "maker of each part is read from its file (a <code>.ZMF</code>'s from its file name), so one folder may "
-        "hold several makers' parts. Other files are ignored; a file that cannot be read is listed at the end "
-        "and the others are still loaded. A part number that comes twice is loaded once."
-        "<p>Lens makers (Thorlabs, Edmund Optics, Newport and others) offer a <code>.zmx</code> file on each "
-        "product page, and OpticStudio installs whole <code>.ZMF</code> catalogs in its "
-        "<code>Zemax\\Stockcat</code> folder. LensForge does not ship or download them (the data is the makers' "
-        "copyright): save the files you download into one folder and load it here. <b>Loading the same folder "
-        "again</b> under the same name replaces the catalog with what the folder holds now, so parts you add "
-        "later appear and deleted ones go. The catalog is remembered between sessions (in "
-        "<code>~/.lensforge/stock_lenses.json</code>, shared with Python scripts) until <b>Remove Catalog...</b> "
-        "in Insert Stock Lens; the folder dialog opens at the last folder you loaded."
-        "<p>From Python: <code>lib = lf.StockLibrary.default(); print(lib.import_folder('~/Downloads/zmx')); "
-        "lib.save()</code>."),
     "File > System Explorer": (
         "Set the aperture, fields, wavelengths and general system options.",
         "Opens the System Explorer: aperture type and value, field type and field points (with their "
@@ -218,10 +210,12 @@ HELP = {
     "Edit > Insert Surface": (
         "Insert a new surface before the selected row.",
         "Adds a flat surface in air before the selected surface. Variables, solves and merit operands that "
-        "refer to later surfaces are renumbered."),
+        "refer to later surfaces are renumbered. Shortcut: Insert; on a Mac, which has no Insert key, "
+        "Option+Up (as in Numbers), and Insert still works on an external PC keyboard."),
     "Edit > Insert Surface After": (
         "Insert a new surface after the selected row.",
-        "Adds a flat surface in air after the selected surface, renumbering later references."),
+        "Adds a flat surface in air after the selected surface, renumbering later references. Shortcut: "
+        "Ctrl+Insert; on a Mac, which has no Insert key, Option+Down (as in Numbers)."),
     "Edit > Delete Surface": (
         "Delete the selected surface, or all selected surfaces.",
         "Removes the selected surface (not the object or image). Variables and solves on it are removed; "

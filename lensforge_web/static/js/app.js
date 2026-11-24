@@ -1,6 +1,6 @@
 // LensForge in the browser: boot, menu bar, toolbar, keyboard shortcuts and the command of every menu
 // item (as lensforge_qt/main_window.py). Lens files live in this browser's storage (IndexedDB).
-import { App, run, call, status, statusError, onState, cmd, initDocks, setState } from "./core.js";
+import { App, run, call, status, statusError, onState, cmd, initDocks, setState, IS_MAC, keyLabel } from "./core.js";
 import * as engine from "./engine.js";
 import * as store from "./storage.js";
 import * as lde from "./lde.js";
@@ -10,7 +10,6 @@ import { showMFE, showMCE, showShell, showUndoHistory, localShortcut } from "./e
 import { optimization, tolerancing, nsEditor, helpBrowser, customizeToolbar } from "./tools.js";
 import { el, esc, iconImg, message, confirmBox, popupMenu, closePopups, popupsOpen, topModal, download, pickFile, readText, onNewDocument, installLongPress } from "./ui.js";
 
-const IS_MAC = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
 const plain = (html) => { const d = document.createElement("div"); d.innerHTML = html || ""; return d.textContent; };
 
 // ================================================================== files
@@ -136,7 +135,6 @@ function buildCommands() {
     "File > Export to Disk": exportToDisk,
     "File > Insert Lens": () => D.insertLensDialog(lde.current().row),
     "File > Insert Stock Lens": () => D.stockLensDialog(lde.current().row),
-    "File > Load Stock Lens Folder": () => D.loadStockFolder(),
     "File > Inspect Lens File": () => D.inspectLens(async (src) => { if (await maybeSave()) await openSource(src); }),
     "File > System Explorer": () => D.systemExplorer(0),
     "File > Fields": () => D.systemExplorer(1),
@@ -217,7 +215,7 @@ function menuItems(items) {
       return { label: it.label, items: menuItems(it.items) };
     }
     const c = C[it.id] || {};
-    return { label: it.label, shortcut: it.shortcut, icon: c.icon, cmd: it.id, title: plain(c.summary),
+    return { label: it.label, shortcut: keyLabel(it.shortcut), icon: c.icon, cmd: it.id, title: plain(c.summary),
       checked: it.id === "View > Show Toolbar" ? toolbarVisible() : undefined, action: () => cmd(it.id) };
   });
 }
@@ -304,7 +302,7 @@ const toolbarStyle = () => store.setting("toolbarStyle", "icons");
 function tooltip(id) {
   const c = App.menus.commands[id];
   if (!c) return id;
-  return c.label.replace(/\.\.\.$/, "") + (c.shortcut ? ` (${c.shortcut})` : "") + (c.summary ? "\n" + plain(c.summary) : "");
+  return c.label.replace(/\.\.\.$/, "") + (c.shortcut ? ` (${keyLabel(c.shortcut)})` : "") + (c.summary ? "\n" + plain(c.summary) : "");
 }
 
 function buildToolbar() {
@@ -393,13 +391,18 @@ const TEXT_KEYS = new Set(["Ctrl+Z", "Ctrl+Y", "Ctrl+Shift+Z", "Ctrl+A", "Ctrl+C
 let shortcutMap = {};
 function buildShortcuts() {
   shortcutMap = {};
+  fromMac = IS_MAC ? Object.fromEntries(Object.entries(App.menus.mac_keys || {}).map(([pc, mac]) => [mac, pc])) : {};
   for (const [id, c] of Object.entries(App.menus.commands)) if (c.shortcut) shortcutMap[c.shortcut] = id;
 }
+
+// a Mac's own keys for shortcuts it has no key for (Option+Up for Ins ...), back to the names the menus use
+let fromMac = {};
 
 function onKey(e) {
   if (e.defaultPrevented) return;
   if (toSheet(e)) return;
-  const k = keyName(e);
+  const k0 = keyName(e);
+  const k = fromMac[k0] || k0;
   if (!k) return;
   if (k === "Esc") {
     if (document.body.classList.contains("whats-this")) { whatsThis(false); e.preventDefault(); return; }

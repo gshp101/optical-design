@@ -1180,35 +1180,60 @@ def test_stock_lens_dialog_import_and_remove(win, tmp_path):
     assert dlg.vendor.currentText() == "All"
 
 
-def test_stock_lens_folder_menu_and_dialog_button(win, tmp_path, monkeypatch):
+def test_stock_lens_load_folder_button(win, tmp_path, monkeypatch):
+    """The Load Folder button (the menu command it replaced passed QAction's checked=False as the folder)."""
     from lensforge_qt import stock_dialog as M
     d = tmp_path / "zmx downloads"
     d.mkdir()
     lf.stock.write_zmf(str(d / "ACME OPTICS.ZMF"), lf.stock.demo_lenses()[:4])
     (d / "notes.txt").write_text("x")
-    lib = lf.StockLibrary(lf.stock.demo_lenses(), path=str(tmp_path / "stock.json"))
-    monkeypatch.setattr(M, "_LIBRARY", lib)
     monkeypatch.setattr(M.QFileDialog, "getExistingDirectory", staticmethod(lambda *a, **k: str(d)))
     monkeypatch.setattr(M.QInputDialog, "getText", staticmethod(lambda *a, **k: ("Downloads", True)))
-    res = win.load_stock_folder()
-    assert len(res.lenses) == 4 and res.catalog == "Downloads"
-    assert "Downloads" in lib.catalogs and os.path.exists(tmp_path / "stock.json")
-    assert win.settings.value("stock_folder") == str(d)
-    assert "File > Load Stock Lens Folder" in [i for i, _, _ in win.toolbar_items]
-    # the dialog's button: loading the folder again replaces the catalog
+    dlg = _stock_dialog(win, tmp_path)
+    dlg.folder_btn.click()  # a real click, through the signal
+    assert "Downloads" in dlg.library.catalogs and len(dlg.library.search(catalog="Downloads")) == 4
+    assert os.path.exists(tmp_path / "stock.json") and win.settings.value("stock_folder") == str(d)
+    assert "Acme Optics" in [dlg.vendor.itemText(i) for i in range(dlg.vendor.count())]
+    assert "File > Load Stock Lens Folder" not in [i for i, _, _ in win.toolbar_items]
+    assert not hasattr(win, "a_stock_folder")
+    # loading the folder again replaces the catalog
     (d / "ACME OPTICS.ZMF").unlink()
     lf.stock.write_zmf(str(d / "ACME OPTICS.ZMF"), lf.stock.demo_lenses()[:2])
+    dlg.folder_btn.click()
+    assert len(dlg.library.search(catalog="Downloads")) == 2
     warned = []
     monkeypatch.setattr(M.QMessageBox, "information", staticmethod(lambda *a: warned.append(a)))
-    dlg = _stock_dialog(win, tmp_path)
-    r = dlg.load_folder(str(d), "Downloads")
-    assert len(r.lenses) == 2 and len(dlg.library.search(catalog="Downloads")) == 2
-    assert "Acme Optics" in [dlg.vendor.itemText(i) for i in range(dlg.vendor.count())]
     empty = tmp_path / "empty"
     empty.mkdir()
     assert dlg.load_folder(str(empty), "E").lenses == [] and warned
     monkeypatch.setattr(M.QFileDialog, "getExistingDirectory", staticmethod(lambda *a, **k: ""))
-    assert win.load_stock_folder() is None  # cancelled
+    assert dlg.load_folder() is None  # cancelled
+
+
+def test_stock_lens_dialog_sorts_on_header_click(win, tmp_path):
+    from lensforge_qt import stock_table as T
+    dlg = _stock_dialog(win, tmp_path)
+    col = lambda name: [dlg.table.item(r, T.COLUMNS.index(name)).text() for r in range(dlg.table.rowCount())]
+    efl = [float(v) for v in col("EFL")]
+    assert efl == sorted(efl)  # default: by focal length
+    dlg.table.selectRow(3)
+    chosen = dlg.selected().key
+    hh = dlg.table.horizontalHeader()
+    hh.sectionClicked.emit(T.COLUMNS.index("Part"))
+    parts = col("Part")
+    assert parts == [x.part for x in T.sort_lenses(dlg.library.lenses, "Part")] and hh.isSortIndicatorShown()
+    assert parts.index("LFD-ACH-25-50") < parts.index("LFD-ACH-25-100")  # numbers in part names sort as numbers
+    assert hh.sortIndicatorOrder() == Qt.AscendingOrder
+    assert dlg.selected().key == chosen  # the selected part stays selected
+    hh.sectionClicked.emit(T.COLUMNS.index("Part"))
+    assert col("Part") == parts[::-1] and hh.sortIndicatorOrder() == Qt.DescendingOrder
+    hh.sectionClicked.emit(T.COLUMNS.index("Diameter"))
+    dia = [float(v) for v in col("Diameter")]
+    assert dia == sorted(dia)
+    dlg.glass.setText("bk7")  # typing keeps the sort
+    dia = [float(v) for v in col("Diameter")]
+    assert dia == sorted(dia) and dlg.table.rowCount() > 0
+    assert [x.key for x in dlg.found][0] == dlg.selected().key  # a new search selects the first row
 
 
 def test_stock_lens_menu(win, monkeypatch):
@@ -1695,3 +1720,18 @@ def test_app_quits_cleanly(tmp_path):
     r = subprocess.run([sys.executable, "-c", code], cwd=os.path.join(HERE, ".."), env=env,
                        capture_output=True, text=True, timeout=300)
     assert r.returncode == 0, (r.returncode, r.stderr[-2000:])
+
+
+def test_insert_shortcuts_have_mac_keys(win):
+    """A Mac has no Insert key: Option+Up / Option+Down (as in Numbers), and Insert still works."""
+    from PySide6.QtGui import QKeySequence
+    from lensforge_qt import keys
+    assert keys.shortcuts("Insert", mac=True) == ["Alt+Up", "Insert"]
+    assert keys.shortcuts("Ctrl+Insert", mac=True) == ["Alt+Down", "Ctrl+Insert"]
+    assert keys.shortcuts("Insert", mac=False) == ["Insert"] and keys.shortcuts("Shift+Delete", mac=True) == ["Shift+Delete"]
+    assert keys.primary(None) is None
+    bound = [s.toString() for s in win.lde.act_insert.shortcuts()]
+    assert bound == ([ "Alt+Up", "Ins"] if keys.IS_MAC else ["Ins"])
+    from lensforge_qt.help_text import lookup
+    assert "Option+Up" in lookup("Edit > Insert Surface")[1] and "Option+Down" in lookup("Edit > Insert Surface After")[1]
+    assert QKeySequence("Alt+Up").toString() == "Alt+Up"

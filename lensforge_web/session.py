@@ -1406,7 +1406,7 @@ class Session:
                 "records": [{"name": c, "data": self.stock.to_dict([c])} for c in cats]}
 
     def stock_import_files(self, catalog, files, replace=True):
-        """File > Load Stock Lens Folder: a folder's lens files ([{name, b64}]) into one catalog.
+        """Insert Stock Lens > Load Folder: a folder's lens files ([{name, b64}]) into one catalog.
         The page sends a big folder in batches (``replace`` only on the first) and then stores
         :meth:`stock_catalog_record`."""
         res = self.stock.import_files([(f["name"], base64.b64decode(f["b64"])) for f in files], catalog,
