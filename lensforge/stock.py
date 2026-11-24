@@ -9,6 +9,7 @@ This module reads both into a :class:`StockLibrary` you can search and insert fr
 
     lib = lf.StockLibrary.default()          # demo parts + the catalogs you imported before
     lib.import_file("THORLABS.ZMF")          # a whole catalog (or a single part's .zmx)
+    lib.import_folder("~/Downloads/zmx")     # every .zmx / .ZMF in a folder, as one catalog
     lib.save()                               # remembered for scripts and both apps
     hits = lib.search(vendor="thorlabs", kind="plano-convex", efl=(45, 55),
                       diameter=(20, 30), glass="N-BK7")
@@ -424,7 +425,7 @@ class StockLibrary:
         return n
 
     def import_file(self, path: str, vendor: str = None, catalog: str = None, part: str = None) -> List[StockLens]:
-        """Add a ``.ZMF`` catalog or one part's ``.zmx`` file; returns the lenses added."""
+        """Add a ``.ZMF`` catalog, one part's ``.zmx`` file or a ``.zip`` of them; returns the lenses added."""
         with open(path, "rb") as f:
             data = f.read()
         return self.import_data(os.path.basename(path), data, vendor, catalog, part)
@@ -433,6 +434,8 @@ class StockLibrary:
                     part: str = None) -> List[StockLens]:
         """As :meth:`import_file`, from a file's name and bytes (the web app's upload)."""
         stem = os.path.splitext(os.path.basename(filename))[0]
+        if filename.lower().endswith(".zip"):  # a zip of .zmx / .ZMF files: one catalog
+            return self.import_files([(filename, data)], catalog or stem, vendor=vendor).lenses
         if filename.lower().endswith(".zmf"):
             lenses = read_zmf(bytes(data), catalog or stem)
             if vendor:
@@ -445,6 +448,92 @@ class StockLibrary:
                                          catalog=catalog or vendor or "Imported")]
         self.add(lenses)
         return lenses
+
+    def import_files(self, files: Iterable[Tuple[str, bytes]], catalog: str, vendor: str = None,
+                     replace: bool = True) -> "FolderImport":
+        """Import many files (``(name, bytes)`` pairs) into one catalog named ``catalog``.
+
+        Every ``.zmx`` part, every lens of a ``.ZMF`` catalog and every such file inside a
+        ``.zip`` goes into ``catalog``; other files are skipped. The maker of each part is
+        guessed from its file (a ``.ZMF``'s maker from its file name) unless ``vendor`` is given.
+        With ``replace`` (the default) the catalog's earlier parts are dropped first, so loading
+        a folder again leaves exactly the parts it holds now. A file that cannot be read is
+        listed in the result's ``errors`` and the others are still imported. The web app sends
+        a folder's files this way; :meth:`import_folder` reads them from disk."""
+        if not catalog or catalog == DEMO_CATALOG:
+            raise ValueError("choose a catalog name (not the demo catalog's)")
+        res = FolderImport(catalog)
+        if replace:
+            self.remove_catalog(catalog)
+        # adding to a catalog (the web app sends a big folder in batches): its parts count as seen
+        seen = {x.part: "an earlier file" for x in self.lenses if x.catalog == catalog}
+        for name, data in _expand_zip(files, res):
+            ext = os.path.splitext(name)[1].lower()
+            if ext not in (".zmx", ".zmf"):
+                res.skipped.append(name)
+                continue
+            try:
+                if ext == ".zmf":
+                    lenses = read_zmf(bytes(data), os.path.splitext(os.path.basename(name))[0])
+                else:
+                    text = _decode(bytes(data))
+                    stem = os.path.splitext(os.path.basename(name))[0]
+                    lenses = [StockLens.from_zmx(text, part=_guess_part(text, stem),
+                                                 vendor=_guess_vendor(text) or "")]
+            except Exception as e:  # noqa: BLE001 - one bad file must not stop the rest
+                res.errors.append(f"{name}: {e}")
+                continue
+            res.files += 1
+            for x in lenses:
+                x.catalog = catalog
+                if vendor:
+                    x.vendor = vendor
+                if x.part in seen:
+                    res.duplicates.append(f"{x.label} ({name}; kept the one from {seen[x.part]})")
+                    continue
+                seen[x.part] = name
+                res.lenses.append(x)
+        self.add(res.lenses)
+        return res
+
+    def import_folder(self, folder: str, catalog: str = None, vendor: str = None, recursive: bool = True,
+                      replace: bool = True) -> "FolderImport":
+        """Import every ``.zmx`` / ``.ZMF`` (and ``.zip`` of them) in ``folder`` into one catalog.
+
+        ``catalog`` defaults to the folder's name; sub-folders are searched too unless
+        ``recursive`` is False. Loading the same folder again (after downloading more parts
+        into it) replaces the catalog with what the folder holds now. Call :meth:`save` to
+        remember it for the apps and later scripts::
+
+            lib = lf.StockLibrary.default()
+            r = lib.import_folder("~/Downloads/thorlabs-zmx")   # catalog 'thorlabs-zmx'
+            print(r)                                            # 312 parts from 312 files
+            lib.save()
+        """
+        folder = os.path.abspath(os.path.expanduser(folder))
+        if not os.path.isdir(folder):
+            raise FileNotFoundError(f"no folder {folder}")
+        catalog = catalog or os.path.basename(folder.rstrip(os.sep)) or "Folder"
+
+        def files():
+            for root, dirs, names in os.walk(folder):
+                dirs.sort()
+                if not recursive:
+                    dirs[:] = []
+                for n in sorted(names):
+                    if n.startswith("."):
+                        continue
+                    path = os.path.join(root, n)
+                    rel = os.path.relpath(path, folder)
+                    if os.path.splitext(n)[1].lower() not in (".zmx", ".zmf", ".zip"):
+                        yield rel, b""
+                        continue
+                    with open(path, "rb") as f:
+                        yield rel, f.read()
+
+        res = self.import_files(files(), catalog, vendor=vendor, replace=replace)
+        res.folder = folder
+        return res
 
     def remove_catalog(self, catalog: str) -> int:
         n = len(self.lenses)
@@ -543,6 +632,59 @@ class StockLibrary:
                 return (v, x.part) if not isinstance(v, str) else (0, v.lower())
             out.sort(key=key)
         return out[:limit] if limit else out
+
+
+@dataclass
+class FolderImport:
+    """What :meth:`StockLibrary.import_folder` / :meth:`~StockLibrary.import_files` did."""
+    catalog: str
+    lenses: List[StockLens] = field(default_factory=list)   # the parts now in the catalog
+    files: int = 0                                          # lens files read
+    errors: List[str] = field(default_factory=list)         # 'file: reason' for files that failed
+    skipped: List[str] = field(default_factory=list)        # files that are not lens files
+    duplicates: List[str] = field(default_factory=list)     # parts that came twice (the first is kept)
+    folder: str = ""
+
+    def __str__(self):
+        s = f"{len(self.lenses)} part(s) from {self.files} file(s) in catalog {self.catalog!r}"
+        if self.errors:
+            s += f"; {len(self.errors)} file(s) could not be read"
+        if self.duplicates:
+            s += f"; {len(self.duplicates)} duplicate part(s) ignored"
+        return s
+
+    def report(self, limit: int = 20) -> str:
+        """A summary plus the first ``limit`` errors and duplicates, for a message box."""
+        lines = [str(self) + "."]
+        for title, items in (("Could not read:", self.errors), ("Duplicates ignored:", self.duplicates)):
+            if items:
+                lines.append(title)
+                lines += ["  " + x for x in items[:limit]]
+                if len(items) > limit:
+                    lines.append(f"  ... and {len(items) - limit} more")
+        return "\n".join(lines)
+
+
+def _expand_zip(files, res: FolderImport):
+    """The (name, bytes) pairs, with each .zip's members in place of the .zip."""
+    import io
+    import zipfile
+    for name, data in files:
+        if not name.lower().endswith(".zip"):
+            yield name, data
+            continue
+        try:
+            z = zipfile.ZipFile(io.BytesIO(bytes(data)))
+            members = [m for m in z.infolist() if not m.is_dir() and not os.path.basename(m.filename).startswith(".")]
+        except Exception as e:  # noqa: BLE001
+            res.errors.append(f"{name}: {e}")
+            continue
+        for m in members:
+            inner = f"{name}/{m.filename}"
+            if os.path.splitext(m.filename)[1].lower() in (".zmx", ".zmf"):
+                yield inner, z.read(m)
+            else:
+                yield inner, b""
 
 
 def _decode(raw: bytes) -> str:

@@ -1180,6 +1180,37 @@ def test_stock_lens_dialog_import_and_remove(win, tmp_path):
     assert dlg.vendor.currentText() == "All"
 
 
+def test_stock_lens_folder_menu_and_dialog_button(win, tmp_path, monkeypatch):
+    from lensforge_qt import stock_dialog as M
+    d = tmp_path / "zmx downloads"
+    d.mkdir()
+    lf.stock.write_zmf(str(d / "ACME OPTICS.ZMF"), lf.stock.demo_lenses()[:4])
+    (d / "notes.txt").write_text("x")
+    lib = lf.StockLibrary(lf.stock.demo_lenses(), path=str(tmp_path / "stock.json"))
+    monkeypatch.setattr(M, "_LIBRARY", lib)
+    monkeypatch.setattr(M.QFileDialog, "getExistingDirectory", staticmethod(lambda *a, **k: str(d)))
+    monkeypatch.setattr(M.QInputDialog, "getText", staticmethod(lambda *a, **k: ("Downloads", True)))
+    res = win.load_stock_folder()
+    assert len(res.lenses) == 4 and res.catalog == "Downloads"
+    assert "Downloads" in lib.catalogs and os.path.exists(tmp_path / "stock.json")
+    assert win.settings.value("stock_folder") == str(d)
+    assert "File > Load Stock Lens Folder" in [i for i, _, _ in win.toolbar_items]
+    # the dialog's button: loading the folder again replaces the catalog
+    (d / "ACME OPTICS.ZMF").unlink()
+    lf.stock.write_zmf(str(d / "ACME OPTICS.ZMF"), lf.stock.demo_lenses()[:2])
+    warned = []
+    monkeypatch.setattr(M.QMessageBox, "information", staticmethod(lambda *a: warned.append(a)))
+    dlg = _stock_dialog(win, tmp_path)
+    r = dlg.load_folder(str(d), "Downloads")
+    assert len(r.lenses) == 2 and len(dlg.library.search(catalog="Downloads")) == 2
+    assert "Acme Optics" in [dlg.vendor.itemText(i) for i in range(dlg.vendor.count())]
+    empty = tmp_path / "empty"
+    empty.mkdir()
+    assert dlg.load_folder(str(empty), "E").lenses == [] and warned
+    monkeypatch.setattr(M.QFileDialog, "getExistingDirectory", staticmethod(lambda *a, **k: ""))
+    assert win.load_stock_folder() is None  # cancelled
+
+
 def test_stock_lens_menu(win, monkeypatch):
     from lensforge_qt import stock_dialog as M
     monkeypatch.setattr(M.StockLensDialog, "exec", lambda self: 0)
