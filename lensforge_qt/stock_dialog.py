@@ -17,8 +17,8 @@ from . import stock_table as T
 from .fonts import fixed_font
 from .ownership import qt_owns_children
 
-CATALOG_FILTER = "Stock lens files (*.zmf *.ZMF *.zmx *.ZMX);;Zemax lens catalog (*.zmf *.ZMF);;" \
-                 "Zemax lens file (*.zmx *.ZMX);;All files (*)"
+CATALOG_FILTER = "Stock lens files (*.zmf *.ZMF *.zmx *.ZMX *.zip);;Zemax lens catalog (*.zmf *.ZMF);;" \
+                 "Zemax lens file (*.zmx *.ZMX);;Zip of lens files (*.zip);;All files (*)"
 
 _LIBRARY = None
 
@@ -32,6 +32,50 @@ def shared_stock_library() -> lf.StockLibrary:
         except Exception:  # unreadable saved file: start with the demo parts
             _LIBRARY = lf.StockLibrary(ST.demo_lenses(), path=ST.user_library_path())
     return _LIBRARY
+
+
+def load_stock_folder(parent, library: lf.StockLibrary, folder: str = None, catalog: str = None):
+    """Ask for a folder (and a catalog name), import its lens files into ``library`` and save it.
+
+    Returns the :class:`lensforge.stock.FolderImport`, or None when cancelled. ``folder`` and
+    ``catalog`` skip the questions (scripts and tests). The last folder is kept in the parent's
+    QSettings as 'stock_folder'."""
+    settings = getattr(parent, "settings", None)
+    if folder is None:
+        start = (settings.value("stock_folder", "") if settings is not None else "") or os.path.expanduser("~")
+        folder = QFileDialog.getExistingDirectory(parent, "Load Stock Lens Folder", start)
+        if not folder:
+            return None
+    if catalog is None:
+        name = os.path.basename(os.path.normpath(folder)) or "Folder"
+        catalog, ok = QInputDialog.getText(parent, "Load Stock Lens Folder",
+                                           "Catalog name (loading a folder again under the same name replaces it):",
+                                           QLineEdit.Normal, name)
+        if not ok or not catalog.strip():
+            return None
+    catalog = catalog.strip()
+    try:
+        res = library.import_folder(folder, catalog=catalog)
+    except (OSError, ValueError) as e:
+        QMessageBox.warning(parent, "Load Stock Lens Folder", str(e))
+        return None
+    if settings is not None:
+        settings.setValue("stock_folder", folder)
+    note = ""
+    if res.lenses or res.files:
+        try:
+            library.save()
+        except OSError as e:
+            note = f"\n\nCannot save the catalog list: {e}"
+    if not res.lenses and not res.errors:
+        QMessageBox.information(parent, "Load Stock Lens Folder",
+                                f"No .zmx or .ZMF lens files in {folder}." + note)
+    elif res.errors or res.duplicates or note:
+        QMessageBox.warning(parent, "Load Stock Lens Folder", res.report() + note)
+    status = getattr(parent, "statusBar", None)
+    if callable(status):
+        status().showMessage(f"Loaded {res}; File > Insert Stock Lens searches it", 8000)
+    return res
 
 
 @qt_owns_children
@@ -142,8 +186,13 @@ class StockLensDialog(QDialog):
         split.setStretchFactor(1, 2)
 
         self.import_btn = QPushButton("Import Catalog...")
-        self.import_btn.setToolTip("Add a Zemax lens catalog (.ZMF) or one part's .zmx file from a lens maker")
+        self.import_btn.setToolTip("Add a Zemax lens catalog (.ZMF), one part's .zmx file from a lens maker, "
+                                   "or a .zip of them")
         self.import_btn.clicked.connect(self.import_dialog)
+        self.folder_btn = QPushButton("Load Folder...")
+        self.folder_btn.setToolTip("Add every .zmx / .ZMF file in a folder (and its sub-folders) as one catalog; "
+                                   "loading the folder again picks up the files you added")
+        self.folder_btn.clicked.connect(lambda: self.load_folder())
         self.remove_btn = QPushButton("Remove Catalog...")
         self.remove_btn.setToolTip("Forget a catalog you imported")
         self.remove_btn.clicked.connect(self.remove_dialog)
@@ -152,6 +201,7 @@ class StockLensDialog(QDialog):
         self.buttons.accepted.connect(self.accept)
         self.buttons.rejected.connect(self.reject)
         self.buttons.addButton(self.import_btn, QDialogButtonBox.ActionRole)
+        self.buttons.addButton(self.folder_btn, QDialogButtonBox.ActionRole)
         self.buttons.addButton(self.remove_btn, QDialogButtonBox.ActionRole)
 
         lay = QVBoxLayout(self)
@@ -240,6 +290,13 @@ class StockLensDialog(QDialog):
         self.fill_vendors()
         self.run_search()
         return n
+
+    def load_folder(self, folder: str = None, catalog: str = None):
+        res = load_stock_folder(self.parent() or self, self.library, folder, catalog)
+        if res is not None:
+            self.fill_vendors()
+            self.run_search()
+        return res
 
     def remove_dialog(self):
         cats = [c for c in self.library.catalogs if c != ST.DEMO_CATALOG]

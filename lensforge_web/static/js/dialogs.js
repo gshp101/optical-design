@@ -713,7 +713,7 @@ function pickBinary(accept) {
 }
 
 export async function importStockCatalog() {
-  const files = await pickBinary(".zmf,.ZMF,.zmx,.ZMX");
+  const files = await pickBinary(".zmf,.ZMF,.zmx,.ZMX,.zip");
   let n = 0;
   for (const f of files) {
     try {
@@ -732,6 +732,82 @@ export async function importStockCatalog() {
   }
   if (n) status(`Imported ${n} stock lens(es); they are kept in this browser and loaded every time LensForge starts`);
   return n;
+}
+
+const LENS_FILE = /\.(zmx|zmf|zip)$/i;
+
+function pickFolder() {
+  // the lens files of a folder (and its sub-folders) as File objects with their relative paths.
+  // iPhone / iPad browsers cannot pick a folder: there the user chooses the files, or a .zip.
+  const ios = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  return new Promise((resolve) => {
+    const attrs = { type: "file", multiple: true, style: { display: "none" } };
+    if (ios) attrs.accept = ".zmx,.ZMX,.zmf,.ZMF,.zip";
+    const i = el("input", attrs);
+    if (!ios) { i.webkitdirectory = true; i.setAttribute("webkitdirectory", ""); i.setAttribute("directory", ""); }
+    i.addEventListener("change", () => {
+      const files = [...i.files];
+      i.remove();
+      const path = (f) => f.webkitRelativePath || f.name;
+      const top = files.length && files[0].webkitRelativePath ? files[0].webkitRelativePath.split("/")[0] : "";
+      resolve({ folder: top, files: files.filter((f) => LENS_FILE.test(f.name) && !f.name.startsWith(".")), total: files.length, path });
+    });
+    i.addEventListener("cancel", () => { i.remove(); resolve(null); });
+    document.body.append(i);
+    i.click();
+  });
+}
+
+async function b64of(f) {
+  const b = new Uint8Array(await f.arrayBuffer());
+  let bin = "";
+  for (let k = 0; k < b.length; k += 0x8000) bin += String.fromCharCode.apply(null, b.subarray(k, k + 0x8000));
+  return btoa(bin);
+}
+
+/** File > Load Stock Lens Folder: every .zmx / .ZMF / .zip in a folder as one catalog, kept in this browser. */
+export async function loadStockFolder() {
+  const pick = await pickFolder();
+  if (!pick) return 0;
+  if (!pick.files.length) {
+    await message("Load Stock Lens Folder", `No .zmx, .ZMF or .zip lens files among the ${pick.total} file(s) chosen.`);
+    return 0;
+  }
+  const guess = pick.folder || (pick.files.length === 1 ? pick.files[0].name.replace(/\.[^.]*$/, "") : "My stock lenses");
+  let name = await prompt("Load Stock Lens Folder", `Catalog name for ${pick.files.length} lens file(s):`, guess,
+    { okLabel: "Load", note: "Loading a folder again under the same name replaces that catalog with what the folder holds now." });
+  name = (name || "").trim();
+  if (!name) return 0;
+  const errors = [], dups = [];
+  let files = 0, batch = [], size = 0, first = true;
+  const send = async () => {
+    if (!batch.length && !first) return;
+    const r = await call("stock_import_files", { catalog: name, files: batch, replace: first });
+    first = false; batch = []; size = 0;
+    files += r.files; errors.push(...r.errors); dups.push(...r.duplicates);
+  };
+  try {
+    for (let k = 0; k < pick.files.length; k++) {
+      const f = pick.files[k];
+      batch.push({ name: pick.path(f), b64: await b64of(f) });
+      size += f.size;
+      if (batch.length >= 200 || size > 8e6) { status(`Loading stock lens files: ${k + 1} of ${pick.files.length}...`); await send(); }
+    }
+    await send();
+    const rec = await call("stock_catalog_record", { catalog: name });
+    if (rec.count) await store.put("stock", { name, data: rec.data, saved: Date.now() });
+    else await store.remove("stock", name);
+    const summary = `${rec.count} part(s) from ${files} file(s) in catalog "${name}"`;
+    status(`Loaded ${summary}; kept in this browser and searched by File > Insert Stock Lens`);
+    if (errors.length || dups.length) {
+      const list = (t, xs) => xs.length ? `<p>${t}</p><ul>${xs.slice(0, 20).map((x) => `<li>${esc(x)}</li>`).join("")}${xs.length > 20 ? `<li>... and ${xs.length - 20} more</li>` : ""}</ul>` : "";
+      await message("Load Stock Lens Folder", `<p>${esc(summary)}.</p>` + list("Could not read:", errors) + list("Duplicates ignored (the first is kept):", dups));
+    }
+    return rec.count;
+  } catch (e) {
+    statusError(`Load Stock Lens Folder: ${e.message}`);
+    return 0;
+  }
 }
 
 export async function reloadStockCatalogs() {
@@ -803,7 +879,9 @@ export async function stockLensDialog(at) {
     };
     const refreshInfo = async () => { info = await run("stock_info"); fillVendors(); await search(); };
     const importBtn = btn("Import Catalog...", async () => { if (await importStockCatalog()) await refreshInfo(); },
-      { title: "Add a Zemax lens catalog (.ZMF) or one part's .zmx file from a lens maker" });
+      { title: "Add a Zemax lens catalog (.ZMF), one part's .zmx file from a lens maker, or a .zip of them" });
+    const folderBtn = btn("Load Folder...", async () => { if (await loadStockFolder()) await refreshInfo(); },
+      { title: "Add every .zmx / .ZMF file in a folder (and its sub-folders) as one catalog; loading the folder again picks up the files you added" });
     const removeBtn = btn("Remove Catalog...", async () => {
       if (!info.catalogs.length) { await message("Remove Catalog", "No imported catalogs (the demo parts always stay)."); return; }
       const name = await dialog({ title: "Remove Catalog", width: 420 }, (w2, done2, bar2) => {
@@ -829,7 +907,7 @@ export async function stockLensDialog(at) {
       wrap, count,
       el("div", { class: "form" }, el("label", {}, "Insert before surface:"), where, el("span"), reverse, el("span"), copySd),
       el("div", {}, "Surfaces to insert (in the order they will be inserted):"), preview, note);
-    bar.append(importBtn, removeBtn, btn("Close", () => done(null)), okBtn);
+    bar.append(importBtn, folderBtn, removeBtn, btn("Close", () => done(null)), okBtn);
     search();
   });
 }

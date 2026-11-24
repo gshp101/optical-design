@@ -69,6 +69,11 @@ ICONS = {
                                  + '<circle cx="16.3" cy="12" r="1.3" fill="#fff"/>'
                                  + f'<path d="M7 6.5c3 3 3 8 0 11z" fill="{GLASS}"/>'
                                  + f'<path d="M10.5 9h2.5M10.5 12h2.5M10.5 15h2.5" stroke="{ORANGE}" stroke-width="1.6"/>'),
+    # a folder holding a catalog card (price tag) with a plano-convex lens: a whole folder of stock parts
+    "File > Load Stock Lens Folder": ('<path d="M2.5 6h6.5l2 2h10.5v12h-19z" fill="#f6d78b"/>'
+                                      + '<path d="M7 10.5h9l3.5 4-3.5 4H7z" fill="#fff"/>'
+                                      + f'<path d="M9.5 11.5c2 2 2 4.5 0 6z" fill="{GLASS}"/>'
+                                      + f'<path d="M12.5 13h2.5M12.5 16h2.5" stroke="{ORANGE}" stroke-width="1.5"/>'),
     "File > Inspect Lens File": (PAGE + '<path d="M8 7h5M8 10h3"/>'
                                  + f'<circle cx="13.5" cy="15" r="3.6" fill="{GLASS}"/>'
                                  + f'<path d="M16.2 17.7l4.3 4.3" stroke="{ORANGE}" stroke-width="2.6"/>'),

@@ -276,3 +276,28 @@ def test_popout_help_and_page():
     assert "Type column is a menu" in menus.lookup("Tools > Merit Function Editor")[1]
     page = open(os.path.join(os.path.dirname(menus.__file__), "static", "popout.html")).read()
     assert "LensForgePopout" in page
+
+
+def test_session_stock_folder_load_in_batches(tmp_path):
+    import base64
+
+    import lensforge as lf
+    s = Session()
+    zmf = tmp_path / "ACME.ZMF"
+    lf.stock.write_zmf(str(zmf), lf.stock.demo_lenses()[:3])
+    b64 = base64.b64encode(zmf.read_bytes()).decode()
+    zmx = base64.b64encode(lf.stock.demo_lenses()[5].zmx.encode()).decode()
+    r = call(s, "stock_import_files", catalog="Mine", replace=True,
+             files=[{"name": "Mine/ACME.ZMF", "b64": b64}, {"name": "Mine/bad.zmf", "b64": "AAAAAA=="}])["result"]
+    assert r["added"] == 3 and r["files"] == 1 and len(r["errors"]) == 1
+    r = call(s, "stock_import_files", catalog="Mine", replace=False,
+             files=[{"name": "Mine/sub/LFD-X.zmx", "b64": zmx}, {"name": "Mine/again/ACME.ZMF", "b64": b64}])["result"]
+    assert r["added"] == 1 and len(r["duplicates"]) == 3   # the second batch adds, the repeat is ignored
+    rec = call(s, "stock_catalog_record", catalog="Mine")["result"]
+    assert rec["name"] == "Mine" and rec["count"] == 4
+    assert "Mine" in call(s, "stock_info")["result"]["catalogs"]
+    t = Session()
+    assert call(t, "stock_restore", data=rec["data"])["result"] == 4
+    # loading the folder again replaces the catalog
+    call(s, "stock_import_files", catalog="Mine", replace=True, files=[{"name": "x/LFD-X.zmx", "b64": zmx}])
+    assert call(s, "stock_catalog_record", catalog="Mine")["result"]["count"] == 1

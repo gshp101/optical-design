@@ -136,6 +136,7 @@ function buildCommands() {
     "File > Export to Disk": exportToDisk,
     "File > Insert Lens": () => D.insertLensDialog(lde.current().row),
     "File > Insert Stock Lens": () => D.stockLensDialog(lde.current().row),
+    "File > Load Stock Lens Folder": () => D.loadStockFolder(),
     "File > Inspect Lens File": () => D.inspectLens(async (src) => { if (await maybeSave()) await openSource(src); }),
     "File > System Explorer": () => D.systemExplorer(0),
     "File > Fields": () => D.systemExplorer(1),

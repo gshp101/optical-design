@@ -1405,6 +1405,20 @@ class Session:
         return {"added": len(added), "catalogs": cats,
                 "records": [{"name": c, "data": self.stock.to_dict([c])} for c in cats]}
 
+    def stock_import_files(self, catalog, files, replace=True):
+        """File > Load Stock Lens Folder: a folder's lens files ([{name, b64}]) into one catalog.
+        The page sends a big folder in batches (``replace`` only on the first) and then stores
+        :meth:`stock_catalog_record`."""
+        res = self.stock.import_files([(f["name"], base64.b64decode(f["b64"])) for f in files], catalog,
+                                      replace=bool(replace))
+        return {"added": len(res.lenses), "files": res.files, "errors": res.errors,
+                "duplicates": res.duplicates, "skipped": len(res.skipped)}
+
+    def stock_catalog_record(self, catalog):
+        """{name, data, count} of one catalog, as the page keeps it in IndexedDB."""
+        data = self.stock.to_dict([catalog])
+        return {"name": catalog, "data": data, "count": len(data["lenses"])}
+
     def stock_restore(self, data):
         return self.stock.load_dict(data)
 
@@ -1547,7 +1561,7 @@ READ_ONLY = {"state", "menus", "help_data", "about", "samples", "lens_text", "su
              "run_analysis", "forget_analysis",
              "mfe_evaluate", "operands", "operand_names", "operand_menu", "wizard_info", "wizard_pupil", "script_example", "opt_info",
              "history_plot", "tolerance_setup", "default_tolerances", "insert_preview", "inspect", "ns_info",
-             "stock_import", "stock_restore", "stock_remove", "stock_info", "stock_search", "stock_preview",
+             "stock_import", "stock_import_files", "stock_catalog_record", "stock_restore", "stock_remove", "stock_info", "stock_search", "stock_preview",
              "ns_text", "ns_trace"}
 
 

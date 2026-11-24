@@ -120,6 +120,7 @@ class MainWindow(QMainWindow):
         self.a_insert_stock = A("Insert &Stock Lens...", self.insert_stock_lens, "Ctrl+Shift+I",
                                 "Search vendor stock lens catalogs by focal length, diameter, type and glass, "
                                 "then insert a part (optionally reversed)")
+        self.a_stock_folder = A("Load Stoc&k Lens Folder...", self.load_stock_folder)
         self.a_inspect = A("Ins&pect Lens File...", self.inspect_lens_dialog, "Ctrl+Shift+O",
                            "Show the system report of a lens file without opening it")
         self.a_agf = A("Load Glass Catalog (AGF)...", self.load_agf)
@@ -182,6 +183,7 @@ class MainWindow(QMainWindow):
         m.addSeparator()
         m.addAction(self.a_insert_lens)
         m.addAction(self.a_insert_stock)
+        m.addAction(self.a_stock_folder)
         m.addAction(self.a_inspect)
         for a in (self.a_sys, self.a_fields, self.a_waves, self.a_rays):
             m.addAction(a)
@@ -591,6 +593,11 @@ class MainWindow(QMainWindow):
         dlg = StockLensDialog(self.doc, at=max(1, row), start_dir=start, parent=self)
         dlg.exec()
         return dlg
+
+    def load_stock_folder(self, folder: str = None, catalog: str = None):
+        """File > Load Stock Lens Folder: every .zmx / .ZMF in a folder as one remembered catalog."""
+        from .stock_dialog import load_stock_folder, shared_stock_library
+        return load_stock_folder(self, shared_stock_library(), folder, catalog)
 
     def inspect_lens_dialog(self):
         start = os.path.dirname(self.doc.path) if self.doc.path else self.settings.value("last_dir", EXAMPLES)

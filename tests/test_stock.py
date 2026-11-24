@@ -197,3 +197,65 @@ def test_save_load_and_remove(lib, tmp_path):
 def test_default_library_honours_lensforge_home(tmp_path, monkeypatch):
     monkeypatch.setenv("LENSFORGE_HOME", str(tmp_path))
     assert ST.user_library_path() == str(tmp_path / "stock_lenses.json")
+
+
+def _write_folder(tmp_path, lib):
+    d = tmp_path / "my parts"
+    (d / "sub").mkdir(parents=True)
+    (d / "AL1220-Zemax(ZMX).zmx").write_bytes(VENDOR_ZMX.replace("\n", "\r\n").encode("utf-16"))
+    (d / "sub" / "LB1761.ZMX").write_text(VENDOR_ZMX.replace("f=20 mm", "LB1761"))
+    ST.write_zmf(str(d / "ACME OPTICS.ZMF"), lib.lenses[:3])
+    (d / "readme.pdf").write_bytes(b"%PDF")
+    (d / "broken.zmf").write_bytes(b"\x00\x00\x00\x00")
+    return d
+
+
+def test_import_folder_one_catalog_and_reload(lib, tmp_path):
+    d = _write_folder(tmp_path, lib)
+    user = tmp_path / "home" / "stock_lenses.json"
+    a = lf.StockLibrary.default(path=str(user))
+    r = a.import_folder(str(d))
+    assert r.catalog == "my parts"
+    assert r.files == 3 and len(r.lenses) == 5
+    assert r.skipped == ["readme.pdf"] and len(r.errors) == 1 and "broken.zmf" in r.errors[0]
+    assert "5 part(s) from 3 file(s)" in str(r) and "could not be read" in r.report()
+    got = {x.part: x for x in a.search(catalog="my parts")}
+    assert set(got) == {"AL1220", "LB1761"} | {x.part for x in lib.lenses[:3]}
+    assert got["AL1220"].vendor == "Thorlabs" and got[lib.lenses[0].part].vendor == "Acme Optics"
+    assert "my parts" in a.catalogs
+    a.save()
+    b = lf.StockLibrary.default(path=str(user))   # remembered between sessions
+    assert len(b.search(catalog="my parts")) == 5
+    # files deleted from the folder vanish when it is loaded again; new ones appear
+    (d / "ACME OPTICS.ZMF").unlink()
+    (d / "LA1131.zmx").write_text(VENDOR_ZMX)
+    r2 = b.import_folder(str(d))
+    assert {x.part for x in b.search(catalog="my parts")} == {"AL1220", "LB1761", "LA1131"}
+    assert len(r2.lenses) == 3
+    # not recursive, own name, forced vendor
+    c = lf.StockLibrary()
+    r3 = c.import_folder(str(d), catalog="Top", vendor="Me", recursive=False)
+    assert {x.part for x in r3.lenses} == {"AL1220", "LA1131"} and {x.vendor for x in r3.lenses} == {"Me"}
+    with pytest.raises(FileNotFoundError):
+        c.import_folder(str(tmp_path / "nope"))
+    with pytest.raises(ValueError):
+        c.import_files([], ST.DEMO_CATALOG)
+
+
+def test_import_zip_and_duplicates(lib, tmp_path):
+    import io
+    import zipfile
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as z:
+        z.writestr("parts/AL1220.zmx", VENDOR_ZMX)
+        z.writestr("parts/copy/AL1220.zmx", VENDOR_ZMX)
+        z.writestr("parts/notes.txt", "x")
+    p = tmp_path / "thorlabs.zip"
+    p.write_bytes(buf.getvalue())
+    x = lf.StockLibrary()
+    got = x.import_file(str(p))
+    assert [g.part for g in got] == ["AL1220"] and x.catalogs == ["thorlabs"]
+    r = x.import_files([("thorlabs.zip", buf.getvalue())], "T")
+    assert len(r.duplicates) == 1 and "duplicate" in str(r)
+    r = x.import_files([("bad.zip", b"not a zip")], "T")
+    assert r.errors and not r.lenses
