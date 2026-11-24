@@ -771,7 +771,8 @@ class MainWindow(QMainWindow):
         extra = ("<p>In the Lens Data Editor, right-click a cell for variables, solves, surface type and stop; "
                  "the ... button in a Material cell opens the material picker. In the Python Shell, Ctrl+Enter "
                  "runs the script.</p><p>On a Mac, which has no Insert key, Option+Up inserts a surface or row above "
-                 "the selected one and Option+Down inserts a surface after it (as in Numbers).</p>")
+                 "the selected one and Option+Down inserts a surface after it (as in Numbers). Command+Backspace deletes "
+                 "the selected surfaces or rows and Option+Shift+Backspace opens Delete Surfaces.</p>")
         d = QMessageBox(self)
         d.setWindowTitle("Keyboard shortcuts")
         d.setText(f"<table cellspacing='6'><tr><th align=left>Menu</th><th align=left>Command</th>"

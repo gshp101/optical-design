@@ -1,8 +1,10 @@
 """Platform keyboard shortcuts: the keys a Mac uses where a PC keyboard has a key a Mac lacks.
 
 Mac keyboards have no Insert key, so the "insert a row" commands use the Numbers / Excel for Mac
-convention there: Option+Up inserts above (before), Option+Down below (after). The PC key still
-works on a Mac (an external PC keyboard). Qt-free: the web front end uses the same table
+convention there: Option+Up inserts above (before), Option+Down below (after). A MacBook's Delete
+key is Backspace (forward delete needs fn), so "delete the selected rows" is Command+Backspace,
+as in Finder and Mail, and Delete Surfaces... is Option+Shift+Backspace (Command+Shift+Backspace
+clears browsing data in browsers). The PC key still works on a Mac (an external PC keyboard). Qt-free: the web front end uses the same table
 (lensforge_web.menus sends it to the page).
 """
 
@@ -17,6 +19,8 @@ IS_MAC = sys.platform == "darwin"
 MAC_EQUIVALENTS = {
     "Insert": "Alt+Up",
     "Ctrl+Insert": "Alt+Down",
+    "Shift+Delete": "Ctrl+Backspace",
+    "Ctrl+Shift+Delete": "Alt+Shift+Backspace",
 }
 
 

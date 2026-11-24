@@ -305,7 +305,7 @@ def svg(item_id: str) -> Optional[str]:
 def mac_keys() -> dict:
     """Web spelling of :data:`lensforge_qt.keys.MAC_EQUIVALENTS` ({'Ins': 'Alt+Up', ...}): a Mac has no Insert key."""
     web = lambda k: k.replace("Insert", "Ins").replace("Delete", "Del")  # noqa: E731
-    return {web(pc): web(mac) for pc, mac in MAC_EQUIVALENTS.items()}
+    return {_sc(web(pc)): web(mac) for pc, mac in MAC_EQUIVALENTS.items()}
 
 
 def menu_data() -> dict:

@@ -221,7 +221,8 @@ HELP = {
         "Removes the selected surface (not the object or image). Variables and solves on it are removed; "
         "merit operands that referred to it move to the previous surface. If several rows are selected "
         "(shift-click or shift+arrow keys in the Lens Data Editor), all of those surfaces are deleted after "
-        "you confirm, as with Delete Surfaces."),
+        "you confirm, as with Delete Surfaces. Shortcut: Shift+Delete; on a Mac, whose Delete key is "
+        "Backspace, Command+Backspace (as in Finder), and Shift+fn+Delete still works."),
     "Edit > Delete Surfaces": (
         "Delete a contiguous range of surfaces, after confirming.",
         "Opens a dialog to pick the first and last surface to delete (it starts from the rows selected in "
@@ -230,7 +231,8 @@ HELP = {
         "variables and solves that are dropped. Merit operands that referred to a deleted surface move to "
         "the surface before the range, and later surface numbers are renumbered. If the stop is deleted, "
         "the surface that takes its place becomes the stop. The whole deletion is one undo step. From a "
-        "script: lf.delete_surfaces(lens, first, last)."),
+        "script: lf.delete_surfaces(lens, first, last). "
+        "Shortcut: Ctrl+Shift+Delete (Alt+Shift+Delete in the web app); on a Mac, Option+Shift+Backspace."),
     "Edit > Toggle Variable": (
         "Make the selected cell a variable for optimisation, or fixed again.",
         "Marks the radius, thickness, conic or parameter in the current cell as an optimisation variable "
