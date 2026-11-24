@@ -317,7 +317,8 @@ def test_session_stock_search_sorts_by_column():
 
 
 def test_web_sends_mac_keys_for_insert():
-    assert menus.menu_data()["mac_keys"] == {"Ins": "Alt+Up", "Ctrl+Ins": "Alt+Down"}
+    assert menus.menu_data()["mac_keys"] == {"Ins": "Alt+Up", "Ctrl+Ins": "Alt+Down", "Shift+Del": "Ctrl+Backspace",
+                                             "Alt+Shift+Del": "Alt+Shift+Backspace"}
     sc = {iid: c["shortcut"] for iid, c in menus.menu_data()["commands"].items()}
     assert sc["Edit > Insert Surface"] == "Ins" and sc["Edit > Insert Surface After"] == "Ctrl+Ins"
     mac = set(menus.mac_keys().values())

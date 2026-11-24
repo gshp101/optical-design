@@ -964,8 +964,10 @@ export async function shortcutsHelp() {
     "semi-diameter. Typing in a Material cell lists the matching glasses (arrow keys and Enter, or a click, take one). On a touch " +
     "screen, tap a selected cell again to type in it. In the Python Shell, " + keyLabel("Ctrl+Enter") + " runs the script.</p>" +
     (IS_MAC ? "<p>On a Mac, \u2318 is Command, \u2325 Option and \u21E7 Shift. A Mac has no Insert key: Option+Up (\u2325\u2191) inserts a surface or " +
-      "row above the selected one and Option+Down (\u2325\u2193) inserts a surface after it, as in Numbers.</p>"
-      : "<p>On a Mac, which has no Insert key, Option+Up inserts a surface or row above the selected one and Option+Down a surface after it.</p>") +
+      "row above the selected one and Option+Down (\u2325\u2193) inserts a surface after it, as in Numbers. Command+Backspace (\u2318\u232B) " +
+      "deletes the selected surfaces or rows, and Option+Shift+Backspace (\u2325\u21E7\u232B) opens Delete Surfaces.</p>"
+      : "<p>On a Mac, which has no Insert key, Option+Up inserts a surface or row above the selected one and Option+Down a surface after it; " +
+        "Command+Backspace deletes the selected surfaces or rows.</p>") +
     `<p>A few shortcuts the browser keeps for itself use ${IS_MAC ? "Option" : "Alt"} instead of ${IS_MAC ? "Command" : "Ctrl"}: ` +
     [["New", "Alt+N"], ["Wavefront Map", "Alt+W"], ["Tolerancing", "Alt+Shift+T"], ["Non-Sequential Component Editor", "Alt+Shift+N"],
       ["Delete Surfaces", "Alt+Shift+Del"], ["Surface Properties", "Alt+Shift+P"], ["Inspect Lens File", "Alt+Shift+O"], ["Insert Stock Lens", "Alt+Shift+I"]]

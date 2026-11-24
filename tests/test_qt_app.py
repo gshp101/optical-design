@@ -1728,10 +1728,14 @@ def test_insert_shortcuts_have_mac_keys(win):
     from lensforge_qt import keys
     assert keys.shortcuts("Insert", mac=True) == ["Alt+Up", "Insert"]
     assert keys.shortcuts("Ctrl+Insert", mac=True) == ["Alt+Down", "Ctrl+Insert"]
-    assert keys.shortcuts("Insert", mac=False) == ["Insert"] and keys.shortcuts("Shift+Delete", mac=True) == ["Shift+Delete"]
+    assert keys.shortcuts("Insert", mac=False) == ["Insert"] and keys.shortcuts("Ctrl+G", mac=True) == ["Ctrl+G"]
+    assert keys.shortcuts("Shift+Delete", mac=True) == ["Ctrl+Backspace", "Shift+Delete"]
+    assert keys.shortcuts("Ctrl+Shift+Delete", mac=True) == ["Alt+Shift+Backspace", "Ctrl+Shift+Delete"]
     assert keys.primary(None) is None
     bound = [s.toString() for s in win.lde.act_insert.shortcuts()]
     assert bound == ([ "Alt+Up", "Ins"] if keys.IS_MAC else ["Ins"])
     from lensforge_qt.help_text import lookup
     assert "Option+Up" in lookup("Edit > Insert Surface")[1] and "Option+Down" in lookup("Edit > Insert Surface After")[1]
+    assert "Command+Backspace" in lookup("Edit > Delete Surface")[1]
+    assert "Option+Shift+Backspace" in lookup("Edit > Delete Surfaces")[1]
     assert QKeySequence("Alt+Up").toString() == "Alt+Up"
