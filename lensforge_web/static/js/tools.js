@@ -1,6 +1,6 @@
 // Tools: optimisation, tolerancing, the non-sequential editor, the help browser and Customize Toolbar
 // (as lensforge_qt/opt_dialogs.py, ns_window.py, help_browser.py and toolbar_dialog.py).
-import { App, run, call, status, statusError, onState, cmd } from "./core.js";
+import { App, run, call, status, statusError, onState, cmd, keyLabel } from "./core.js";
 import * as engine from "./engine.js";
 import * as store from "./storage.js";
 import { el, esc, btn, select, numInput, check, openWindow, dialog, message, confirmBox, download, pickFile, iconImg, svgURL, copyText } from "./ui.js";
@@ -363,7 +363,7 @@ export function helpBrowser(itemId) {
     const c = C[id];
     const where = esc(id.replace(/ > /g, " ▸ "));
     const head = `<div class="help-head">${c && c.icon ? `<img src="${svgURL(c.icon)}" alt="">` : ""}<div><h2 style="margin:0">${esc(c ? c.path[c.path.length - 1] : id)}</h2>` +
-      `<span class="muted">${where}${c && c.shortcut ? `&nbsp;&nbsp;·&nbsp;&nbsp;Shortcut: <b>${esc(c.shortcut)}</b>` : ""}</span></div></div>`;
+      `<span class="muted">${where}${c && c.shortcut ? `&nbsp;&nbsp;·&nbsp;&nbsp;Shortcut: <b>${esc(keyLabel(c.shortcut))}</b>` : ""}</span></div></div>`;
     if (!c || !c.summary) return head + "<p><i>No help has been written for this command yet.</i></p>";
     return `${head}<p><b>${c.summary}</b></p><p>${c.details}</p>`;
   };

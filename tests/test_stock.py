@@ -259,3 +259,15 @@ def test_import_zip_and_duplicates(lib, tmp_path):
     assert len(r.duplicates) == 1 and "duplicate" in str(r)
     r = x.import_files([("bad.zip", b"not a zip")], "T")
     assert r.errors and not r.lenses
+
+
+def test_table_sort_numbers_text_and_missing_values():
+    from lensforge_qt import stock_table as T
+    a = ST.StockLens("LA11310", vendor="B", efl=50.0)
+    b = ST.StockLens("LA1131", vendor="a", efl=-20.0)
+    c = ST.StockLens("LA2", vendor="C")  # no focal length
+    assert [x.part for x in T.sort_lenses([a, b, c], "Part")] == ["LA2", "LA1131", "LA11310"]
+    assert [x.part for x in T.sort_lenses([a, b, c], "EFL")] == ["LA1131", "LA11310", "LA2"]
+    assert [x.part for x in T.sort_lenses([a, b, c], "EFL", True)] == ["LA11310", "LA1131", "LA2"]
+    assert [x.part for x in T.sort_lenses([a, b, c], "Vendor")] == ["LA1131", "LA11310", "LA2"]
+    assert T.sort_lenses([a, b], None) == [a, b] and T.sort_lenses([a, b], "nope") == [a, b]

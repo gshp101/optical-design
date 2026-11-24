@@ -30,7 +30,7 @@ PYODIDE_CDN = f"https://cdn.jsdelivr.net/pyodide/v{PYODIDE_VERSION}/full/"
 
 #: modules of lensforge_qt that do not import Qt (the web session uses them)
 QT_FREE = ["__init__", "edits", "analyses", "rays", "help_text", "mfe_help", "icon_svgs", "commands",
-           "opt_runner", "ns_table", "stock_table"]
+           "opt_runner", "ns_table", "stock_table", "keys"]
 WEB_MODULES = ["__init__", "menus", "document", "session"]
 
 

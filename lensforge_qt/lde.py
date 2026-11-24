@@ -23,6 +23,7 @@ from lensforge import optimize as opt
 from lensforge import surfaces as S
 
 from . import edits as E
+from . import keys
 from .ownership import qt_owns_children
 
 FIXED_COLUMNS = [("surf", "Surf"), ("type", "Surf:Type"), ("comment", "Comment"), ("radius", "Radius"),
@@ -429,7 +430,7 @@ class LensDataEditor(QWidget):
         def act(text, slot, shortcut=None):
             a = QAction(text, self)
             if shortcut:
-                a.setShortcut(QKeySequence(shortcut))
+                a.setShortcuts([QKeySequence(s) for s in keys.shortcuts(shortcut)])  # Mac: Option+Up for Insert
                 a.setShortcutContext(Qt.WidgetWithChildrenShortcut)
             a.triggered.connect(slot)
             self.view.addAction(a)

@@ -301,3 +301,37 @@ def test_session_stock_folder_load_in_batches(tmp_path):
     # loading the folder again replaces the catalog
     call(s, "stock_import_files", catalog="Mine", replace=True, files=[{"name": "x/LFD-X.zmx", "b64": zmx}])
     assert call(s, "stock_catalog_record", catalog="Mine")["result"]["count"] == 1
+
+
+def test_session_stock_search_sorts_by_column():
+    from lensforge_qt import stock_table as T
+    s = Session()
+    i = T.COLUMNS.index("Part")
+    rows = call(s, "stock_search", form={"sort": "Part"})["result"]["rows"]
+    parts = [r[i] for r in rows]
+    assert parts.index("LFD-ACH-25-50") < parts.index("LFD-ACH-25-100") and parts[0] < parts[-1]
+    rows = call(s, "stock_search", form={"sort": "EFL", "descending": True})["result"]["rows"]
+    efl = [float(r[T.COLUMNS.index("EFL")]) for r in rows]
+    assert efl == sorted(efl, reverse=True)
+    assert "File > Load Stock Lens Folder" not in [iid for iid, _, _ in menus.commands()]
+
+
+def test_web_sends_mac_keys_for_insert():
+    assert menus.menu_data()["mac_keys"] == {"Ins": "Alt+Up", "Ctrl+Ins": "Alt+Down"}
+    sc = {iid: c["shortcut"] for iid, c in menus.menu_data()["commands"].items()}
+    assert sc["Edit > Insert Surface"] == "Ins" and sc["Edit > Insert Surface After"] == "Ctrl+Ins"
+    mac = set(menus.mac_keys().values())
+    assert not mac & {s for s in sc.values() if s}  # the Mac keys clash with no other command
+
+
+def test_build_ships_every_qt_free_module_the_session_imports():
+    """A lensforge_qt module the web session imports but build.py leaves out stops Pyodide at start-up."""
+    import subprocess
+    import sys
+    import importlib
+    build = importlib.import_module("lensforge_web.build")
+    out = subprocess.run([sys.executable, "-c", "import sys, lensforge_web.session; "
+                          "print(' '.join(m for m in sys.modules if m.startswith('lensforge_qt.')))"],
+                         capture_output=True, text=True, check=True, cwd=os.path.dirname(os.path.dirname(__file__)))
+    used = {m.split(".", 1)[1] for m in out.stdout.split()}
+    assert used - set(build.QT_FREE) == set(), "add these to lensforge_web/build.py QT_FREE"

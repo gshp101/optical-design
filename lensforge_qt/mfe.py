@@ -20,6 +20,7 @@ from PySide6.QtWidgets import (QAbstractItemView, QCheckBox, QComboBox, QComplet
 from lensforge import optimize as opt
 
 from . import edits as E
+from . import keys
 from . import mfe_help
 from . import workers
 from .fonts import fixed_font
@@ -278,11 +279,12 @@ class MeritFunctionEditor(QWidget):
     def _act(self, tb, text, slot, shortcut=None, tip=""):
         a = QAction(text, self)
         a.triggered.connect(slot)
+        label = QKeySequence(keys.primary(shortcut)).toString(QKeySequence.NativeText) if shortcut else ""
         if tip:
-            a.setToolTip(f"{text} ({shortcut})\n{tip}" if shortcut else f"{text}\n{tip}")
+            a.setToolTip(f"{text} ({label})\n{tip}" if shortcut else f"{text}\n{tip}")
             a.setStatusTip(tip)
         if shortcut:
-            a.setShortcut(QKeySequence(shortcut))
+            a.setShortcuts([QKeySequence(s) for s in keys.shortcuts(shortcut)])  # Mac: Option+Up for Insert
             a.setShortcutContext(Qt.WidgetWithChildrenShortcut)
             self.view.addAction(a)
         tb.addAction(a)

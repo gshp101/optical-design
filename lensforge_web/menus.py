@@ -20,6 +20,7 @@ from typing import Dict, List, Optional, Tuple
 from lensforge_qt.analyses import GROUPS, REGISTRY
 from lensforge_qt.commands import DEFAULT_TOOLBAR, SEPARATOR, SHORT_LABELS, sample_list
 from lensforge_qt.help_text import lookup as qt_lookup
+from lensforge_qt.keys import MAC_EQUIVALENTS
 from lensforge_qt.icon_svgs import GREEN, INK, ORANGE, svg as qt_svg
 
 SEP = None  # a separator in a menu list
@@ -58,7 +59,6 @@ def menu_tree() -> List[dict]:
             _item("Import from Disk", "Ctrl+Alt+O", dialog=True), _item("Export to Disk", "Ctrl+Alt+S", dialog=True),
             SEP,
             _item("Insert Lens", "Ctrl+I", dialog=True), _item("Insert Stock Lens", "Ctrl+Shift+I", dialog=True),
-            _item("Load Stock Lens Folder", dialog=True),
             _item("Inspect Lens File", "Ctrl+Shift+O", dialog=True),
             _item("System Explorer", "F2", dialog=True), _item("Fields", "F3", dialog=True),
             _item("Wavelengths", "F4", dialog=True), _item("Input Rays", "F5", dialog=True), SEP,
@@ -152,33 +152,25 @@ WEB_HELP: Dict[str, Tuple[str, str]] = {
         "Search stock lens catalogs by properties and insert a part, normal or reversed.",
         "Search the stock lenses by part number or description, vendor, type (plano-convex, bi-concave, "
         "meniscus, cemented doublet, ...), focal length and diameter ranges (either end may be empty), glass "
-        "and number of elements; the list updates as you type. Pick a part to preview its surfaces as they will "
+        "and number of elements; the list updates as you type. Click a column header to sort the list by that "
+        "column; click it again to reverse the order (the arrow shows the sort column; by default parts are "
+        "listed by focal length). Pick a part to preview its surfaces as they will "
         "be inserted. Choose the surface to insert in front of (the selected row by default), Reverse to turn "
         "the part round, and whether to use the part's semi-diameters. Only the element surfaces are inserted "
         "(the last keeps the maker's back distance, or the turned part's back focal distance when reversed); "
         "the first and last get the comment 'part (vendor)' (', reversed' when reversed). Later variables, "
         "solves and merit operands are renumbered; one undo step. Import Catalog adds a Zemax lens catalog "
-        "(.ZMF), one part's .zmx file or a .zip of them from your computer, and Load Folder adds every lens "
-        "file in a folder as one catalog (File > Load Stock Lens Folder) (lens makers publish these; LensForge does not ship "
-        "vendor data, which is the makers' copyright). Imported catalogs are kept in this browser's storage and "
+        "(.ZMF), one part's .zmx file or a .zip of them from your computer, and Load Folder adds every .zmx, "
+        ".ZMF and .zip in a folder and its sub-folders as one catalog: choose the folder, then a catalog name "
+        "(the folder's name by default). Each part's maker is read from its file; other files are ignored, files "
+        "that cannot be read are listed at the end, and a part number that comes twice is loaded once. Loading "
+        "the same folder again under the same name replaces the catalog with what the folder holds now. Where "
+        "the browser cannot pick a folder (iPhone and iPad), choose the files themselves or a .zip. Lens makers "
+        "publish these files on their product pages and OpticStudio installs whole .ZMF catalogs; LensForge "
+        "does not ship vendor data, which is the makers' copyright. Imported catalogs are kept in this browser's storage and "
         "loaded again at start-up until Remove Catalog. Generic LensForge Demo parts are always available. "
         "Glasses missing from the loaded catalogs are replaced by an equivalent or a model glass with the "
         "maker's nd and vd, and the preview says so."),
-    "File > Load Stock Lens Folder": (
-        "Add every .zmx / .ZMF lens file in a folder as one searchable stock lens catalog.",
-        "Choose a folder on your computer, then a name for the catalog (the folder's name by default). Every "
-        "Zemax part file (.zmx), lens catalog (.ZMF) and .zip of them in the folder and its sub-folders goes "
-        "into that catalog, which File > Insert Stock Lens then searches; other files are not read. The maker "
-        "of each part is read from its file (a .ZMF's from its file name), so one folder may hold several "
-        "makers' parts. A file that cannot be read is listed at the end and the others are still loaded; a "
-        "part number that comes twice is loaded once. Where the browser cannot pick a folder (iPhone and iPad), "
-        "choose the files themselves or a .zip of the folder. Lens makers (Thorlabs, Edmund Optics, Newport "
-        "and others) offer a .zmx file on each product page, and OpticStudio installs whole .ZMF catalogs in "
-        "its Zemax\\Stockcat folder; LensForge does not ship or download them (the data is the makers' "
-        "copyright), so save the files you download into one folder and load it here. Loading the same folder "
-        "again under the same name replaces the catalog with what the folder holds now. The catalog is kept in "
-        "this browser's storage and loaded again every time LensForge starts, until Remove Catalog in Insert "
-        "Stock Lens. The Insert Stock Lens window has the same command as its Load Folder button."),
     "File > Inspect Lens File": (
         "Show the system report of a lens without opening it.",
         "Choose a lens saved in this browser or a file from your computer; its full system report (first-order "
@@ -310,6 +302,12 @@ def svg(item_id: str) -> Optional[str]:
     return qt_svg(item_id)
 
 
+def mac_keys() -> dict:
+    """Web spelling of :data:`lensforge_qt.keys.MAC_EQUIVALENTS` ({'Ins': 'Alt+Up', ...}): a Mac has no Insert key."""
+    web = lambda k: k.replace("Insert", "Ins").replace("Delete", "Del")  # noqa: E731
+    return {web(pc): web(mac) for pc, mac in MAC_EQUIVALENTS.items()}
+
+
 def menu_data() -> dict:
     """Everything the page needs to build the menu bar, toolbar and help browser."""
     tree = menu_tree()
@@ -320,7 +318,7 @@ def menu_data() -> dict:
         info[iid] = {"path": list(path), "label": it["label"], "shortcut": it["shortcut"],
                      "checkable": it["checkable"], "icon": svg(iid), "summary": h[0] if h else "",
                      "details": h[1] if h else "", "short": SHORT_LABELS.get(iid)}
-    return {"tree": tree, "commands": info, "default_toolbar": list(DEFAULT_TOOLBAR), "separator": SEPARATOR}
+    return {"tree": tree, "commands": info, "mac_keys": mac_keys(), "default_toolbar": list(DEFAULT_TOOLBAR), "separator": SEPARATOR}
 
 
 def commands_of(tree) -> List[Tuple[str, Tuple[str, ...], dict]]:

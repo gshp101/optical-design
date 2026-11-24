@@ -101,9 +101,9 @@ class StockLensDialog(QDialog):
         self.elements = QComboBox()
         self.elements.addItems([label for label, _ in T.ELEMENT_CHOICES])
         for w in (self.text, self.glass, self.efl_min, self.efl_max, self.dia_min, self.dia_max):
-            w.textChanged.connect(self.run_search)
+            w.textChanged.connect(lambda *_: self.run_search())
         for w in (self.vendor, self.kind, self.elements):
-            w.currentIndexChanged.connect(self.run_search)
+            w.currentIndexChanged.connect(lambda *_: self.run_search())
 
         def pair(a, b, unit=""):
             h = QHBoxLayout()
@@ -138,7 +138,13 @@ class StockLensDialog(QDialog):
         self.table.verticalHeader().setVisible(False)
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
         self.table.horizontalHeader().setStretchLastSection(True)
-        self.table.setSortingEnabled(False)
+        self.table.setSortingEnabled(False)  # sorted by the search (T.search), so rows stay in step with self.found
+        self.sort_column, self.sort_descending = None, False
+        hh = self.table.horizontalHeader()
+        hh.setSectionsClickable(True)
+        hh.setSortIndicatorShown(False)
+        hh.setToolTip("Click a column header to sort by it; click again to reverse the order")
+        hh.sectionClicked.connect(self.sort_by)
         self.table.itemSelectionChanged.connect(self.update_preview)
         self.table.cellDoubleClicked.connect(lambda *_: self.accept())
         self.count = QLabel()
@@ -224,9 +230,21 @@ class StockLensDialog(QDialog):
     def form(self) -> dict:
         return dict(text=self.text.text(), vendor=self.vendor.currentText(), kind=self.kind.currentText(),
                     glass=self.glass.text(), efl_min=self.efl_min.text(), efl_max=self.efl_max.text(),
-                    dia_min=self.dia_min.text(), dia_max=self.dia_max.text(), elements=self.elements.currentIndex())
+                    dia_min=self.dia_min.text(), dia_max=self.dia_max.text(), elements=self.elements.currentIndex(),
+                    sort=self.sort_column, descending=self.sort_descending)
 
-    def run_search(self):
+    def sort_by(self, section: int):
+        """Header click: sort by that column; a second click on it reverses the order."""
+        col = T.COLUMNS[section]
+        self.sort_descending = (not self.sort_descending) if col == self.sort_column else False
+        self.sort_column = col
+        hh = self.table.horizontalHeader()
+        hh.setSortIndicatorShown(True)
+        hh.setSortIndicator(section, Qt.DescendingOrder if self.sort_descending else Qt.AscendingOrder)
+        self.run_search(keep_selection=True)
+
+    def run_search(self, keep_selection: bool = False):
+        keep = self.selected() if keep_selection else None
         try:
             self.found, rows, msg = T.search(self.library, self.form())
         except ValueError as e:
@@ -241,7 +259,8 @@ class StockLensDialog(QDialog):
                 self.table.setItem(r, c, it)
         self.count.setText(msg + f" in {len(self.library.catalogs)} catalog(s)")
         if rows:
-            self.table.selectRow(0)
+            keys = [x.key for x in self.found]
+            self.table.selectRow(keys.index(keep.key) if keep is not None and keep.key in keys else 0)
         self.update_preview()
 
     def selected(self):

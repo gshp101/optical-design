@@ -9,6 +9,7 @@ lenses into table rows.
 from __future__ import annotations
 
 import math
+import re
 from typing import List, Optional
 
 import lensforge as lf
@@ -70,9 +71,42 @@ def row(x: ST.StockLens) -> List[str]:
             " / ".join(x.glasses), x.description]
 
 
+def _sort_key(column: str):
+    """Key for sorting lenses by a table column: numbers numerically (missing values last),
+    text without regard to case, with digit runs compared as numbers (LA1131 before LA11310)."""
+    num = {"EFL": "efl", "Diameter": "diameter", "Thickness": "thickness", "Elements": "elements"}
+    if column in num:
+        attr = num[column]
+
+        def key(x):
+            v = getattr(x, attr)
+            ok = v is not None and math.isfinite(v)
+            return (not ok, v if ok else 0.0, x.part.lower())
+        return key
+    idx = COLUMNS.index(column)
+
+    def key(x):
+        text = row(x)[idx].lower()
+        return ([(0, int(t), "") if t.isdigit() else (1, 0, t) for t in re.findall(r"\d+|\D+", text)], x.part.lower())
+    return key
+
+
+def sort_lenses(found, column: Optional[str] = None, descending: bool = False):
+    """``found`` sorted by a column of :data:`COLUMNS` (unchanged for no column)."""
+    if not column or column not in COLUMNS:
+        return list(found)
+    key = _sort_key(column)
+    if column in ("EFL", "Diameter", "Thickness", "Elements"):
+        ok = [x for x in found if not key(x)[0]]
+        missing = [x for x in found if key(x)[0]]
+        return sorted(ok, key=key, reverse=descending) + missing   # parts without a value stay last
+    return sorted(found, key=key, reverse=descending)
+
+
 def search(library: lf.StockLibrary, form: dict):
-    """(lenses, rows, message) for the form values."""
-    found = library.search(**search_args(form))
+    """(lenses, rows, message) for the form values. ``form['sort']`` (a column name) and
+    ``form['descending']`` sort the list as a click on the table header asks."""
+    found = sort_lenses(library.search(**search_args(form)), form.get("sort"), bool(form.get("descending")))
     msg = f"{len(found)} part(s)"
     if len(found) > MAX_ROWS:
         msg += f", showing the first {MAX_ROWS}; narrow the search"
